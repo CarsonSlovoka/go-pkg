@@ -1,8 +1,8 @@
 package syscall
 
 import (
-	"CarsonSlovoka/go-pkg/v2/w32"
 	"fmt"
+	"github.com/CarsonSlovoka/go-pkg/v2/w32"
 	"testing"
 )
 
