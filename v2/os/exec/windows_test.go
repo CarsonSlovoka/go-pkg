@@ -19,3 +19,19 @@ func TestTaskKill(t *testing.T) {
 		t.Fatalf("The program was still alive.")
 	}
 }
+
+func TestIsSingleInstance(t *testing.T) {
+	testApp := "notepad.exe"
+	if err := exec.Command(testApp).Start(); err != nil {
+		t.Fatalf(err.Error())
+	}
+	if !IsSingleInstance(testApp) {
+		t.FailNow()
+	}
+	if err := exec.Command(testApp).Start(); err != nil { // run again
+		t.Fatalf(err.Error())
+	}
+	if IsSingleInstance(testApp) {
+		t.FailNow()
+	}
+}

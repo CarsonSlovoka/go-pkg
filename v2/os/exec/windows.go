@@ -14,9 +14,9 @@ func countTask(exeName string) int {
 
 func IsSingleInstance(curExeName string) bool {
 	if countTask(curExeName) > 1 { // 當前啟動的程式會佔用一個，所以要大於1個才是真的有重複
-		return true
+		return false
 	}
-	return false
+	return true
 }
 
 func IsTaskRunning(exeName string) bool {
