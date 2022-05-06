@@ -23,6 +23,7 @@ func TestMessageBoxOK(t *testing.T) {
 
 	_ = MessageBoxOK(procMessageBox, "Test", "OK")
 	_ = MessageBoxYesNoCancel(procMessageBox, "Test", "Yes No Cancel")
+	_ = MessageBox(procMessageBox, "Test", "OK", w32.MB_OK)
 	_ = MessageBoxW(procMessageBox, "Test", "Help button", w32.MB_HELP)
 	_ = MessageBoxW(procMessageBox, "Test", "OK CANCEL", w32.MB_OKCANCEL)
 	_ = MessageBoxW(procMessageBox, "Test", "ABORT RETRY IGNORE", w32.MB_ABORTRETRYIGNORE)

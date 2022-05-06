@@ -21,6 +21,10 @@ func MessageBoxW(proc *syscall.LazyProc, caption, body string, btnFlag uintptr) 
 	return responseVal
 }
 
+func MessageBox(proc *syscall.LazyProc, caption, body string, btnFlag uintptr) uintptr {
+	return MessageBoxW(proc, caption, body, btnFlag)
+}
+
 func MessageBoxOK(proc *syscall.LazyProc, caption, body string) uintptr {
 	return MessageBoxW(proc, caption, body, 0x00000000)
 }
