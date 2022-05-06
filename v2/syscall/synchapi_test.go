@@ -7,25 +7,29 @@ import (
 )
 
 func TestCreateMutex(t *testing.T) {
-	syscall2.DllKernel32 = syscall.NewLazyDLL("kernel32.dll")
-	handle, err := syscall2.CreateMutex("hello world")
+	kernel32DLL := syscall.NewLazyDLL("kernel32.dll")
+	procCreteMutex := kernel32DLL.NewProc("CreateMutexW")
+	procCloseHandle := kernel32DLL.NewProc("CloseHandle")
+
+	handle, err := syscall2.CreateMutexW(procCreteMutex, "hello world")
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
 
-	_, err = syscall2.CreateMutex("hello world")
+	_, err = syscall2.CreateMutexW(procCreteMutex, "hello world")
 	if err == nil || err != syscall.ERROR_ALREADY_EXISTS {
 		t.Error("should panic")
 	}
 
-	if err = syscall2.CloseHandle(handle); err != nil {
+	if err = syscall2.CloseHandle(procCloseHandle, handle); err != nil {
 		t.Error(err)
 	}
-	// syscall2.CloseHandle(handle) // If the handle does not exist will panic! Don't do that.
+	// err = syscall2.CloseHandle(procCloseHandle, handle) // If you are debugging it will panic!
+	// fmt.Printf("%+v\n%d", err, err.(syscall.Errno))     // The Handle is invalid.  6
 
 	// We can create again since we have closed.
-	handle, _ = syscall2.CreateMutex("hello world")
-	if err = syscall2.CloseHandle(handle); err != nil {
+	handle, _ = syscall2.CreateMutexW(procCreteMutex, "hello world")
+	if err = syscall2.CloseHandle(procCloseHandle, handle); err != nil {
 		t.Error(err)
 	}
 }
