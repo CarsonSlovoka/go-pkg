@@ -5,7 +5,7 @@ import (
 	"reflect"
 )
 
-func run(obj any, name string, args ...any) ([]reflect.Value, error) {
+func procCall(obj any, name string, args ...any) ([]reflect.Value, error) {
 	inputs := make([]reflect.Value, len(args))
 	for i, _ := range args {
 		inputs[i] = reflect.ValueOf(args[i])

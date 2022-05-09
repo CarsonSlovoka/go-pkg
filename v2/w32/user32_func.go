@@ -6,15 +6,15 @@ import (
 	"unsafe"
 )
 
-type User32LazyProc[H Hwnd] struct {
+type User32LazyProc struct {
 	*syscall.LazyProc
 }
 
-func (proc *User32LazyProc[Hwnd]) Run(args ...any) ([]reflect.Value, error) {
-	return run(proc, proc.Name, args...)
+func (proc *User32LazyProc) Run(args ...any) ([]reflect.Value, error) {
+	return procCall(proc, proc.Name, args...)
 }
 
-func (proc *User32LazyProc[Hwnd]) FindWindow(className, windowName string) (hwnd uintptr, err error) {
+func (proc *User32LazyProc) FindWindow(className, windowName string) (hwnd uintptr, err error) {
 	if proc.Name != "FindWindow" {
 		panic(proc.Name != "FindWindow")
 	}
@@ -29,7 +29,7 @@ func (proc *User32LazyProc[Hwnd]) FindWindow(className, windowName string) (hwnd
 
 // GetForegroundWindow User32.dll 此函數可以獲得當前窗口的HWND
 // https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getforegroundwindow
-func (proc *User32LazyProc[Hwnd]) GetForegroundWindow() (uintptr, error) {
+func (proc *User32LazyProc) GetForegroundWindow() (uintptr, error) {
 	if proc.Name != "GetForegroundWindow" {
 		panic(proc.Name != "GetForegroundWindow")
 	}
@@ -52,7 +52,7 @@ func (proc *User32LazyProc[Hwnd]) GetForegroundWindow() (uintptr, error) {
 // 回傳名稱而不是長度(如果有需要長度在自己用len即可)
 // https://docs.microsoft.com/zh-tw/windows/win32/api/winuser/nf-winuser-getclassname
 // https://go.dev/play/p/dKueOJv9Sx
-func (proc *User32LazyProc[Hwnd]) GetClassNameW(hwnd Hwnd) (name string, err error) {
+func (proc *User32LazyProc) GetClassNameW(hwnd HWND) (name string, err error) {
 	if proc.Name != "GetClassNameW" {
 		panic(proc.Name != "GetClassNameW")
 	}
@@ -85,7 +85,7 @@ func (proc *User32LazyProc[Hwnd]) GetClassNameW(hwnd Hwnd) (name string, err err
 
 // GetWindowTextW
 // https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowtextw
-func (proc *User32LazyProc[Hwnd]) GetWindowTextW(hwnd Hwnd) (string, error) {
+func (proc *User32LazyProc) GetWindowTextW(hwnd HWND) (string, error) {
 	if proc.Name != "GetWindowTextW" {
 		panic(proc.Name != "GetWindowTextW")
 	}

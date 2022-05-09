@@ -7,9 +7,13 @@
 - [win.go]
 - [kernel32.go-1], [kernel32.go-2]
 
-不用擔心宣告太多變數執行檔會變得很大，實際上就[user32.go]的這些內容，打包出來的執行檔差異也只有10KB左右<sub>就算以上四項全部包含進去也才影響14KB</sub>，影響很小
+不用擔心宣告太多變數執行檔會變得很大，實際上就[user32.go]的這些內容，打包出來的執行檔差異也只有10KB左右<sup>就算以上四項全部包含進去也才影響14KB</sup>，影響很小
 
 至於struct的定義，宣告再多都不會影響執行檔大小(看的是用了多少)
+
+如果要把`lxn/win`所有的init也包含進去<sup>例如其中之一的[ user32.go.init](https://github.com/lxn/win/blob/7a0e89e/user32.go#L1903-L2059)</sup>
+
+此包的所有init都涵蓋近來約莫會增加368KB，好處是使用上更加直接，缺點就是執行檔變大一些
 
 [lxn/win]: https://github.com/lxn/win
 [user32.go]: https://github.com/lxn/win/blob/a377121e959e22055dd01ed4bb2383e5bd02c238/user32.go#L18-L1744
