@@ -28,3 +28,30 @@ func TestGetActiveWindow(t *testing.T) {
 	}
 	fmt.Println("window text Name:", winText)
 }
+
+func testMessageBox(t *testing.T) {
+	user32dll := w32.NewUser32DLL([]w32.ProcName{
+		w32.PNMessageBox,
+	})
+
+	hwndTop := uintptr(w32.HWND_TOP)
+	response, _ := user32dll.MessageBox(hwndTop, "title", "body message", w32.MB_OK)
+	switch response {
+	case w32.IDYES:
+		fmt.Println("Yes")
+	case w32.IDNO:
+		fmt.Println("No")
+	default: // 基本上沒辦法有這個出現，對話框只有Yes,No可以選，右上角的打X也不能按
+		fmt.Println("Unknown")
+	}
+
+	messageBox := user32dll.MessageBox
+	_, _ = messageBox(hwndTop, "Test", "OK", w32.MB_OK)
+	_, _ = messageBox(hwndTop, "Test", "Yes No Cancel", w32.MB_YESNOCANCEL)
+	_, _ = messageBox(hwndTop, "Test", "OK", w32.MB_OK)
+	_, _ = messageBox(hwndTop, "Test", "Help button", w32.MB_HELP)
+	_, _ = messageBox(hwndTop, "Test", "OK CANCEL", w32.MB_OKCANCEL)
+	_, _ = messageBox(hwndTop, "Test", "ABORT RETRY IGNORE", w32.MB_ABORTRETRYIGNORE)
+	_, _ = messageBox(hwndTop, "Test", "RETRY CANCEL", w32.MB_RETRYCANCEL)
+	_, _ = messageBox(hwndTop, "Test", "CANCEL TRY CONTINUE", w32.MB_CANCELTRYCONTINUE)
+}
