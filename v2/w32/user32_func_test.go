@@ -1,37 +1,30 @@
-package w32
+package w32_test
 
 import (
 	"fmt"
-	"syscall"
+	"github.com/CarsonSlovoka/go-pkg/v2/w32"
 	"testing"
 )
 
 func TestGetActiveWindow(t *testing.T) {
-	user32DLL := syscall.NewLazyDLL("User32.dll")
-	procGetForegroundWindow := User32LazyProc{user32DLL.NewProc("GetForegroundWindow")}
-	values, err := procGetForegroundWindow.Run() // 透過共同方法去呼叫，缺點是輸入參數不會檢查(容易放錯)以及返回值的對象也不易理解
-	if err != nil {
-		t.Fatal(err)
-	}
-	e := values[1]
-	if e.Interface() != nil {
-		t.Fatal(e.Interface().(error))
-	}
-	curHandle := values[0].Interface().(uintptr)
-	fmt.Println("current window HWND:", curHandle) // 當前窗口的識別號
+	user32dll := w32.NewDll[w32.User32DLL](w32.DN_USER32, []w32.ProcName{
+		w32.PCGetForegroundWindow,
+		w32.PCGetClassName,
+		w32.PCGetWindowText,
+	})
 
-	procGetClassNameW := User32LazyProc{user32DLL.NewProc("GetClassNameW")}
-	clsName, err := procGetClassNameW.GetClassNameW(HWND(curHandle)) // 指名調用某方法
+	curHwnd, err := user32dll.GetForegroundWindow()
+	fmt.Println("current window HWND:", curHwnd) // 當前窗口的識別號
+
+	clsName, err := user32dll.GetClassName(curHwnd)
 	if err != nil {
 		t.Fatal(err)
 	}
 	fmt.Println("window class Name:", clsName)
 
-	procGetWindowTextW := User32LazyProc{user32DLL.NewProc("GetWindowTextW")}
-	values, err = procGetWindowTextW.Run(HWND(curHandle))
+	winText, err := user32dll.GetWindowText(curHwnd)
 	if err != nil {
 		t.Fatal(err)
 	}
-	winText := values[0].String()
 	fmt.Println("window text Name:", winText)
 }

@@ -1,23 +1,34 @@
 package w32
 
 import (
-	"reflect"
 	"syscall"
 	"unsafe"
 )
 
-type User32LazyProc struct {
-	*syscall.LazyProc
+const (
+	PCFindWindow          ProcName = "FindWindow"
+	PCGetForegroundWindow          = "GetForegroundWindow"
+	PCGetClassName                 = "GetClassNameW"
+	PCGetWindowText                = "GetWindowTextW"
+)
+
+type User32DLL struct {
+	procMap  map[ProcName]*syscall.LazyProc
+	mustProc func(name ProcName) *syscall.LazyProc
 }
 
-func (proc *User32LazyProc) Run(args ...any) ([]reflect.Value, error) {
-	return procCall(proc, proc.Name, args...)
-}
-
-func (proc *User32LazyProc) FindWindow(className, windowName string) (hwnd uintptr, err error) {
-	if proc.Name != "FindWindow" {
-		panic(proc.Name != "FindWindow")
+/* 使用defaultMustProc取代
+func (dll *User32DLL) mustProc(name ProcName) *syscall.LazyProc {
+	proc, exists := dll.procMap[name]
+	if !exists {
+		panic("The proc is not exist in the dll.")
 	}
+	return proc
+}
+*/
+
+func (dll *User32DLL) FindWindow(className, windowName string) (hwnd uintptr, err error) {
+	proc := dll.mustProc(PCFindWindow)
 	lpClassName, _ := syscall.UTF16PtrFromString(className)
 	lpWindowName, _ := syscall.UTF16PtrFromString(windowName)
 	hwnd, _, err = proc.Call(
@@ -29,18 +40,16 @@ func (proc *User32LazyProc) FindWindow(className, windowName string) (hwnd uintp
 
 // GetForegroundWindow User32.dll 此函數可以獲得當前窗口的HWND
 // https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getforegroundwindow
-func (proc *User32LazyProc) GetForegroundWindow() (uintptr, error) {
-	if proc.Name != "GetForegroundWindow" {
-		panic(proc.Name != "GetForegroundWindow")
+func (dll *User32DLL) GetForegroundWindow() (hwnd uintptr, err error) {
+	proc := dll.mustProc(PCGetForegroundWindow)
+	hwnd, _, err = proc.Call()
+	if hwnd == 0 {
+		return hwnd, err
 	}
-	ret, _, err := proc.Call()
-	if ret == 0 {
-		return ret, err
-	}
-	return ret, nil
+	return hwnd, nil
 }
 
-// GetClassNameW If the function succeeds, the return value is the number of characters copied to the buffer
+// GetClassName If the function succeeds, the return value is the number of characters copied to the buffer
 // win32api定義此函數的「參數」說明
 // 1. 傳入 hwnd (您想要取得視窗名稱的.hwnd 可以想成是一個窗口id)
 // 2. [out] 要輸出的對象, 傳入一個記憶體位址
@@ -52,10 +61,8 @@ func (proc *User32LazyProc) GetForegroundWindow() (uintptr, error) {
 // 回傳名稱而不是長度(如果有需要長度在自己用len即可)
 // https://docs.microsoft.com/zh-tw/windows/win32/api/winuser/nf-winuser-getclassname
 // https://go.dev/play/p/dKueOJv9Sx
-func (proc *User32LazyProc) GetClassNameW(hwnd HWND) (name string, err error) {
-	if proc.Name != "GetClassNameW" {
-		panic(proc.Name != "GetClassNameW")
-	}
+func (dll *User32DLL) GetClassName(hwnd uintptr) (name string, err error) {
+	proc := dll.mustProc(PCGetClassName)
 
 	maxCount := 256
 	clsName := make([]uint16, maxCount)
@@ -83,18 +90,16 @@ func (proc *User32LazyProc) GetClassNameW(hwnd HWND) (name string, err error) {
 	return // 由於我們的回傳值皆以具名，故當省略回傳項目時，會直接以具名變數取代
 }
 
-// GetWindowTextW
+// GetWindowText
 // https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowtextw
-func (proc *User32LazyProc) GetWindowTextW(hwnd HWND) (string, error) {
-	if proc.Name != "GetWindowTextW" {
-		panic(proc.Name != "GetWindowTextW")
-	}
+func (dll *User32DLL) GetWindowText(hwnd uintptr) (string, error) {
+	proc := dll.mustProc(PCGetWindowText)
 
 	maxCount := 256
 	textName := make([]uint16, maxCount)
 	pTextName := &textName[0]
 
-	r0, _, errno := syscall.SyscallN(proc.Addr(), uintptr(hwnd),
+	r0, _, errno := syscall.SyscallN(proc.Addr(), hwnd,
 		uintptr(unsafe.Pointer(pTextName)),
 		uintptr(len(textName)),
 	)
