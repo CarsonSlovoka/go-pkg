@@ -6,29 +6,24 @@ import (
 )
 
 const (
-	PCFindWindow          ProcName = "FindWindow"
-	PCGetForegroundWindow          = "GetForegroundWindow"
-	PCGetClassName                 = "GetClassNameW"
-	PCGetWindowText                = "GetWindowTextW"
+	PNFindWindow          ProcName = "FindWindow"
+	PNGetForegroundWindow          = "GetForegroundWindow"
+	PNGetClassName                 = "GetClassNameW"
+	PNGetWindowText                = "GetWindowTextW"
 )
 
 type User32DLL struct {
-	procMap  map[ProcName]*syscall.LazyProc
-	mustProc func(name ProcName) *syscall.LazyProc
+	*dLL
 }
 
-/* 使用defaultMustProc取代
-func (dll *User32DLL) mustProc(name ProcName) *syscall.LazyProc {
-	proc, exists := dll.procMap[name]
-	if !exists {
-		panic("The proc is not exist in the dll.")
-	}
-	return proc
+func NewUser32DLL(procList []ProcName) *User32DLL {
+	dll := newDll(DN_USER32, procList)
+	// dll.mustProc = ...
+	return &User32DLL{dll}
 }
-*/
 
 func (dll *User32DLL) FindWindow(className, windowName string) (hwnd uintptr, err error) {
-	proc := dll.mustProc(PCFindWindow)
+	proc := dll.mustProc(PNFindWindow)
 	lpClassName, _ := syscall.UTF16PtrFromString(className)
 	lpWindowName, _ := syscall.UTF16PtrFromString(windowName)
 	hwnd, _, err = proc.Call(
@@ -41,7 +36,7 @@ func (dll *User32DLL) FindWindow(className, windowName string) (hwnd uintptr, er
 // GetForegroundWindow User32.dll 此函數可以獲得當前窗口的HWND
 // https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getforegroundwindow
 func (dll *User32DLL) GetForegroundWindow() (hwnd uintptr, err error) {
-	proc := dll.mustProc(PCGetForegroundWindow)
+	proc := dll.mustProc(PNGetForegroundWindow)
 	hwnd, _, err = proc.Call()
 	if hwnd == 0 {
 		return hwnd, err
@@ -62,7 +57,7 @@ func (dll *User32DLL) GetForegroundWindow() (hwnd uintptr, err error) {
 // https://docs.microsoft.com/zh-tw/windows/win32/api/winuser/nf-winuser-getclassname
 // https://go.dev/play/p/dKueOJv9Sx
 func (dll *User32DLL) GetClassName(hwnd uintptr) (name string, err error) {
-	proc := dll.mustProc(PCGetClassName)
+	proc := dll.mustProc(PNGetClassName)
 
 	maxCount := 256
 	clsName := make([]uint16, maxCount)
@@ -93,7 +88,7 @@ func (dll *User32DLL) GetClassName(hwnd uintptr) (name string, err error) {
 // GetWindowText
 // https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowtextw
 func (dll *User32DLL) GetWindowText(hwnd uintptr) (string, error) {
-	proc := dll.mustProc(PCGetWindowText)
+	proc := dll.mustProc(PNGetWindowText)
 
 	maxCount := 256
 	textName := make([]uint16, maxCount)

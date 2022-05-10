@@ -1,8 +1,10 @@
 package w32
 
-import "syscall"
-
 type Kernel32DLL struct {
-	procMap  map[ProcName]*syscall.LazyProc
-	mustProc func(name ProcName) *syscall.LazyProc
+	*dLL
+}
+
+func NewKernel32DLL(procList []ProcName) *Kernel32DLL {
+	dll := newDll(DN_KERNEL32, procList)
+	return &Kernel32DLL{dll}
 }

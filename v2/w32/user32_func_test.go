@@ -7,10 +7,10 @@ import (
 )
 
 func TestGetActiveWindow(t *testing.T) {
-	user32dll := w32.NewDll[w32.User32DLL](w32.DN_USER32, []w32.ProcName{
-		w32.PCGetForegroundWindow,
-		w32.PCGetClassName,
-		w32.PCGetWindowText,
+	user32dll := w32.NewUser32DLL([]w32.ProcName{
+		w32.PNGetForegroundWindow,
+		w32.PNGetClassName,
+		w32.PNGetWindowText,
 	})
 
 	curHwnd, err := user32dll.GetForegroundWindow()

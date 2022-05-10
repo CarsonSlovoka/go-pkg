@@ -5,16 +5,19 @@ import "syscall"
 type DllName string
 
 const (
-	DN_USER32 DllName = "User32.dll"
+	DN_USER32   DllName = "User32.dll"
+	DN_KERNEL32         = "Kernel32.dll"
 )
 
 type ProcName string
 
-type DllType interface {
-	User32DLL
+type dLL struct {
+	name     DllName
+	procMap  map[ProcName]*syscall.LazyProc
+	mustProc func(name ProcName) *syscall.LazyProc
 }
 
-func defaultMustProc[D DllType](dll D, name ProcName) *syscall.LazyProc {
+func defaultMustProc(dll dLL, name ProcName) *syscall.LazyProc {
 	proc, exists := dll.procMap[name]
 	if !exists {
 		panic("The proc is not exist in the dll.")
@@ -22,12 +25,12 @@ func defaultMustProc[D DllType](dll D, name ProcName) *syscall.LazyProc {
 	return proc
 }
 
-// NewDll 指派您要使用哪一個dll，以及使用該dll中的那些proc
-func NewDll[D DllType](name DllName, procList []ProcName) *D {
-	dll := D{}
-	user32DLL := syscall.NewLazyDLL(string(name))
-	for _, name := range procList {
-		dll.procMap[name] = user32DLL.NewProc(string(name))
+func newDll(name DllName, procList []ProcName) *dLL {
+	dll := dLL{name: name}
+	lazyDLL := syscall.NewLazyDLL(string(dll.name))
+	dll.procMap = make(map[ProcName]*syscall.LazyProc)
+	for _, procName := range procList {
+		dll.procMap[procName] = lazyDLL.NewProc(string(procName))
 	}
 	dll.mustProc = func(name ProcName) *syscall.LazyProc {
 		return defaultMustProc(dll, name)
