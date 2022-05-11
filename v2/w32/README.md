@@ -50,18 +50,18 @@ GO中針對不同平台的建置方法有以下幾種:
 
 1. 使用檔名(filename suffixes)來判斷，例如:
 
-- `xxx_GOOS_GOARCH.go`
-- `xxx_windows_[arch].go`
-- `xxx_windows_arm64.go`
+   - `xxx_GOOS_GOARCH.go`
+   - `xxx_windows_[arch].go`
+   - `xxx_windows_arm64.go`
 
-其中還可以順便申明arch，一般來說很好在指定arch
+    以上GOOS和GOARCH都是可選上，可加也可不加，通常不太會去特別註明arch
 
 2. 明確使用build標籤:
-  - `//go:build windows` 只在windows平台build
-  - `//go:build !windows` 只要是`非`windows平台就build
-  - `//go:build darwin`
-  - `//+build windows,amd64` 只在windows且arch為amd64才構建
-  - `//+build darwin linux dragonfly js,wasm` 前面三個為os，最後一個`js,wasm`這要看成一個，意思為OS:js, arch為wasm
+   - `//go:build windows` 只在windows平台build
+   - `//go:build !windows` 只要是`非`windows平台就build
+   - `//go:build darwin`
+   - `//+build windows,amd64` 只在windows且arch為amd64才構建
+   - `//+build darwin linux dragonfly js,wasm` 前面三個為os，最後一個`js,wasm`這要看成一個，意思為OS:js, arch為wasm
 
    要查看有哪些OS, ARCH可用，可以使用指令
    > go tool dist list
