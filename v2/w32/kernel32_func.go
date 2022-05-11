@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	PNCreateMutex ProcName = "CreateMutexW"
-	PNCloseHandle          = "CloseHandle"
+	PNCreateMutex         ProcName = "CreateMutexW"
+	PNCloseHandle         ProcName = "CloseHandle"
+	PNGetNativeSystemInfo ProcName = "GetNativeSystemInfo"
 )
 
 type Kernel32DLL struct {
@@ -53,4 +54,12 @@ func (dll *Kernel32DLL) CreateMutex(name string) (handle uintptr, err error) {
 		return handle, nil
 	}
 	return handle, errno
+}
+
+// GetNativeSystemInfo
+// https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getnativesysteminfo
+func (dll *Kernel32DLL) GetNativeSystemInfo() (info SYSTEM_INFO) {
+	proc := dll.mustProc(PNGetNativeSystemInfo)
+	_, _, _ = syscall.SyscallN(proc.Addr(), uintptr(unsafe.Pointer(&info)))
+	return
 }

@@ -1457,25 +1457,6 @@ type MONITORINFO struct {
 	DwFlags   uint32
 }
 
-type (
-	HACCEL    HANDLE
-	HCURSOR   HANDLE
-	HDWP      HANDLE
-	HICON     HANDLE
-	HMENU     HANDLE
-	HMONITOR  HANDLE
-	HRAWINPUT HANDLE
-	HWND      HANDLE
-)
-
-type Handle interface {
-	~uintptr // uintptr | HWND | HANDLE //不需要這樣寫，使用~，其表示只要「原型」是如此就算
-}
-
-type Hwnd interface {
-	~uintptr
-}
-
 type MSG struct {
 	HWnd    HWND
 	Message uint32

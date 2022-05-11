@@ -8,7 +8,8 @@ type DllName string
 
 const (
 	DN_USER32   DllName = "User32.dll"
-	DN_KERNEL32         = "Kernel32.dll"
+	DN_KERNEL32 DllName = "Kernel32.dll"
+	DN_NTDLL    DllName = "ntdll.dll"
 )
 
 type ProcName string

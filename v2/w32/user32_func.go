@@ -13,6 +13,7 @@ const (
 	PNGetClassName        ProcName = "GetClassNameW"
 	PNGetWindowText       ProcName = "GetWindowTextW"
 	PNMessageBox          ProcName = "MessageBoxW"
+	PNGetSystemMetrics    ProcName = "GetSystemMetrics"
 )
 
 type User32DLL struct {
@@ -121,4 +122,12 @@ func (dll *User32DLL) MessageBox(hwnd uintptr, caption, text string, btnFlag uin
 		btnFlag,
 	)
 	return
+}
+
+// GetSystemMetrics 依據所傳入的參數回傳您所要查詢的數值資料
+// https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getsystemmetrics#parameters
+func (dll *User32DLL) GetSystemMetrics(targetIdx int) int {
+	proc := dll.mustProc(PNGetSystemMetrics)
+	r0, _, _ := syscall.SyscallN(proc.Addr(), uintptr(targetIdx))
+	return int(r0)
 }

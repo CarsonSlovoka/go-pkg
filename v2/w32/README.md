@@ -1,4 +1,18 @@
-## lxn/win
+## 型別與GO的對照
+
+| C++ | Go  |
+|-----|-----|
+WORD | uint16
+DWORD | uint32
+DWORD_PTR | *uint32
+WCHAR  xxx[128] | [128]uint16
+USHORT | uint16
+UCHAR | byte
+LPVOID | unsafe.Pointer
+
+## 使用go來調用windows api的專案
+
+### [lxn/win]
 
 常數數值大部分都是參考此專案[lxn/win]，這專案很棒，省去您花很多時間去找微軟文件所定義的該數值為何
 
@@ -28,27 +42,30 @@
 
 [kernel32.go-2]: https://github.com/lxn/win/blob/a377121e959e22055dd01ed4bb2383e5bd02c238/kernel32.go#L92-L140
 
+### ⭐[gonutz/w32](https://github.com/gonutz/w32)
+
 ## [build](https://www.digitalocean.com/community/tutorials/building-go-applications-for-different-operating-systems-and-architectures)
 
 GO中針對不同平台的建置方法有以下幾種:
 
 1. 使用檔名(filename suffixes)來判斷，例如:
-  - `xxx_GOOS_GOARCH.go`
-  - `xxx_windows_[arch].go`
-  - `xxx_windows_arm64.go`
 
-   其中還可以順便申明arch，一般來說很好在指定arch
+- `xxx_GOOS_GOARCH.go`
+- `xxx_windows_[arch].go`
+- `xxx_windows_arm64.go`
+
+其中還可以順便申明arch，一般來說很好在指定arch
 
 2. 明確使用build標籤:
-   - `//go:build windows` 只在windows平台build
-   - `//go:build !windows` 只要是`非`windows平台就build
-   - `//go:build darwin`
-   - `//+build windows,amd64` 只在windows且arch為amd64才構建
-   - `//+build darwin linux dragonfly js,wasm` 前面三個為os，最後一個`js,wasm`這要看成一個，意思為OS:js, arch為wasm
+  - `//go:build windows` 只在windows平台build
+  - `//go:build !windows` 只要是`非`windows平台就build
+  - `//go:build darwin`
+  - `//+build windows,amd64` 只在windows且arch為amd64才構建
+  - `//+build darwin linux dragonfly js,wasm` 前面三個為os，最後一個`js,wasm`這要看成一個，意思為OS:js, arch為wasm
 
-    要查看有哪些OS, ARCH可用，可以使用指令
-    > go tool dist list
-    它會呈現出: `OS/ARCH`的列表 (list all supported platforms):
+   要查看有哪些OS, ARCH可用，可以使用指令
+   > go tool dist list
+   它會呈現出: `OS/ARCH`的列表 (list all supported platforms):
 
     ```
     aix/ppc64

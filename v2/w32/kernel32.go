@@ -2,19 +2,6 @@
 
 package w32
 
-type (
-	ATOM          uint16
-	HANDLE        uintptr
-	HGLOBAL       HANDLE
-	HINSTANCE     HANDLE
-	LCID          uint32
-	LCTYPE        uint32
-	LANGID        uint16
-	HMODULE       uintptr
-	HWINEVENTHOOK HANDLE
-	HRSRC         uintptr
-)
-
 type FILETIME struct {
 	DwLowDateTime  uint32
 	DwHighDateTime uint32
@@ -40,6 +27,8 @@ type SYSTEMTIME struct {
 	WMilliseconds uint16
 }
 
+// ACTCTX
+// https://docs.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-actctxw
 type ACTCTX struct {
 	size                  uint32
 	Flags                 uint32
@@ -92,3 +81,18 @@ const (
 	LOCALE_SISO639LANGNAME   LCTYPE = 0x59
 	LOCALE_SISO639LANGNAME2  LCTYPE = 0x67
 )
+
+// https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/ns-sysinfoapi-system_info
+type SYSTEM_INFO struct {
+	ProcessorArchitecture     uint16
+	Reserved                  uint16
+	PageSize                  uint32
+	MinimumApplicationAddress LPCVOID
+	MaximumApplicationAddress LPCVOID
+	ActiveProcessorMask       *uint32
+	NumberOfProcessors        uint32
+	ProcessorType             uint32
+	AllocationGranularity     uint32
+	ProcessorLevel            uint16
+	ProcessorRevision         uint16
+}
