@@ -1,13 +1,17 @@
+//go:build windows
+
 package exec
 
 import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"syscall"
 )
 
 func countTask(exeName string) int {
 	cmdTimer := exec.Command("TASKLIST", "/FI", fmt.Sprintf("IMAGENAME eq %s", exeName))
+	cmdTimer.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	rtnBytes, _ := cmdTimer.Output()
 	return strings.Count(strings.ToUpper(string(rtnBytes)), fmt.Sprintf("%s", strings.ToUpper(exeName)))
 }
@@ -32,6 +36,7 @@ func TaskKill(exeName string) error {
 		cmd := exec.Command("taskkill",
 			"/IM", exeName,
 			"/F")
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 		return cmd.Run()
 	}
 	return nil
