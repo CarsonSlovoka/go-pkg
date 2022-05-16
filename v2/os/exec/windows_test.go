@@ -1,6 +1,8 @@
 package exec
 
 import (
+	"fmt"
+	"os"
 	"os/exec"
 	"testing"
 	"time"
@@ -36,12 +38,25 @@ func TestIsSingleInstance(t *testing.T) {
 	}
 }
 
+// debug運行可能會刪不掉，要變成執行檔才行
 func testListenToDeleteApp(t *testing.T) {
 	chanKill := make(chan bool)
 	chanQuit := make(chan bool)
-	go ListenToDeleteApp(chanKill, func() {
+	targetExePath := "temp.txt"
+	f, _ := os.Create(targetExePath)
+	f.Close()
+
+	listenToDelFunc, err := ListenToDelete(targetExePath) // os.Args[0]
+	if err != nil {
+		t.Fatal(err)
+	}
+	go listenToDelFunc(chanKill, func(err error) {
+		if err != nil {
+			fmt.Println(err)
+		}
 		close(chanQuit)
 	})
+
 	go func() {
 		needDelete := true
 		if needDelete {
