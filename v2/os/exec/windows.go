@@ -4,6 +4,7 @@ package exec
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"syscall"
@@ -40,4 +41,21 @@ func TaskKill(exeName string) error {
 		return cmd.Run()
 	}
 	return nil
+}
+
+// ListenToDeleteApp 如果chan接收到true，將會刪除執行檔(自己本身)
+// callbackFunc提供簡單的結束流程，不應該寫得太複雜，因為結束動作是直接打開powershell運行，
+// 因此當您的callback要花很多時間，有可能還沒跑完就刪除了
+func ListenToDeleteApp(ch chan bool, callbackFunc func()) {
+	select {
+	case killNow, _ := <-ch:
+		if killNow {
+			cmd := exec.Command("powershell", "del", os.Args[0])
+			cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+			if err := cmd.Start(); err != nil {
+				panic(err)
+			}
+			callbackFunc()
+		}
+	}
 }

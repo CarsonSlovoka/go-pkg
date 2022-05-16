@@ -35,3 +35,24 @@ func TestIsSingleInstance(t *testing.T) {
 		t.FailNow()
 	}
 }
+
+func testListenToDeleteApp(t *testing.T) {
+	chanKill := make(chan bool)
+	chanQuit := make(chan bool)
+	go ListenToDeleteApp(chanKill, func() {
+		close(chanQuit)
+	})
+	go func() {
+		needDelete := true
+		if needDelete {
+			chanKill <- true
+			return
+		}
+		close(chanQuit)
+	}()
+
+	select {
+	case <-chanQuit:
+		return
+	}
+}
