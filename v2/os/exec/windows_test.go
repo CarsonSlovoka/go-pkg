@@ -112,3 +112,12 @@ func TestListenToDeleteMultipleFile(t *testing.T) {
 		return
 	}
 }
+
+func TestCmdWithoutWindow(t *testing.T) {
+	cmd := CmdWithoutWindow("powershell", fmt.Sprintf("Get-FileHash %s -Algorithm md5 | select Hash,Path", os.Args[0]))
+	rtnBytes, err := cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(string(rtnBytes))
+}
