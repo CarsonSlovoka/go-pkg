@@ -44,28 +44,32 @@ func TaskKill(exeName string) error {
 	return nil
 }
 
-// ListenToDelete return a function that start another process by Powershell to delete the file.
-// If you want to delete the executable (self), pass os.Args[0] to filepath
-//
+// ListenToDelete Send the file path which you want to delete to the channel, and then it will start another process by Powershell to delete the file.
+// If you want to delete the executable (self), you can send os.Args[0] "ch"
+// 正常而言您不需要透過此函數來刪除檔案，僅需要`os.Remove()`即可。
+// 此函數的特色:能刪除掉自身執行檔
 // 如果您選擇的是刪除自身執行檔，那麼callbackFunc，不應該寫得太複雜，因為結束動作是直接打開powershell運行，
 // 因此當您的callback要花很多時間，有可能還沒跑完就刪除了
-func ListenToDelete(filePath string) (func(ch chan bool, callbackFunc func(error)), error) {
+func ListenToDelete(ch chan string, cbFunc func(string, error)) {
 	var err error
-	if filePath, err = filepath.Abs(filePath); err != nil {
-		return nil, err
-	}
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("filepath not found:%s", filePath)
-	}
-	return func(ch chan bool, callbackFunc func(error)) {
+	for {
 		select {
-		case killNow, _ := <-ch:
-			if killNow {
-				cmd := exec.Command("powershell", "del", filePath)
-				cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-				err = cmd.Start()
-				callbackFunc(err)
+		case filePath, isOpen := <-ch:
+			if !isOpen {
+				// fmt.Println("Stop listen")
+				return
 			}
+			if filePath, err = filepath.Abs(filePath); err != nil {
+				cbFunc(filePath, err)
+				continue
+			}
+			if _, err = os.Stat(filePath); os.IsNotExist(err) {
+				cbFunc(filePath, fmt.Errorf("filepath not found:%s", filePath))
+				continue
+			}
+			cmd := exec.Command("powershell", "del", filePath)
+			cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+			cbFunc(filePath, cmd.Start())
 		}
-	}, nil
+	}
 }

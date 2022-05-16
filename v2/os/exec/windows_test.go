@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sync"
 	"testing"
 	"time"
 )
@@ -38,36 +39,76 @@ func TestIsSingleInstance(t *testing.T) {
 	}
 }
 
-// debug運行可能會刪不掉，要變成執行檔才行
-func testListenToDeleteApp(t *testing.T) {
-	chanKill := make(chan bool)
+func TestListenToDeleteSelfExe(t *testing.T) {
+	chanRemoveFile := make(chan string)
 	chanQuit := make(chan bool)
-	targetExePath := "temp.txt"
-	f, _ := os.Create(targetExePath)
-	f.Close()
-
-	listenToDelFunc, err := ListenToDelete(targetExePath) // os.Args[0]
-	if err != nil {
-		t.Fatal(err)
-	}
-	go listenToDelFunc(chanKill, func(err error) {
+	go ListenToDelete(chanRemoveFile, func(curFile string, err error) {
+		defer close(chanQuit)
 		if err != nil {
 			fmt.Println(err)
+			return
 		}
-		close(chanQuit)
+		// fmt.Printf("remove the file successful: %s\n", curFile) // 由於我們用start去運行，因此沒有錯誤只是代表呼叫成功，但不意味已經刪除該檔案了
+		fmt.Printf("call the del command successful: %s\n", curFile)
+	})
+	chanRemoveFile <- os.Args[0]
+	select {
+	case <-chanQuit:
+		return
+	}
+}
+
+func TestListenToDeleteMultipleFile(t *testing.T) {
+	chanRemoveFile := make(chan string)
+	chanQuit := make(chan bool)
+	deleteFiles := []string{
+		"temp.txt",
+		"temp.exe",
+	}
+	for _, testFilepath := range deleteFiles {
+		f, _ := os.Create(testFilepath)
+		if err := f.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	time.Sleep(time.Second) // just let you see the file created.
+
+	wg := new(sync.WaitGroup)
+	wg.Add(len(deleteFiles))
+	go ListenToDelete(chanRemoveFile, func(curFile string, err error) {
+		defer wg.Done()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Printf("call the del command successful: %s\n", curFile)
 	})
 
 	go func() {
-		needDelete := true
-		if needDelete {
-			chanKill <- true
-			return
+		var curFile string
+		for {
+			if len(deleteFiles) == 0 {
+				close(chanRemoveFile)
+				close(chanQuit)
+				break
+			}
+			curFile, deleteFiles = deleteFiles[0], deleteFiles[1:] // pop
+			chanRemoveFile <- curFile
 		}
-		close(chanQuit)
 	}()
 
 	select {
 	case <-chanQuit:
+		wg.Wait()
+		time.Sleep(time.Second) // goland的debug貌似主程序結束，powershell的呼叫也會被中斷，所以要等待，如果是打包出去的執行檔，不需要特別加上sleep
+		for _, filePath := range []string{
+			"temp.txt",
+			"temp.exe",
+		} {
+			if _, err := os.Stat(filePath); !os.IsNotExist(err) {
+				t.Fatal("the file still exists, not deleted.")
+			}
+		}
 		return
 	}
 }
