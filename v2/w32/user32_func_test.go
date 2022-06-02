@@ -54,4 +54,13 @@ func testMessageBox(t *testing.T) {
 	_, _ = messageBox(hwndTop, "Test", "ABORT RETRY IGNORE", w32.MB_ABORTRETRYIGNORE)
 	_, _ = messageBox(hwndTop, "Test", "RETRY CANCEL", w32.MB_RETRYCANCEL)
 	_, _ = messageBox(hwndTop, "Test", "CANCEL TRY CONTINUE", w32.MB_CANCELTRYCONTINUE)
+
+	// newline
+	_, _ = messageBox(hwndTop, "Test", "row1\nrow2\nrow3", w32.MB_OK)
+
+	body := `r1
+r2
+...
+rn`
+	_, _ = messageBox(hwndTop, "Test", body, w32.MB_OK)
 }
