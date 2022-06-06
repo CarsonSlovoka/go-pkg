@@ -64,3 +64,18 @@ r2
 rn`
 	_, _ = messageBox(hwndTop, "Test", body, w32.MB_OK)
 }
+
+func testMessageBox2(t *testing.T) {
+	user32dll := w32.NewUser32DLL([]w32.ProcName{
+		w32.PNMessageBox,
+	})
+	messageBox := user32dll.MessageBox
+
+	_, _ = messageBox(0, "Test", "OK", w32.MB_OK|w32.MB_ICONSTOP|
+		w32.MB_RIGHT| // text right-justified
+		w32.MB_TOPMOST,
+	)
+	_, _ = messageBox(0, "Test", "OK", w32.MB_OK|w32.MB_ICONQUESTION)
+	_, _ = messageBox(0, "Test", "OK", w32.MB_OK|w32.MB_ICONWARNING)
+	_, _ = messageBox(0, "Test", "OK", w32.MB_OK|w32.MB_ICONINFORMATION)
+}
