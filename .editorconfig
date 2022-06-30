@@ -25,7 +25,7 @@ end_of_line = crlf
 indent_style = tab
 
 
-[*.{md, yml, yaml, json, js, css, html, gohtml, gotmpl, toml, scss, sass, xml}]
+[*.{md, yml, yaml, json, js, css, html, gohtml, gotmpl, toml, scss, sass, xml, lua}]
 indent_size = 2
 
 [*.{md, markdown, html}]
