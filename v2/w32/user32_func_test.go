@@ -29,7 +29,7 @@ func TestGetActiveWindow(t *testing.T) {
 	fmt.Println("window text Name:", winText)
 }
 
-func testMessageBox(t *testing.T) {
+func TestMessageBox(t *testing.T) {
 	user32dll := w32.NewUser32DLL([]w32.ProcName{
 		w32.PNMessageBox,
 	})
@@ -73,7 +73,8 @@ func testMessageBox2(t *testing.T) {
 
 	_, _ = messageBox(0, "Test", "OK", w32.MB_OK|w32.MB_ICONSTOP|
 		w32.MB_RIGHT| // text right-justified
-		w32.MB_TOPMOST,
+		// w32.MB_TOPMOST,
+		w32.MB_SYSTEMMODAL, // 比使用MB_TOPMOST好
 	)
 	_, _ = messageBox(0, "Test", "OK", w32.MB_OK|w32.MB_ICONQUESTION)
 	_, _ = messageBox(0, "Test", "OK", w32.MB_OK|w32.MB_ICONWARNING)
