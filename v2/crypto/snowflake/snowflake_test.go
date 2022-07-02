@@ -114,7 +114,7 @@ func TestOtherSize(t *testing.T) {
 		numNode uint8
 		numStep uint8
 	}{
-		{0, 0, 0},
+		{0, 0, 0}, // Base2: 101101111001010010100011111
 		{2, 3, 0},
 		{0, 0, 5},
 		{67108862, 26, 10}, // String: 6536855424677705728 Base2: "101101010110111100100110101111111111111111111111111100000000000"
@@ -123,8 +123,21 @@ func TestOtherSize(t *testing.T) {
 		if err != nil {
 			t.Fatal(n, err)
 		}
-		// id := n.Generate()
-		// t.Logf("%#v", id.Base2())
-		// t.Logf("String   : %#v", id.String())
+		/*
+			id := n.Generate()
+			t.Logf("%#v", id.Base2())
+			t.Logf("String   : %#v", id.String())
+		*/
+	}
+
+	n1, _ := snowflake.NewNode(0, time.Date(2022, 7, 1, 16, 10, 54, 0, time.UTC), 0, 0)
+	id2022 := n1.Generate()
+	// t.Logf("%#v", id2022.Base2()) // 101110001100011100110100010
+	n2, _ := snowflake.NewNode(0, time.Date(2008, 7, 1, 16, 10, 54, 0, time.UTC), 0, 0)
+	id2008 := n2.Generate()
+	// t.Logf("%#v", id2008.Base2()) // 110011011100000111010011011010110100010
+
+	if len(id2008.Base2()) < len(id2022.Base2()) { // 時間越早，其生成的長度也越大
+		t.Fatal()
 	}
 }
