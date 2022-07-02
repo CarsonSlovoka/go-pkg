@@ -110,7 +110,7 @@ func TestParse(t *testing.T) {
 
 func TestOtherSize(t *testing.T) {
 	for _, d := range []struct {
-		node    int64
+		psw     int64
 		numNode uint8
 		numStep uint8
 	}{
@@ -119,7 +119,7 @@ func TestOtherSize(t *testing.T) {
 		{0, 0, 5},
 		{67108862, 26, 10}, // String: 6536855424677705728 Base2: "101101010110111100100110101111111111111111111111111100000000000"
 	} {
-		n, err := snowflake.NewNode(d.node, BaseT, d.numNode, d.numStep)
+		n, err := snowflake.NewNode(d.psw, BaseT, d.numNode, d.numStep)
 		if err != nil {
 			t.Fatal(n, err)
 		}
