@@ -12,7 +12,7 @@ import (
 // [time][node][step]
 type Node struct {
 	baseTime *time.Time // 基準日
-	time     int64      // 生成的時間 與 基準日 相減的差(微秒)
+	time     int64      // 生成的時間 與 基準日 相減的差(毫秒)
 
 	node        int64 // 機器碼 (隨便您設定，有點像Token的意思)
 	numNodeBits uint8 // 機器碼有幾碼
@@ -74,11 +74,10 @@ func (n *Node) Generate() ID {
 
 	baseTime := *n.baseTime
 	now := time.Since(baseTime).Milliseconds()
-
-	if now == n.time { // 如果當前時間與結點時間相同(微秒)，用流水號來區別
+	if now == n.time { // 如果當前時間與結點時間相同(毫秒)，用流水號來區別
 		n.step = (n.step + 1) & n.maskStep
 
-		if n.step == 0 { // +1之後如果又循環回來，我們就讓時間設定到下一微秒
+		if n.step == 0 { // +1之後如果又循環回來，我們就讓時間設定到下一毫秒
 			now += 1
 			if time.Since(baseTime.Add(time.Duration(now)*time.Millisecond)) < 0 {
 				time.Sleep(time.Millisecond)
