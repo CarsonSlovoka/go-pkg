@@ -25,6 +25,9 @@ jobs:
       - name: change dir
         run: cd v2
 
+      - name: go mod tidy
+        run: go mod tidy
+
       - name: test "strings"
         run: go test ./strings
 
