@@ -26,7 +26,7 @@ jobs:
         run: cd v2
 
       - name: test "strings"
-        run: go test strings
+        run: go test ./strings
 
       - name: test "op"
-        run: go test op -v
+        run: go test ./op -v
