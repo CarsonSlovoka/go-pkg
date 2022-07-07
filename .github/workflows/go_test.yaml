@@ -4,6 +4,10 @@ on:
   push:
     branches-ignore:
       - temp
+defaults:
+  run:
+    # 指如果run的這些屬性沒有設定的時候，其預設值改為我們這裡所設定的數值
+    working-directory: ./v2
 jobs:
   test:
     strategy:
@@ -21,9 +25,6 @@ jobs:
 
       - name: Check out code into the Go module directory.
         uses: actions/checkout@v2
-
-      - name: change dir
-        run: cd v2
 
       - name: go mod tidy
         run: go mod tidy
