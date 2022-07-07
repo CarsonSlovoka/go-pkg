@@ -5,7 +5,7 @@ import (
 	. "github.com/CarsonSlovoka/go-pkg/v2/crypto/snowflake"
 )
 
-var gN *Node // global Node // 方便其他測試案例使用
+var gN *Node // global Node // 方便其他測試案例使用 (缺點是在pkg.go.dev的網站上，在片段範例之中仍然不會給出任何提示
 
 func init() {
 	var err error

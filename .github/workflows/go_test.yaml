@@ -35,5 +35,8 @@ jobs:
       - name: test "op"
         run: go test ./op -v
 
+      - name: test "embed"
+        run: go test ./embed -v
+
       # - name: test All
       #   run: go test ./...
