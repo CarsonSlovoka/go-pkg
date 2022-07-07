@@ -30,3 +30,6 @@ jobs:
 
       - name: test "op"
         run: go test ./op -v
+
+      # - name: test All
+      #   run: go test ./...

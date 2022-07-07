@@ -73,11 +73,11 @@ func TestParse(t *testing.T) {
 	}
 
 	id := n.Generate()
-	/*
-		t.Logf("org    : %#v", id)            // 398977984344064
-		t.Logf("Int64    : %#v", id.Int64())  // 398977984344064
-		t.Logf("String   : %#v", id.String()) // "398977984344064"
-		t.Logf("Base2    : %#v", id.Base2())  // "1011010101101111001001101000001111011000000000000"
+	/* 時間長度不固定這是在2022/06(time.Now())左右與2022/7/1 16:10:54(baseT)所計算出來的長度，兩者的時間差的越大，出來的數字長度就可能越長
+	t.Logf("org    : %#v", id)            // 398977984344064
+	t.Logf("Int64    : %#v", id.Int64())  // 398977984344064
+	t.Logf("String   : %#v", id.String()) // "398977984344064"
+	t.Logf("Base2    : %#v", id.Base2())  // "1011010101101111001001101000001111011000000000000"
 	*/
 
 	_ = id.Time(n.BaseTime(), n.ShiftTime())
