@@ -1,0 +1,32 @@
+# https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions
+name: Go Test
+on:
+  push:
+    branches-ignore:
+      - temp
+jobs:
+  test:
+    strategy:
+      matrix:
+        # [ubuntu-latest, macos-latest, windows-latest]
+        platform: [ windows-latest ]
+        go-version: [ 1.18.x ]
+    runs-on: ${{ matrix.platform }}
+    name: Integration tests
+    steps:
+      - name: Install Go.
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Check out code into the Go module directory.
+        uses: actions/checkout@v2
+
+      - name: change dir
+        run: cd v2
+
+      - name: test "strings"
+        run: go test strings
+
+      - name: test "op"
+        run: go test op -v
