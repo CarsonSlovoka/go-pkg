@@ -5,7 +5,8 @@ on:
     branches-ignore:
       - temp
   pull_request:
-    - temp
+    branches-ignore:
+      - temp
 defaults:
   run:
     # 指如果run的這些屬性沒有設定的時候，其預設值改為我們這裡所設定的數值
