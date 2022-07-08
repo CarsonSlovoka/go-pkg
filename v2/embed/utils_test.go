@@ -10,6 +10,7 @@ import (
 //go:embed testData
 var embedBuildBat embed0.FS
 
+// Extract the file from the embed path (src) to the output path (dst).
 func ExampleExtractFile() {
 	outputFilePath := "./output.txt"
 	if err := ExtractFile(&embedBuildBat, "testData/hello.txt", outputFilePath); err != nil {

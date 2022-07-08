@@ -62,3 +62,20 @@ func TestCompute(t *testing.T) {
 		}
 	}
 }
+
+func ExampleCompute() {
+	fmt.Println(math.Compute(3, 2, '+'))
+	fmt.Println(math.Compute("3.4", 5, '+'))
+	fmt.Println(math.Compute("3.4", "-5", '-'))
+	fmt.Println(math.Compute("-10", "5", '-'))
+	fmt.Println(math.Compute("3.4", "4", '*'))
+	fmt.Println(math.Compute("3", "1.5", '/'))
+
+	// Output:
+	// 5 <nil>
+	// 8.4 <nil>
+	// 8.4 <nil>
+	// -15 <nil>
+	// 13.6 <nil>
+	// 2 <nil>
+}

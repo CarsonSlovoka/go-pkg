@@ -5,41 +5,57 @@ import (
 	"os"
 	"os/exec"
 	"sync"
-	"testing"
 	"time"
 )
 
-func TestTaskKill(t *testing.T) {
+func ExampleTaskKill() {
 	testApp := "taskmgr.exe"                              // Task manager
 	if err := exec.Command(testApp).Start(); err != nil { // please run with admin
-		t.Fatalf(err.Error()) // The requested operation requires elevation.
+		panic(err) // The requested operation requires elevation.
 	}
 	time.Sleep(250 * time.Millisecond)
 	if err := TaskKill(testApp); err != nil {
-		t.Fatalf(err.Error())
+		panic(err)
 	}
 	if IsTaskRunning(testApp) {
-		t.Fatalf("The program was still alive.")
+		panic("The program was still alive.")
 	}
 }
 
-func TestIsSingleInstance(t *testing.T) {
+func ExampleIsTaskRunning() {
+	testApp := "taskmgr.exe"                              // Task manager
+	if err := exec.Command(testApp).Start(); err != nil { // please run with admin
+		panic(err) // The requested operation requires elevation.
+	}
+	time.Sleep(250 * time.Millisecond)
+	if err := TaskKill(testApp); err != nil {
+		panic(err)
+	}
+	if IsTaskRunning(testApp) {
+		panic("The program was still alive.")
+	}
+}
+
+func ExampleIsSingleInstance() {
 	testApp := "notepad.exe"
 	if err := exec.Command(testApp).Start(); err != nil {
-		t.Fatalf(err.Error())
+		panic(err)
 	}
 	if !IsSingleInstance(testApp) {
-		t.FailNow()
+		panic("假設notepad的應用程式對象只有一個，那麼不該有錯誤")
 	}
+
+	// 建立第二個notepad
 	if err := exec.Command(testApp).Start(); err != nil { // run again
-		t.Fatalf(err.Error())
+		panic(err)
 	}
 	if IsSingleInstance(testApp) {
-		t.FailNow()
+		panic("此時有兩個對象，所以InSingleInstance應該為false")
 	}
 }
 
-func TestListenToDeleteSelfExe(t *testing.T) {
+// Delete Self Exe
+func ExampleListenToDelete() {
 	chanRemoveFile := make(chan string)
 	chanQuit := make(chan bool)
 	go ListenToDelete(chanRemoveFile, func(curFile string, err error) {
@@ -58,7 +74,7 @@ func TestListenToDeleteSelfExe(t *testing.T) {
 	}
 }
 
-func TestListenToDeleteMultipleFile(t *testing.T) {
+func ExampleListenToDelete_multiple() {
 	chanRemoveFile := make(chan string)
 	chanQuit := make(chan bool)
 	deleteFiles := []string{
@@ -68,7 +84,7 @@ func TestListenToDeleteMultipleFile(t *testing.T) {
 	for _, testFilepath := range deleteFiles {
 		f, _ := os.Create(testFilepath)
 		if err := f.Close(); err != nil {
-			t.Fatal(err)
+			panic(err)
 		}
 	}
 	time.Sleep(time.Second) // just let you see the file created.
@@ -106,18 +122,18 @@ func TestListenToDeleteMultipleFile(t *testing.T) {
 			"temp.exe",
 		} {
 			if _, err := os.Stat(filePath); !os.IsNotExist(err) {
-				t.Fatal("the file still exists, not deleted.")
+				panic("the file still exists, not deleted. " + err.Error())
 			}
 		}
 		return
 	}
 }
 
-func TestCmdWithoutWindow(t *testing.T) {
+func ExampleCmdWithoutWindow() {
 	cmd := CmdWithoutWindow("powershell", fmt.Sprintf("Get-FileHash %s -Algorithm md5 | select Hash,Path", os.Args[0]))
 	rtnBytes, err := cmd.Output()
 	if err != nil {
-		t.Fatal(err)
+		panic(err)
 	}
 	fmt.Println(string(rtnBytes))
 }

@@ -2,9 +2,11 @@ package compare_test
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/CarsonSlovoka/go-pkg/v2/tpl/funcs/compare"
 	htmlTemplate "html/template"
 	"testing"
+	"text/template"
 )
 
 func TestCompare(t *testing.T) {
@@ -72,4 +74,23 @@ func TestCompare(t *testing.T) {
 			}
 		}
 	}
+}
+
+func ExampleCompare() {
+	t, err := new(template.Template).
+		Funcs(map[string]any{"default": compare.Default}).
+		Parse(`{{ .Data | default "myDefault" }}`)
+	if err != nil {
+		panic(err)
+	}
+	buffer := bytes.NewBuffer(make([]byte, 0))
+	_ = t.Execute(buffer, map[string]string{"Data": "Hello World"})
+	fmt.Println(buffer)
+
+	buffer.Truncate(0) // clear buffer
+	_ = t.Execute(buffer, nil)
+	fmt.Println(buffer)
+	// Output:
+	// Hello World
+	// myDefault
 }

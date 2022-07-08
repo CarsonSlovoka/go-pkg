@@ -1,6 +1,7 @@
 package testing
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 )
@@ -18,6 +19,16 @@ func TestMustPanic(t *testing.T) {
 	if !isPanic || reason != "should panic" {
 		t.Fatalf("should panic")
 	}
+}
+
+// If you know that you will get a panic, then you can call this function that will do recover.
+func ExampleMustPanic() {
+	MustPanic(func() {
+		panic("raise a panic")
+	})
+	fmt.Println("I can run in here")
+	// Output:
+	// I can run in here
 }
 
 func TestPanicFunc(t *testing.T) {
@@ -54,4 +65,28 @@ func TestPanicFunc(t *testing.T) {
 			t.Fatalf("%d", idx)
 		}
 	}
+}
+
+func ExampleTestPanic() {
+	// example1
+	reason, isPanic := TestPanic(func() {
+		panic("invalid memory address")
+	})
+	fmt.Printf("%v | %v\n", reason, isPanic)
+
+	// example2
+	reason, isPanic = TestPanic(func() {
+		panic(errors.New("reason type: error"))
+	})
+	fmt.Printf("%v | %v\n", reason.(error).Error(), isPanic)
+
+	// example3
+	reason, isPanic = TestPanic(func() {
+		_ = fmt.Sprintln("hello world")
+	})
+	fmt.Printf("%v | %v\n", reason, isPanic)
+	// Output:
+	// invalid memory address | true
+	// reason type: error | true
+	// <nil> | false
 }

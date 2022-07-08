@@ -3,10 +3,9 @@ package w32_test
 import (
 	"fmt"
 	"github.com/CarsonSlovoka/go-pkg/v2/w32"
-	"testing"
 )
 
-func TestGetActiveWindow(t *testing.T) {
+func ExampleUser32DLL_GetWindowText() {
 	user32dll := w32.NewUser32DLL([]w32.ProcName{
 		w32.PNGetForegroundWindow,
 		w32.PNGetClassName,
@@ -18,18 +17,18 @@ func TestGetActiveWindow(t *testing.T) {
 
 	clsName, err := user32dll.GetClassName(curHwnd)
 	if err != nil {
-		t.Fatal(err)
+		panic(err)
 	}
 	fmt.Println("window class Name:", clsName)
 
 	winText, err := user32dll.GetWindowText(curHwnd)
 	if err != nil {
-		t.Fatal(err)
+		panic(err)
 	}
 	fmt.Println("window text Name:", winText)
 }
 
-func TestMessageBox(t *testing.T) {
+func ExampleUser32DLL_MessageBox() {
 	user32dll := w32.NewUser32DLL([]w32.ProcName{
 		w32.PNMessageBox,
 	})
@@ -63,14 +62,8 @@ r2
 ...
 rn`
 	_, _ = messageBox(hwndTop, "Test", body, w32.MB_OK)
-}
 
-func testMessageBox2(t *testing.T) {
-	user32dll := w32.NewUser32DLL([]w32.ProcName{
-		w32.PNMessageBox,
-	})
-	messageBox := user32dll.MessageBox
-
+	// Icon
 	_, _ = messageBox(0, "Test", "OK", w32.MB_OK|w32.MB_ICONSTOP|
 		w32.MB_RIGHT| // text right-justified
 		// w32.MB_TOPMOST,
@@ -79,4 +72,5 @@ func testMessageBox2(t *testing.T) {
 	_, _ = messageBox(0, "Test", "OK", w32.MB_OK|w32.MB_ICONQUESTION)
 	_, _ = messageBox(0, "Test", "OK", w32.MB_OK|w32.MB_ICONWARNING)
 	_, _ = messageBox(0, "Test", "OK", w32.MB_OK|w32.MB_ICONINFORMATION)
+	// Output
 }

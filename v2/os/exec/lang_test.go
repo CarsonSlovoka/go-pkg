@@ -2,10 +2,9 @@ package exec
 
 import (
 	"fmt"
-	"testing"
 )
 
-func TestGetLocalLangLoc(t *testing.T) {
+func ExampleGetLocalLangLoc() {
 	lang, loc := GetLocalLangLoc("en", "US")
 	fmt.Println(lang, loc)
 }

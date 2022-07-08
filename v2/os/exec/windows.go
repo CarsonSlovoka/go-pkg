@@ -18,6 +18,8 @@ func countTask(exeName string) int {
 	return strings.Count(strings.ToUpper(string(rtnBytes)), fmt.Sprintf("%s", strings.ToUpper(exeName)))
 }
 
+// Deprecated: I do not recommend that you use this method. Use "CreateMutex" instead, see below,
+// https://github.com/CarsonSlovoka/go-pkg/blob/4b6ee040d9e5d9831740d20918e992a260594e80/v2/w32/kernel32_func_test.go#L9-L35
 func IsSingleInstance(curExeName string) bool {
 	if countTask(curExeName) > 1 { // 當前啟動的程式會佔用一個，所以要大於1個才是真的有重複
 		return false

@@ -1,3 +1,5 @@
+// 目前主要都是針對樣板(text/template, html/template)所設計，也就是對string的類型進行四則運算
+
 package math
 
 import (

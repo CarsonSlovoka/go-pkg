@@ -1,6 +1,9 @@
 package slices
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 type testData struct {
 	actual   any
@@ -23,6 +26,18 @@ func TestIndex(t *testing.T) {
 	)
 }
 
+func ExampleIndex() {
+	fmt.Println(Index([]string{"A", "B", "C"}, "B"))
+	fmt.Println(Index([]int{1, 3, 5, 7}, 7))
+
+	// slice為空，必定回傳-1
+	fmt.Println(Index([]int{}, 0))
+	// Output:
+	// 1
+	// 3
+	// -1
+}
+
 func TestContains(t *testing.T) {
 	test(t, []testData{
 		{Contains([]string{"A", "B", "C"}, "B"), true},
@@ -31,6 +46,20 @@ func TestContains(t *testing.T) {
 		{Contains([]int{1, 3, 5, 7}, 9), false},
 		{Contains([]int{}, 0), false}},
 	)
+}
+
+func ExampleContains() {
+	fmt.Println(Contains([]string{"A", "B", "C"}, "B"))
+	fmt.Println(Contains([]string{"A", "B", "C"}, "Z"))
+	fmt.Println(Contains([]int{1, 3, 5, 7}, 5))
+	fmt.Println(Contains([]int{1, 3, 5, 7}, 9))
+	fmt.Println(Contains([]int{}, 0))
+	// Output:
+	// true
+	// false
+	// true
+	// false
+	// false
 }
 
 func TestAny(t *testing.T) {
@@ -44,6 +73,22 @@ func TestAny(t *testing.T) {
 	})
 }
 
+func ExampleAny() {
+	fmt.Println(Any([]string{"AA", "B", "C"}, "AA", "C"))
+	fmt.Println(Any([]string{"AA", "B", "C"}, "AK", "C"))
+	fmt.Println(Any([]string{"AA", "B", "C"}, []string{"Z", "D"}...))
+	fmt.Println(Any([]int{1, 2, 3}, []int{2, 8, 9}...))
+	fmt.Println(Any([]int{1, 2, 3}, 5, 7, 9))
+	fmt.Println(Any([]int{1, 2, 3}, 3))
+	// Output:
+	// true
+	// true
+	// false
+	// true
+	// false
+	// true
+}
+
 func TestAll(t *testing.T) {
 	test(t, []testData{
 		{All([]string{"AA", "B", "C"}, "C"), true},
@@ -53,7 +98,33 @@ func TestAll(t *testing.T) {
 		{All([]int{1, 3, 5}, 3), true},
 		{All([]int{1, 3, 5}, 2, 3), false},
 		{All([]int{1, 3, 5}, 1, 5), true},
-		{All([]int{}, 0), false},          // slice為空必定不相等
+		{All([]int{}, 0), false},          // slice為空必定為false
 		{All([]int{}, []int{}...), false}, // 此外檢驗空資料是否於某slice也視為false
 	})
+}
+
+func ExampleAll() {
+	fmt.Println(All([]string{"AA", "B", "C"}, "C"))
+	fmt.Println(All([]string{"AA", "B", "C"}, "AA", "C"))
+	fmt.Println(All([]string{"AA", "B", "C"}, "AK", "C"))
+	fmt.Println(All([]string{"AA", "B", "C"}, []string{"B", "C"}...))
+	fmt.Println(All([]int{1, 3, 5}, 3))
+	fmt.Println(All([]int{1, 3, 5}, 2, 3))
+	fmt.Println(All([]int{1, 3, 5}, 1, 5))
+
+	// slice為空必定為false
+	fmt.Println(All([]int{}, 0))
+
+	// 此外檢驗空資料是否於某slice也視為false
+	fmt.Println(All([]int{}, []int{}...))
+	// Output:
+	// true
+	// true
+	// false
+	// true
+	// true
+	// false
+	// true
+	// false
+	// false
 }
