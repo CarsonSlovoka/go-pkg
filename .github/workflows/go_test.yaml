@@ -31,14 +31,14 @@ jobs:
       - name: go mod tidy
         run: go mod tidy
 
-      - name: test "strings"
-        run: go test ./strings
+      #- name: test "strings"
+      #  run: go test ./strings
 
-      - name: test "op"
-        run: go test ./op -v
+      #- name: test "op"
+      #  run: go test ./op -v
 
-      - name: test "embed"
-        run: go test ./embed -v
+      #- name: test "embed"
+      #  run: go test ./embed -v
 
-      # - name: test All
-      #   run: go test ./...
+      - name: test All
+          run: go test ./...
