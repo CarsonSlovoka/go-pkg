@@ -1,0 +1,12 @@
+<head>
+{{template "head.gohtml" .}}
+{{block "head" .}}
+{{end}}
+</head>
+
+{{template "navbar.gohtml" . -}}
+
+{{block "body" . -}}
+{{end -}}
+
+{{template "footer.gohtml" . -}}

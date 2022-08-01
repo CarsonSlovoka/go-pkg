@@ -13,7 +13,6 @@ func ExampleCollectFiles() {
 		panic(err)
 	}
 	fmt.Println(len(fileList))
-	fmt.Printf("%v", fileList)
 	// Output:
 	// 5
 }
