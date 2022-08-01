@@ -23,22 +23,26 @@ var testFS embed.FS
 
 // 蒐集embed中特定資料夾路徑其包含的所有檔案路徑
 func ExampleCollectFilesFromFS() {
-	fileList, err := filepath.CollectFilesFromFS(testFS, "testdata", []string{".md"}, true)
+	fileList, err := filepath.CollectFilesFromFS(testFS, []string{"testdata"}, []string{".md"}, true)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(len(fileList))
 
-	fileList, err = filepath.CollectFilesFromFS(testFS, "testdata", []string{".md"}, false)
+	fileList, err = filepath.CollectFilesFromFS(testFS, []string{"testdata"}, []string{".md"}, false)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(len(fileList))
 
-	fileList, _ = filepath.CollectFilesFromFS(testFS, "testdata/sub", nil, true)
+	fileList, _ = filepath.CollectFilesFromFS(testFS, []string{"testdata/sub"}, nil, true)
+	fmt.Println(len(fileList))
+
+	fileList, _ = filepath.CollectFilesFromFS(testFS, []string{"testdata/sub", "testdata/sub2"}, nil, false)
 	fmt.Println(len(fileList))
 	// Output:
 	// 4
 	// 2
 	// 4
+	// 6
 }
