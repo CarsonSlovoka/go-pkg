@@ -128,3 +128,14 @@ func ExampleAll() {
 	// false
 	// false
 }
+
+func ExampleChunkBy() {
+	src := []int{1, 2, 3, 4, 5}
+	fmt.Println(ChunkBy(src, 5))
+	fmt.Println(ChunkBy(src, 2))
+	fmt.Println(ChunkBy([]string{"a", "b", "c"}, 2))
+	// Output:
+	// [[1 2 3 4 5]]
+	// [[1 2] [3 4] [5]]
+	// [[a b] [c]]
+}

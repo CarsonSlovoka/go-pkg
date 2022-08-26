@@ -38,3 +38,11 @@ func All[E comparable](s []E, e ...E) bool {
 	}
 	return true
 }
+
+// ChunkBy slice分組
+func ChunkBy[T any](items []T, size int) (chunks [][]T) {
+	for size < len(items) {
+		items, chunks = items[size:], append(chunks, items[0:size])
+	}
+	return append(chunks, items)
+}
