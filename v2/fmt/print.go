@@ -62,3 +62,11 @@ func (c *ColorPrinter) Println(a ...any) {
 	s[len(a)+1] = c.suffix
 	_, _ = fmt.Fprintln(os.Stdout, s...)
 }
+
+func (c *ColorPrinter) Printf(format string, a ...any) {
+	_, _ = fmt.Fprintf(os.Stdout, c.prefix+format+c.suffix, a...)
+}
+
+func (c *ColorPrinter) Errorf(format string, a ...any) error {
+	return fmt.Errorf(c.prefix+format+c.suffix, a...)
+}
