@@ -2,6 +2,7 @@ package fmt
 
 import (
 	"fmt"
+	"io"
 	"os"
 )
 
@@ -73,8 +74,22 @@ func (c *ColorPrinter) Println(a ...any) {
 	_, _ = fmt.Fprintln(os.Stdout, s...)
 }
 
+func (c *ColorPrinter) Fprintln(w io.Writer, a ...any) (n int, err error) {
+	s := c.addFix(a)
+	return fmt.Fprintln(w, s...)
+}
+
+func (c *ColorPrinter) Fprint(w io.Writer, a ...any) (n int, err error) {
+	s := c.addFix(a)
+	return fmt.Fprint(w, s...)
+}
+
 func (c *ColorPrinter) Printf(format string, a ...any) {
 	_, _ = fmt.Fprintf(os.Stdout, c.prefix+format+c.suffix, a...)
+}
+
+func (c *ColorPrinter) Fprintf(w io.Writer, format string, a ...any) (n int, err error) {
+	return fmt.Fprintf(w, c.prefix+format+c.suffix, a...)
 }
 
 func (c *ColorPrinter) Errorf(format string, a ...any) error {

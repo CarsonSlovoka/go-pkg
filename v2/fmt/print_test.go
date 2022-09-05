@@ -4,6 +4,7 @@ import (
 	"fmt"
 	. "github.com/CarsonSlovoka/go-pkg/v2/fmt"
 	"log"
+	"os"
 	"testing"
 )
 
@@ -51,10 +52,33 @@ func ExampleColorPrinter() {
 	// Output:
 }
 
-func ExampleSprintln() {
+func ExampleColorPrinter_Sprintln() {
 	p := NewColorPrinter(0, 0, 0, 255, 255, 0)
 	log.Print(p.Sprintln(123, "Hi", "quote"))
 	p.SetBGColor(0, 255, 0)
 	log.Println(p.Sprintln(123))
+	// Output:
+}
+
+func ExampleColorPrinter_Fprintf() {
+	p := NewColorPrinter(0, 0, 0, 255, 255, 0)
+	_, _ = p.Fprintf(os.Stderr, "%d %s %q\n", 123, "Hi", "quote")
+	_, _ = p.Fprintf(os.Stderr, "%d %s %q", 123, "Hi", "quote")
+	// Output:
+}
+
+func ExampleColorPrinter_Fprintln() {
+	p := NewColorPrinter(0, 0, 0, 255, 255, 0)
+	_, _ = p.Fprintln(os.Stderr, 123, "Hi")
+	_, _ = p.Fprintln(os.Stderr, 123, "Hi")
+	_, _ = p.Fprintln(os.Stderr, "Hi")
+	// Output:
+}
+
+func ExampleColorPrinter_Fprint() {
+	p := NewColorPrinter(0, 0, 0, 255, 255, 0)
+	_, _ = p.Fprint(os.Stderr, 123, "Hi")
+	_, _ = p.Fprint(os.Stderr, 123, "Hi\n")
+	_, _ = p.Fprint(os.Stderr, "abc")
 	// Output:
 }
