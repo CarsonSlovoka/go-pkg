@@ -50,3 +50,11 @@ func ExampleColorPrinter() {
 	log.Println(p.Sprintf("%d %s %q", 123, "Hi", "quote"))
 	// Output:
 }
+
+func ExampleSprintln() {
+	p := NewColorPrinter(0, 0, 0, 255, 255, 0)
+	log.Print(p.Sprintln(123, "Hi", "quote"))
+	p.SetBGColor(0, 255, 0)
+	log.Println(p.Sprintln(123))
+	// Output:
+}

@@ -53,13 +53,23 @@ func (c *ColorPrinter) Sprintf(format string, a ...any) string {
 	return c.prefix + fmt.Sprintf(format, a...) + c.suffix
 }
 
-func (c *ColorPrinter) Println(a ...any) {
+func (c *ColorPrinter) addFix(a ...any) []any {
 	s := make([]any, len(a)+2)
 	s[0] = c.prefix
 	for i, e := range a {
 		s[i+1] = e
 	}
 	s[len(a)+1] = c.suffix
+	return s
+}
+
+func (c *ColorPrinter) Sprintln(a ...any) string {
+	s := c.addFix(a)
+	return fmt.Sprintln(s...)
+}
+
+func (c *ColorPrinter) Println(a ...any) {
+	s := c.addFix(a)
 	_, _ = fmt.Fprintln(os.Stdout, s...)
 }
 
