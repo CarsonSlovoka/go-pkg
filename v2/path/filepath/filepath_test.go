@@ -13,8 +13,16 @@ func ExampleCollectFiles() {
 		panic(err)
 	}
 	fmt.Println(len(fileList))
+
+	fileList, err = filepath.CollectFiles("./testdata", nil)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(len(fileList))
+
 	// Output:
 	// 5
+	// 9
 }
 
 //go:embed testdata/*

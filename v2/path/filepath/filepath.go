@@ -17,8 +17,10 @@ func CollectFiles(dir string, excludeList []string) (fileList []string, err erro
 			return nil
 		}
 
-		if regexp.MustCompile(strings.Join(excludeList, "|")).Match([]byte(path)) {
-			return nil
+		if excludeList != nil {
+			if regexp.MustCompile(strings.Join(excludeList, "|")).Match([]byte(path)) {
+				return nil
+			}
 		}
 
 		fileList = append(fileList, path)
