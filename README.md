@@ -39,3 +39,16 @@ go標準庫的補強 (不使用第三方套件)
 > https://pkg.go.dev/github.com/CarsonSlovoka/go-pkg/v2@v2.1.0
 
 如果不存在，那麼他會出現一個按鈕，讓您點擊，之後就會去生成了
+
+----
+
+當您剛發布的時候，有可能手動請求也還是出不來，這時候可以至[Open Source Insights](https://deps.dev/)，可參考下方連結
+
+> https://deps.dev/go/github.com%2Fcarsonslovoka%2Fgo-pkg%2Fv2/
+
+進入之後選擇您最新的版本，如果還在準備中會看到以下訊息
+
+> Warning This is a recently released version, so we are still processing the data. Please check back later, or go to the latest version we have information for vx.x.x
+
+所以要過一段時間之後才可以被抓到
+
