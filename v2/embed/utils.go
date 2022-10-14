@@ -10,6 +10,7 @@ func ExtractFile(fs *embed.FS, srcPath, dstPath string) error {
 	return PromiseExtractFile(fs, srcPath, dstPath, nil, nil)
 }
 
+// PromiseExtractFile 與ExtractFile類似，但可以在成功或者失敗的時候在做某些事情
 func PromiseExtractFile(fs *embed.FS, srcPath, dstPath string,
 	successFunc func(dst string) error,
 	errFunc func(err error) error,
