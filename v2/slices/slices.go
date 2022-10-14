@@ -41,6 +41,9 @@ func All[E comparable](s []E, e ...E) bool {
 
 // ChunkBy slice分組
 func ChunkBy[T any](items []T, size int) (chunks [][]T) {
+	if size <= 0 {
+		panic("The size must be greater than zero")
+	}
 	for size < len(items) {
 		items, chunks = items[size:], append(chunks, items[0:size])
 	}

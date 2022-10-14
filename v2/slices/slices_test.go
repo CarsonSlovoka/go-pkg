@@ -129,13 +129,39 @@ func ExampleAll() {
 	// false
 }
 
+func TestChunkBy_panic(t *testing.T) {
+	defer func() {
+		err := recover()
+		if err == nil {
+			t.Fatal("should panic")
+		}
+	}()
+	ChunkBy([]int{1, 2, 3, 4, 5}, 0)
+}
+
+func ExampleChunkBy_panic() {
+	defer func() {
+		err := recover()
+		if err == nil {
+			panic("should panic")
+		}
+		fmt.Printf("error: %s\n", err)
+	}()
+	ChunkBy([]int{1, 2, 3, 4, 5}, 0)
+
+	// Output:
+	// error: The size must be greater than zero
+}
+
 func ExampleChunkBy() {
 	src := []int{1, 2, 3, 4, 5}
 	fmt.Println(ChunkBy(src, 5))
 	fmt.Println(ChunkBy(src, 2))
+	fmt.Println(ChunkBy(src, 1))
 	fmt.Println(ChunkBy([]string{"a", "b", "c"}, 2))
 	// Output:
 	// [[1 2 3 4 5]]
 	// [[1 2] [3 4] [5]]
+	// [[1] [2] [3] [4] [5]]
 	// [[a b] [c]]
 }
