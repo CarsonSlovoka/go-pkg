@@ -7,9 +7,11 @@ import "syscall"
 type DllName string
 
 const (
-	DN_USER32   DllName = "User32.dll"
-	DN_KERNEL32 DllName = "Kernel32.dll"
-	DN_NTDLL    DllName = "ntdll.dll"
+	DNUser32   DllName = "User32.dll"
+	DNKernel32 DllName = "Kernel32.dll"
+	DNNtdll    DllName = "ntdll.dll"
+	DNGdi32    DllName = "Gdi32.dll"
+	DNShell32  DllName = "Shell32.dll"
 )
 
 type ProcName string

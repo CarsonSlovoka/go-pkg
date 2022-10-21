@@ -3,17 +3,25 @@
 package w32
 
 import (
+	"fmt"
 	"syscall"
 	"unsafe"
 )
 
 const (
-	PNFindWindow          ProcName = "FindWindow"
+	PNFindWindow          ProcName = "FindWindowW"
+	PNFindWindowEx        ProcName = "FindWindowExW"
 	PNGetForegroundWindow ProcName = "GetForegroundWindow"
 	PNGetClassName        ProcName = "GetClassNameW"
 	PNGetWindowText       ProcName = "GetWindowTextW"
 	PNMessageBox          ProcName = "MessageBoxW"
 	PNGetSystemMetrics    ProcName = "GetSystemMetrics"
+	PNLoadIcon            ProcName = "LoadIconW"
+	PNGetDC               ProcName = "GetDC"
+	PNReleaseDC           ProcName = "ReleaseDC"
+	PNDrawIcon            ProcName = "DrawIcon"
+	PNPostMessage         ProcName = "PostMessageW"
+	PNSendMessage         ProcName = "SendMessageW"
 )
 
 type User32DLL struct {
@@ -21,20 +29,39 @@ type User32DLL struct {
 }
 
 func NewUser32DLL(procList []ProcName) *User32DLL {
-	dll := newDll(DN_USER32, procList)
+	dll := newDll(DNUser32, procList)
 	// dll.mustProc = ...
 	return &User32DLL{dll}
 }
 
+// FindWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-findwindoww
 func (dll *User32DLL) FindWindow(className, windowName string) (hwnd uintptr, err error) {
 	proc := dll.mustProc(PNFindWindow)
-	lpClassName, _ := syscall.UTF16PtrFromString(className)
-	lpWindowName, _ := syscall.UTF16PtrFromString(windowName)
-	hwnd, _, err = proc.Call(
-		uintptr(unsafe.Pointer(lpClassName)),
-		uintptr(unsafe.Pointer(lpWindowName)),
-		0)
-	return
+	hwnd, _, err = syscall.SyscallN(proc.Addr(),
+		StrToLPCWSTR(className),
+		StrToLPCWSTR(windowName),
+	)
+	if hwnd == 0 {
+		return 0, lastError("FindWindow")
+	}
+	return hwnd, nil
+}
+
+// FindWindowEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-findwindowexw
+func (dll *User32DLL) FindWindowEx(hWndParent, hWndChildAfter uintptr, className, windowName string) (hwnd uintptr, err error) {
+	proc := dll.mustProc(PNFindWindowEx)
+	// lpClassName, _ := syscall.UTF16PtrFromString(className)
+	// lpWindowName, _ := syscall.UTF16PtrFromString(windowName)
+	hwnd, _, err = syscall.SyscallN(proc.Addr(),
+		hWndParent,
+		hWndChildAfter,
+		StrToLPCWSTR(className), // uintptr(unsafe.Pointer(lpClassName)) // 這樣其實也可以，不過如果是NULL就會有問題，要給0
+		StrToLPCWSTR(windowName),
+	)
+	if hwnd == 0 {
+		return 0, lastError("FindWindowEx")
+	}
+	return hwnd, nil
 }
 
 // GetForegroundWindow User32.dll 此函數可以獲得當前窗口的HWND
@@ -130,4 +157,76 @@ func (dll *User32DLL) GetSystemMetrics(targetIdx int) int {
 	proc := dll.mustProc(PNGetSystemMetrics)
 	r0, _, _ := syscall.SyscallN(proc.Addr(), uintptr(targetIdx))
 	return int(r0)
+}
+
+// LoadIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadiconw
+func (dll *User32DLL) LoadIcon(hInstance uintptr, lpIconName *uint16) (hIcon uintptr, err error) {
+	proc := dll.mustProc(PNLoadIcon)
+	hwnd, _, _ := syscall.SyscallN(proc.Addr(),
+		hInstance,
+		uintptr(unsafe.Pointer(lpIconName)),
+	)
+
+	if hwnd == 0 {
+		return 0, lastError("LoadIcon")
+	}
+	return hwnd, nil
+}
+
+// GetDC LoadIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getdc
+func (dll *User32DLL) GetDC(hwnd uintptr) uintptr {
+	proc := dll.mustProc(PNGetDC)
+	hdc, _, _ := syscall.SyscallN(proc.Addr(),
+		hwnd,
+	)
+	return hdc
+}
+
+// ReleaseDC https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-releasedc
+// 返回值0表示沒有被釋放, 1表示釋放成功
+func (dll *User32DLL) ReleaseDC(hwnd, hdc uintptr) error {
+	proc := dll.mustProc(PNReleaseDC)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		hwnd,
+		hdc,
+	)
+	if int(r1) == 0 {
+		return fmt.Errorf("ERROR: ReleaseDC")
+	}
+	return nil
+}
+
+// DrawIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-drawicon
+func (dll *User32DLL) DrawIcon(hdc uintptr, x, y int, hicon uintptr) error {
+	proc := dll.mustProc(PNDrawIcon)
+	hwnd, _, _ := syscall.SyscallN(proc.Addr(),
+		hdc,
+		uintptr(x),
+		uintptr(y),
+		hicon,
+	)
+
+	if hwnd == 0 {
+		return lastError("DrawIcon")
+	}
+	return nil
+}
+
+// PostMessage https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage
+func (dll *User32DLL) PostMessage(hwnd uintptr, wmMsgID int, wParam, lParam uintptr) (r1, r2 uintptr, err error) {
+	proc := dll.mustProc(PNPostMessage)
+	return syscall.SyscallN(proc.Addr(), hwnd, uintptr(wmMsgID), wParam, lParam)
+	/*
+		if err != syscall.Errno(0x0) {
+			return err
+		}
+		return nil
+	*/
+}
+
+// SendMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendmessage
+// 注意，他會等待回應，會造成程式當掉的錯覺 https://social.msdn.microsoft.com/Forums/en-US/6900f74f-6ece-47da-88fc-f9c8bcd40206/sendmessage-api-slow?forum=wpf
+func (dll *User32DLL) SendMessage(hwnd uintptr, wmMsgID int, wParam, lParam uintptr) (r1, r2 uintptr, err error) {
+	proc := dll.mustProc(PNSendMessage)
+	return syscall.SyscallN(proc.Addr(), hwnd, uintptr(wmMsgID), wParam, lParam)
 }

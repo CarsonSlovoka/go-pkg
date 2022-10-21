@@ -16,7 +16,7 @@ type NtDLL struct {
 }
 
 func NewNtDLL(procList []ProcName) *NtDLL {
-	dll := newDll(DN_NTDLL, procList)
+	dll := newDll(DNNtdll, procList)
 	return &NtDLL{dll}
 }
 

@@ -7,10 +7,10 @@ import (
 )
 
 func TestCreateMutex(t *testing.T) {
-	kernel32dll := w32.NewKernel32DLL([]w32.ProcName{
+	kernel32dll := w32.NewKernel32DLL(
 		w32.PNCreateMutex,
 		w32.PNCloseHandle,
-	})
+	)
 	handle, err := kernel32dll.CreateMutex("hello world")
 	if err != nil {
 		t.Fatal(err)

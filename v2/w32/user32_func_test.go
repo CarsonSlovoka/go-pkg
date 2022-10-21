@@ -3,6 +3,7 @@ package w32_test
 import (
 	"fmt"
 	"github.com/CarsonSlovoka/go-pkg/v2/w32"
+	"log"
 )
 
 func ExampleUser32DLL_GetWindowText() {
@@ -73,4 +74,131 @@ rn`
 	_, _ = messageBox(0, "Test", "OK", w32.MB_OK|w32.MB_ICONWARNING)
 	_, _ = messageBox(0, "Test", "OK", w32.MB_OK|w32.MB_ICONINFORMATION)
 	// Output
+}
+
+// 抓取icon畫在notepad應用程式上(如果要執行，請確保您有運行nodepad.exe)
+// https://learn.microsoft.com/en-us/windows/win32/menurc/using-icons#creating-an-icon
+func ExampleUser32DLL_DrawIcon() {
+	user32dll := w32.NewUser32DLL([]w32.ProcName{
+		w32.PNLoadIcon,
+		w32.PNDrawIcon,
+		w32.PNGetDC,
+		w32.PNFindWindow,
+
+		w32.PNSendMessage,
+		w32.PNFindWindow,
+
+		w32.PNReleaseDC,
+	})
+
+	// 獲取HICON{question, chrome}
+	var hIconQuestion, hIconChrome uintptr
+	{
+		var err error
+		// 取得系統圖標question
+		hIconQuestion, err = user32dll.LoadIcon(0, w32.MakeIntResource(w32.IDI_QUESTION))
+		if err != nil {
+			log.Println("系統圖標: QUESTION 找不到")
+			return
+		}
+
+		// 取得chrome的圖標
+		hwndChrome, err := user32dll.FindWindow("Chrome_WidgetWin_1", "")
+		if err != nil {
+			log.Println("找不到chrome窗口")
+			return
+		}
+
+		hIconChrome, _, _ = user32dll.SendMessage(hwndChrome, w32.WM_GETICON, w32.ICON_SMALL, 0)
+		if hIconChrome == 0 {
+			log.Println("chrome圖標獲取失敗")
+
+			// 嘗試使用LoadIcon函數取得
+			hIconChrome, _ = user32dll.LoadIcon(hwndChrome, w32.MakeIntResource(w32.IDI_APPLICATION))
+			if hIconChrome == 0 {
+				// Alternative method. Use OS default icon
+				hIconChrome, _ = user32dll.LoadIcon(0, w32.MakeIntResource(w32.IDI_APPLICATION))
+			}
+		}
+	}
+
+	// 建立HDC
+	var curHDC uintptr
+	{
+		// 獲取notepad的hdc對象
+		hwndNotepad, err := user32dll.FindWindow("Notepad", "")
+		if err != nil {
+			log.Println("找不到Notepad窗口")
+			return
+		}
+		curHDC = user32dll.GetDC(hwndNotepad)
+
+		defer func() {
+			if curHDC != 0 {
+				if err = user32dll.ReleaseDC(hwndNotepad, curHDC); err != nil {
+					log.Fatal(err)
+				}
+			}
+		}()
+	}
+
+	// 將圖標輸出
+	{
+		for _, d := range []struct {
+			x     int // 要畫在哪一個位置
+			y     int
+			hIcon uintptr
+		}{
+			{50, 100, hIconQuestion},
+			{50, 200, hIconQuestion},
+			{50, 300, hIconChrome},
+		} {
+			if err := user32dll.DrawIcon(curHDC, d.x, d.y, d.hIcon); err != nil {
+				panic(err)
+			}
+		}
+	}
+
+	// Output:
+}
+
+func ExampleUser32DLL_PostMessage() {
+	user32dll := w32.NewUser32DLL([]w32.ProcName{
+		w32.PNPostMessage,
+	})
+	if _, _, err := user32dll.PostMessage(uintptr(w32.HWND_BROADCAST), w32.WM_FONTCHANGE, 0, 0); err != nil {
+		panic(err)
+	}
+}
+
+func ExampleUser32DLL_FindWindow() {
+	user32dll := w32.NewUser32DLL([]w32.ProcName{
+		w32.PNFindWindow,
+	})
+
+	// Chrome
+	// "Chrome_WidgetWin_1" You can find this information from Spy++ tool
+	hwnd, _ := user32dll.FindWindow("Chrome_WidgetWin_1", "")
+	log.Println(hwnd)
+	// Output:
+}
+
+func ExampleUser32DLL_FindWindowEx() {
+	user32dll := w32.NewUser32DLL([]w32.ProcName{
+		w32.PNFindWindowEx,
+	})
+	hwnd, _ := user32dll.FindWindowEx(0, 0, "Notepad", "")
+	log.Println(hwnd)
+	// Output:
+}
+
+func ExampleUser32DLL_SendMessage() {
+	user32dll := w32.NewUser32DLL([]w32.ProcName{
+		w32.PNSendMessage,
+		w32.PNFindWindow,
+	})
+
+	hIcon, _, _ := user32dll.SendMessage(0, w32.WM_GETICON, w32.ICON_SMALL, 0)
+	log.Println(hIcon)
+	// Output:
 }

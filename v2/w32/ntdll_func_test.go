@@ -24,9 +24,9 @@ func TestGetVersion(t *testing.T) {
 	user32Dll := w32.NewUser32DLL([]w32.ProcName{
 		w32.PNGetSystemMetrics,
 	})
-	kernel32Dll := w32.NewKernel32DLL([]w32.ProcName{
+	kernel32Dll := w32.NewKernel32DLL(
 		w32.PNGetNativeSystemInfo,
-	})
+	)
 
 	osV := ntDll.RtlGetVersion()
 	fmt.Printf("%+v\n", osV)

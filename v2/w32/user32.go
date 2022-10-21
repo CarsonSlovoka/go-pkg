@@ -284,8 +284,9 @@ const (
 )
 
 // Predefined icon constants
+// https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadiconw#parameters
 const (
-	IDI_APPLICATION = 32512
+	IDI_APPLICATION = 32512 // Default application icon.
 	IDI_HAND        = 32513
 	IDI_QUESTION    = 32514
 	IDI_EXCLAMATION = 32515
@@ -669,6 +670,7 @@ const (
 )
 
 // Window message constants
+// http://pinvoke.net/default.aspx/Constants.WM
 const (
 	WM_APP                    = 32768
 	WM_ACTIVATE               = 6
