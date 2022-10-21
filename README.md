@@ -50,5 +50,8 @@ go標準庫的補強 (不使用第三方套件)
 
 > Warning This is a recently released version, so we are still processing the data. Please check back later, or go to the latest version we have information for vx.x.x
 
-所以要過一段時間之後才可以被抓到
+所以要過一段時間之後才可以被抓到。
 
+您也可以查看proxy的狀態，例如
+
+> https://proxy.golang.org/github.com/carsonslovoka/go-pkg/v2/@v/v2.3.0.info
