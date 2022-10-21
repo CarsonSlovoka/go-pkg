@@ -1,3 +1,27 @@
+## Go使用windows dll的技巧
+
+```go
+package main
+
+import (
+  "log"
+  "syscall"
+  "unsafe"
+)
+
+func main() {
+  dll := syscall.NewLazyDLL("Shell32.dll")                           // 載入dll
+  proc := dll.NewProc("ExtractIconW")                                // 抓取dll的方法
+  lpcwstrExeFileName, _ := syscall.UTF16PtrFromString("notepad.exe") // 準備該方法中需要的參數
+  hIcon, _, _ := syscall.SyscallN(proc.Addr(), // 使用該方法
+    0,
+    uintptr(unsafe.Pointer(lpcwstrExeFileName)),
+    0,
+  )
+  log.Println(hIcon)
+}
+```
+
 ## 型別與GO的對照
 
 | C++ | Go  |
@@ -50,11 +74,11 @@ GO中針對不同平台的建置方法有以下幾種:
 
 1. 使用檔名(filename suffixes)來判斷，例如:
 
-   - `xxx_GOOS_GOARCH.go`
-   - `xxx_windows_[arch].go`
-   - `xxx_windows_arm64.go`
+- `xxx_GOOS_GOARCH.go`
+- `xxx_windows_[arch].go`
+- `xxx_windows_arm64.go`
 
-    以上GOOS和GOARCH都是可選上，可加也可不加，通常不太會去特別註明arch
+以上GOOS和GOARCH都是可選上，可加也可不加，通常不太會去特別註明arch
 
 2. 明確使用build標籤:
    - `//go:build windows` 只在windows平台build
@@ -63,9 +87,9 @@ GO中針對不同平台的建置方法有以下幾種:
    - `//+build windows,amd64` 只在windows且arch為amd64才構建
    - `//+build darwin linux dragonfly js,wasm` 前面三個為os，最後一個`js,wasm`這要看成一個，意思為OS:js, arch為wasm
 
-   要查看有哪些OS, ARCH可用，可以使用指令
-   > go tool dist list
-   它會呈現出: `OS/ARCH`的列表 (list all supported platforms):
+    要查看有哪些OS, ARCH可用，可以使用指令
+    > go tool dist list
+    > 它會呈現出: `OS/ARCH`的列表 (list all supported platforms):
 
     ```
     aix/ppc64
@@ -90,4 +114,5 @@ GO中針對不同平台的建置方法有以下幾種:
     windows/arm
     windows/arm64
     ```
+
 3. 使用`GOOS`, `GOARCH`，如果1,2都沒有，就會依照這兩個變數而定
