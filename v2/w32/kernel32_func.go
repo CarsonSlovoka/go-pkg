@@ -11,6 +11,7 @@ const (
 	PNCreateMutex         ProcName = "CreateMutexW"
 	PNCloseHandle         ProcName = "CloseHandle"
 	PNGetNativeSystemInfo ProcName = "GetNativeSystemInfo"
+	PNGetLastError        ProcName = "GetLastError"
 )
 
 type Kernel32DLL struct {
@@ -62,4 +63,13 @@ func (dll *Kernel32DLL) GetNativeSystemInfo() (info SYSTEM_INFO) {
 	proc := dll.mustProc(PNGetNativeSystemInfo)
 	_, _, _ = syscall.SyscallN(proc.Addr(), uintptr(unsafe.Pointer(&info)))
 	return
+}
+
+func (dll *Kernel32DLL) GetLastError() uint32 {
+	proc := dll.mustProc(PNGetLastError)
+	ret, _, _ := syscall.SyscallN(proc.Addr(),
+		0,
+		0,
+		0)
+	return uint32(ret)
 }
