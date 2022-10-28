@@ -42,4 +42,14 @@ jobs:
       #  run: go test ./embed -v
 
       - name: test All
-        run: go test ./...
+        run: go test -v -coverpkg=./... -coverprofile="coverage.txt" ./...
+
+      - name: Cover Func
+        run: go tool cover -func="coverage.txt"
+
+      - name: Upload coverage file
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-artifact # go tool cover -html=coverage-artifact  # go tool cover -html="coverage.txt"
+          path: |
+            coverage.txt

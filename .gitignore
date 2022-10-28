@@ -1,2 +1,4 @@
 *.exe
 .idea/
+v2/coverage.txt
+v2/coverage-artifact
