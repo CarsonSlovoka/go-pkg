@@ -52,4 +52,4 @@ jobs:
         with:
           name: coverage-artifact # go tool cover -html=coverage-artifact  # go tool cover -html="coverage.txt"
           path: |
-            coverage.txt
+            ./v2/coverage.txt
