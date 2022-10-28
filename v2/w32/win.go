@@ -27,3 +27,25 @@ type (
 	BOOL    int32
 	HRESULT int32
 )
+
+const (
+	PIPE_CLIENT_END       uint32 = 0x00000000
+	PIPE_SERVER_END              = 0x00000001
+	FILE_FLAG_OVERLAPPED         = 0x40000000
+	FILE_ATTRIBUTE_NORMAL        = 0x00000080
+	FILE_SHARE_READ              = 0x00000001
+	FILE_SHARE_WRITE             = 0x00000002
+
+	GENERIC_READ                  uint32 = 0x80000000
+	GENERIC_WRITE                        = 0x40000000
+	GENERIC_EXECUTE                      = 0x20000000
+	GENERIC_ALL                          = 0x10000000
+	CREATE_NEW                           = 1
+	CREATE_ALWAYS                        = 2
+	OPEN_EXISTING                        = 3
+	OPEN_ALWAYS                          = 4
+	TRUNCATE_EXISTING                    = 5
+	FILE_FLAG_FIRST_PIPE_INSTANCE        = 0x00080000
+
+	INVALID_HANDLE_VALUE int = -1
+)

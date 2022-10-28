@@ -9,19 +9,21 @@ import (
 )
 
 const (
-	PNFindWindow          ProcName = "FindWindowW"
-	PNFindWindowEx        ProcName = "FindWindowExW"
-	PNGetForegroundWindow ProcName = "GetForegroundWindow"
-	PNGetClassName        ProcName = "GetClassNameW"
-	PNGetWindowText       ProcName = "GetWindowTextW"
-	PNMessageBox          ProcName = "MessageBoxW"
-	PNGetSystemMetrics    ProcName = "GetSystemMetrics"
-	PNLoadIcon            ProcName = "LoadIconW"
-	PNGetDC               ProcName = "GetDC"
-	PNReleaseDC           ProcName = "ReleaseDC"
-	PNDrawIcon            ProcName = "DrawIcon"
-	PNPostMessage         ProcName = "PostMessageW"
-	PNSendMessage         ProcName = "SendMessageW"
+	PNFindWindow                  ProcName = "FindWindowW"
+	PNFindWindowEx                ProcName = "FindWindowExW"
+	PNGetForegroundWindow         ProcName = "GetForegroundWindow"
+	PNGetClassName                ProcName = "GetClassNameW"
+	PNGetWindowText               ProcName = "GetWindowTextW"
+	PNMessageBox                  ProcName = "MessageBoxW"
+	PNGetSystemMetrics            ProcName = "GetSystemMetrics"
+	PNLoadIcon                    ProcName = "LoadIconW"
+	PNGetDC                       ProcName = "GetDC"
+	PNReleaseDC                   ProcName = "ReleaseDC"
+	PNDrawIcon                    ProcName = "DrawIcon"
+	PNPostMessage                 ProcName = "PostMessageW"
+	PNSendMessage                 ProcName = "SendMessageW"
+	PNLookupIconIdFromDirectoryEx ProcName = "LookupIconIdFromDirectoryEx"
+	PNCreateIconFromResourceEx    ProcName = "CreateIconFromResourceEx"
 )
 
 type User32DLL struct {
@@ -229,4 +231,54 @@ func (dll *User32DLL) PostMessage(hwnd uintptr, wmMsgID int, wParam, lParam uint
 func (dll *User32DLL) SendMessage(hwnd uintptr, wmMsgID int, wParam, lParam uintptr) (r1, r2 uintptr, err error) {
 	proc := dll.mustProc(PNSendMessage)
 	return syscall.SyscallN(proc.Addr(), hwnd, uintptr(wmMsgID), wParam, lParam)
+}
+
+// LookupIconIdFromDirectoryEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-lookupiconidfromdirectoryex
+// If the function succeeds, the return value is an integer resource identifier for the icon or cursor that best fits the current display device.
+// If the function fails, the return value is zero.
+func (dll *User32DLL) LookupIconIdFromDirectoryEx(presBits uintptr,
+	fIcon bool, // Indicates whether an icon or a cursor is sought. If this parameter is TRUE, the function is searching for an icon; if the parameter is FALSE, the function is searching for a cursor.
+	cxDesired, // The desired width, in pixels, of the icon. If this parameter is zero, the function uses the SM_CXICON or SM_CXCURSOR system metric value.
+	cyDesired int, // 0, SM_CYICON, SM_CYCURSOR
+	flags uint, // LR_DEFAULTCOLOR or LR_MONOCHROME
+) int {
+	proc := dll.mustProc(PNLookupIconIdFromDirectoryEx)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		presBits,
+		uintptr(unsafe.Pointer(&fIcon)),
+		uintptr(cxDesired), uintptr(cyDesired),
+		uintptr(flags),
+	)
+	return int(r1)
+}
+
+// CreateIconFromResourceEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-createiconfromresourceex
+// flags:
+// - LR_DEFAULTCOLOR: Uses the default color format.
+// - LR_DEFAULTSIZE
+// - LR_MONOCHROME: 單色
+// - LR_SHARED
+//
+// return:
+// If the function succeeds, the return value is a handle to the icon or cursor.
+// If the function fails, the return value is NULL.
+func (dll *User32DLL) CreateIconFromResourceEx(
+	presBits uintptr,
+	dwResSize uint32,
+	fIcon bool,
+	dwVer uint32, // must be greater than or equal to 0x00020000 and less than or equal to 0x00030000. This parameter is generally set to 0x00030000.
+	cxDesired int,
+	cyDesired int,
+	flags uint, // combination of the following values:
+) (hicon uintptr) {
+	proc := dll.mustProc(PNCreateIconFromResourceEx)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		presBits,
+		uintptr(dwResSize),
+		uintptr(unsafe.Pointer(&fIcon)),
+		uintptr(dwVer),
+		uintptr(cxDesired), uintptr(cyDesired),
+		uintptr(flags),
+	)
+	return r1
 }

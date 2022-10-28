@@ -5,11 +5,22 @@ import (
 	"unsafe"
 )
 
+// StrToCharPtr
+// 可以用在A的函數 procA.Call(uintptr(unsafe.Pointer(StrToCharPtr(name))))
+func StrToCharPtr(str string) *uint8 {
+	chars := append([]byte(str), 0) // null terminated
+	return &chars[0]
+}
+
+// StrToLPCWSTR 用在W的方法中
 func StrToLPCWSTR(str string) uintptr {
+	// wchars := utf16.Encode([]rune(str + "\x00"))
+	// return &wchars[0] // *uint16
+
 	if str == "" {
 		return 0
 	}
-	lpcwstr, err := syscall.UTF16PtrFromString(str)
+	lpcwstr, err := syscall.UTF16PtrFromString(str) // *uint16, err
 	if err != nil {
 		panic(err)
 	}
