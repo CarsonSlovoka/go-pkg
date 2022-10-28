@@ -49,7 +49,8 @@ func ExampleKernel32DLL_CreateFile() {
 		0,                                  // default security
 		w32.CREATE_ALWAYS,                  // create flags
 		w32.FILE_ATTRIBUTE_NORMAL,          // file attributes
-		0) // no template
+		0,                                  // no template
+	)
 	if int(hFile) == w32.INVALID_HANDLE_VALUE {
 		log.Fatal("Could not open file.")
 	}

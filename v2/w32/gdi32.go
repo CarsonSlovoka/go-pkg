@@ -2,7 +2,9 @@
 
 package w32
 
-import "unsafe"
+import (
+	"unsafe"
+)
 
 // GetDeviceCaps index constants
 const (
@@ -750,10 +752,11 @@ const (
 	AC_SRC_ALPHA = 0x1
 )
 
+// https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-addfontresourceexw#parameters
 // AddFontResourceEx flags
 const (
-	FR_PRIVATE  = 0x10
-	FR_NOT_ENUM = 0x20
+	FR_PRIVATE  = 0x10 // 程式關閉後會自動刪除
+	FR_NOT_ENUM = 0x20 // 不允許process有能力列舉字型
 )
 
 func RGB(r, g, b byte) COLORREF {
@@ -1026,4 +1029,8 @@ type BLENDFUNCTION struct {
 	BlendFlags          byte
 	SourceConstantAlpha byte
 	AlphaFormat         byte
+}
+
+type FontMemResource struct {
+	hFontResource HANDLE
 }
