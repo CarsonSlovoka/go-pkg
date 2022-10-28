@@ -296,17 +296,17 @@ func ExampleKernel32DLL_FindResource() {
 		w32.SM_CXICON, w32.SM_CYICON, w32.LR_DEFAULTCOLOR)
 
 	// init HDC
-	var hdc uintptr
+	var hdc w32.HDC
 	{
-		hwndNotepad, err := user32dll.FindWindow("Notepad", "")
-		if err != nil {
+		hwndNotepad := user32dll.FindWindow("Notepad", "")
+		if hwndNotepad == 0 {
 			return
 		}
 		hdc = user32dll.GetDC(hwndNotepad)
 
 		defer func() {
 			if hdc != 0 {
-				if err = user32dll.ReleaseDC(hwndNotepad, hdc); err != nil {
+				if err := user32dll.ReleaseDC(hwndNotepad, hdc); err != nil {
 					log.Fatal(err)
 				}
 			}
@@ -362,17 +362,17 @@ func ExampleKernel32DLL_FindResource_icon() {
 		w32.SM_CXICON, w32.SM_CYICON, w32.LR_DEFAULTCOLOR)
 
 	// init HDC
-	var hdc uintptr
+	var hdc w32.HDC
 	{
-		hwndNotepad, err := user32dll.FindWindow("Notepad", "")
-		if err != nil {
+		hwndNotepad := user32dll.FindWindow("Notepad", "")
+		if hwndNotepad == 0 {
 			return
 		}
 		hdc = user32dll.GetDC(hwndNotepad)
 
 		defer func() {
 			if hdc != 0 {
-				if err = user32dll.ReleaseDC(hwndNotepad, hdc); err != nil {
+				if err := user32dll.ReleaseDC(hwndNotepad, hdc); err != nil {
 					log.Fatal(err)
 				}
 			}

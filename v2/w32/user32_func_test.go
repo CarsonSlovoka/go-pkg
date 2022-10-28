@@ -13,7 +13,7 @@ func ExampleUser32DLL_GetWindowText() {
 		w32.PNGetWindowText,
 	)
 
-	curHwnd, err := user32dll.GetForegroundWindow()
+	curHwnd := user32dll.GetForegroundWindow()
 	log.Println("current window HWND:", curHwnd) // 當前窗口的識別號
 
 	clsName, err := user32dll.GetClassName(curHwnd)
@@ -105,18 +105,18 @@ func ExampleUser32DLL_DrawIcon() {
 		}
 
 		// 取得chrome的圖標
-		hwndChrome, err := user32dll.FindWindow("Chrome_WidgetWin_1", "")
-		if err != nil {
+		hwndChrome := user32dll.FindWindow("Chrome_WidgetWin_1", "")
+		if hwndChrome == 0 {
 			log.Println("找不到chrome窗口")
 			return
 		}
 
-		hIconChrome, _, _ = user32dll.SendMessage(hwndChrome, w32.WM_GETICON, w32.ICON_SMALL, 0)
+		hIconChrome, _, _ = user32dll.SendMessage(uintptr(hwndChrome), w32.WM_GETICON, w32.ICON_SMALL, 0)
 		if hIconChrome == 0 {
 			log.Println("chrome圖標獲取失敗")
 
 			// 嘗試使用LoadIcon函數取得
-			hIconChrome, _ = user32dll.LoadIcon(hwndChrome, w32.MakeIntResource(w32.IDI_APPLICATION))
+			hIconChrome, _ = user32dll.LoadIcon(uintptr(hwndChrome), w32.MakeIntResource(w32.IDI_APPLICATION))
 			if hIconChrome == 0 {
 				// Alternative method. Use OS default icon
 				hIconChrome, _ = user32dll.LoadIcon(0, w32.MakeIntResource(w32.IDI_APPLICATION))
@@ -125,11 +125,11 @@ func ExampleUser32DLL_DrawIcon() {
 	}
 
 	// 建立HDC
-	var curHDC uintptr
+	var curHDC w32.HDC
 	{
 		// 獲取notepad的hdc對象
-		hwndNotepad, err := user32dll.FindWindow("Notepad", "")
-		if err != nil {
+		hwndNotepad := user32dll.FindWindow("Notepad", "")
+		if hwndNotepad == 0 {
 			log.Println("找不到Notepad窗口")
 			return
 		}
@@ -137,7 +137,7 @@ func ExampleUser32DLL_DrawIcon() {
 
 		defer func() {
 			if curHDC != 0 {
-				if err = user32dll.ReleaseDC(hwndNotepad, curHDC); err != nil {
+				if err := user32dll.ReleaseDC(hwndNotepad, curHDC); err != nil {
 					log.Fatal(err)
 				}
 			}
@@ -180,14 +180,14 @@ func ExampleUser32DLL_FindWindow() {
 
 	// Chrome
 	// "Chrome_WidgetWin_1" You can find this information from Spy++ tool
-	hwnd, _ := user32dll.FindWindow("Chrome_WidgetWin_1", "")
+	hwnd := user32dll.FindWindow("Chrome_WidgetWin_1", "")
 	log.Println(hwnd)
 	// Output:
 }
 
 func ExampleUser32DLL_FindWindowEx() {
 	user32dll := w32.NewUser32DLL(w32.PNFindWindowEx)
-	hwnd, _ := user32dll.FindWindowEx(0, 0, "Notepad", "")
+	hwnd := user32dll.FindWindowEx(0, 0, "Notepad", "")
 	log.Println(hwnd)
 	// Output:
 }

@@ -37,44 +37,39 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 }
 
 // FindWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-findwindoww
-func (dll *User32DLL) FindWindow(className, windowName string) (hwnd uintptr, err error) {
+// If the function fails, the return value is NULL.
+func (dll *User32DLL) FindWindow(className, windowName string) HWND {
 	proc := dll.mustProc(PNFindWindow)
-	hwnd, _, err = syscall.SyscallN(proc.Addr(),
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
 		UintptrFromStr(className),
 		UintptrFromStr(windowName),
 	)
-	if hwnd == 0 {
-		return 0, lastError("FindWindow")
-	}
-	return hwnd, nil
+	return HWND(r1)
 }
 
 // FindWindowEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-findwindowexw
-func (dll *User32DLL) FindWindowEx(hWndParent, hWndChildAfter uintptr, className, windowName string) (hwnd uintptr, err error) {
+// If the function fails, the return value is NULL.
+func (dll *User32DLL) FindWindowEx(hWndParent, hWndChildAfter uintptr, className, windowName string) HWND {
 	proc := dll.mustProc(PNFindWindowEx)
 	// lpClassName, _ := syscall.UTF16PtrFromString(className)
 	// lpWindowName, _ := syscall.UTF16PtrFromString(windowName)
-	hwnd, _, err = syscall.SyscallN(proc.Addr(),
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
 		hWndParent,
 		hWndChildAfter,
 		UintptrFromStr(className), // uintptr(unsafe.Pointer(lpClassName)) // 這樣其實也可以，不過如果是NULL就會有問題，要給0
 		UintptrFromStr(windowName),
 	)
-	if hwnd == 0 {
-		return 0, lastError("FindWindowEx")
-	}
-	return hwnd, nil
+	return HWND(r1)
 }
 
 // GetForegroundWindow User32.dll 此函數可以獲得當前窗口的HWND
 // https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getforegroundwindow
-func (dll *User32DLL) GetForegroundWindow() (hwnd uintptr, err error) {
+// The return value is a handle to the foreground window.
+// The foreground window can be NULL in certain circumstances, such as when a window is losing activation.
+func (dll *User32DLL) GetForegroundWindow() HWND {
 	proc := dll.mustProc(PNGetForegroundWindow)
-	hwnd, _, err = proc.Call()
-	if hwnd == 0 {
-		return hwnd, err
-	}
-	return hwnd, nil
+	hwnd, _, _ := proc.Call()
+	return HWND(hwnd)
 }
 
 // GetClassName If the function succeeds, the return value is the number of characters copied to the buffer
@@ -89,7 +84,7 @@ func (dll *User32DLL) GetForegroundWindow() (hwnd uintptr, err error) {
 // 回傳名稱而不是長度(如果有需要長度在自己用len即可)
 // https://docs.microsoft.com/zh-tw/windows/win32/api/winuser/nf-winuser-getclassname
 // https://go.dev/play/p/dKueOJv9Sx
-func (dll *User32DLL) GetClassName(hwnd uintptr) (name string, err error) {
+func (dll *User32DLL) GetClassName(hwnd HWND) (name string, err error) {
 	proc := dll.mustProc(PNGetClassName)
 
 	maxCount := 256
@@ -120,14 +115,14 @@ func (dll *User32DLL) GetClassName(hwnd uintptr) (name string, err error) {
 
 // GetWindowText
 // https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowtextw
-func (dll *User32DLL) GetWindowText(hwnd uintptr) (string, error) {
+func (dll *User32DLL) GetWindowText(hwnd HWND) (string, error) {
 	proc := dll.mustProc(PNGetWindowText)
 
 	maxCount := 256
 	textName := make([]uint16, maxCount)
 	pTextName := &textName[0]
 
-	r0, _, errno := syscall.SyscallN(proc.Addr(), hwnd,
+	r0, _, errno := syscall.SyscallN(proc.Addr(), uintptr(hwnd),
 		uintptr(unsafe.Pointer(pTextName)),
 		uintptr(len(textName)),
 	)
@@ -176,21 +171,21 @@ func (dll *User32DLL) LoadIcon(hInstance uintptr, lpIconName *uint16) (hIcon uin
 }
 
 // GetDC LoadIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getdc
-func (dll *User32DLL) GetDC(hwnd uintptr) uintptr {
+func (dll *User32DLL) GetDC(hwnd HWND) HDC {
 	proc := dll.mustProc(PNGetDC)
 	hdc, _, _ := syscall.SyscallN(proc.Addr(),
-		hwnd,
+		uintptr(hwnd),
 	)
-	return hdc
+	return HDC(hdc)
 }
 
 // ReleaseDC https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-releasedc
 // 返回值0表示沒有被釋放, 1表示釋放成功
-func (dll *User32DLL) ReleaseDC(hwnd, hdc uintptr) error {
+func (dll *User32DLL) ReleaseDC(hwnd HWND, hdc HDC) error {
 	proc := dll.mustProc(PNReleaseDC)
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
-		hwnd,
-		hdc,
+		uintptr(hwnd),
+		uintptr(hdc),
 	)
 	if int(r1) == 0 {
 		return fmt.Errorf("ERROR: ReleaseDC")
@@ -199,10 +194,10 @@ func (dll *User32DLL) ReleaseDC(hwnd, hdc uintptr) error {
 }
 
 // DrawIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-drawicon
-func (dll *User32DLL) DrawIcon(hdc uintptr, x, y int, hicon uintptr) error {
+func (dll *User32DLL) DrawIcon(hdc HDC, x, y int, hicon uintptr) error {
 	proc := dll.mustProc(PNDrawIcon)
 	hwnd, _, _ := syscall.SyscallN(proc.Addr(),
-		hdc,
+		uintptr(hdc),
 		uintptr(x),
 		uintptr(y),
 		hicon,

@@ -36,15 +36,15 @@ func ExampleShellDLL_ExtractIcon() {
 			w32.PNDrawIcon,
 		)
 
-		hwndNotepad, err := user32dll.FindWindow("Notepad", "")
-		if err != nil {
+		hwndNotepad := user32dll.FindWindow("Notepad", "")
+		if hwndNotepad == 0 {
 			log.Println("notepad.exe not found")
 			return
 		}
 		curHDC := user32dll.GetDC(hwndNotepad)
 		defer func() {
 			if curHDC != 0 {
-				if err = user32dll.ReleaseDC(hwndNotepad, curHDC); err != nil {
+				if err := user32dll.ReleaseDC(hwndNotepad, curHDC); err != nil {
 					log.Fatal(err)
 				}
 			}
@@ -82,15 +82,15 @@ func ExampleShellDLL_ExtractIcon_count() {
 			w32.PNDrawIcon,
 		)
 
-		hwndNotepad, err := user32dll.FindWindow("Notepad", "")
-		if err != nil {
+		hwndNotepad := user32dll.FindWindow("Notepad", "")
+		if hwndNotepad == 0 {
 			log.Println("notepad.exe not found")
 			return
 		}
 		curHDC := user32dll.GetDC(hwndNotepad)
 		defer func() {
 			if curHDC != 0 {
-				if err = user32dll.ReleaseDC(hwndNotepad, curHDC); err != nil {
+				if err := user32dll.ReleaseDC(hwndNotepad, curHDC); err != nil {
 					log.Fatal(err)
 				}
 			}
