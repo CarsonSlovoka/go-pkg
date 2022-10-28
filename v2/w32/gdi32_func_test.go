@@ -37,13 +37,18 @@ func ExampleGdi32DLL_AddFontResourceEx() {
 	ttfPath := "./testdata/fonts/teamviewer15.otf"
 	gdi32dll := w32.NewGdi32DLL(w32.PNAddFontResourceEx, w32.PNRemoveFontResourceEx)
 	user32dll := w32.NewUser32DLL([]w32.ProcName{w32.PNPostMessage})
-	numFont := gdi32dll.AddFontResourceEx(ttfPath, w32.FR_NOT_ENUM, 0) // 使用FR_PRIVATE程式結束會自動刪除
+	numFont := gdi32dll.AddFontResourceEx(ttfPath,
+		w32.FR_NOT_ENUM, // 若使用FR_PRIVATE程式結束會自動刪除，同時FR_PRIVATE沒有辦法讓其他應用程式訪問到該字型，即其他應用程式沒辦法選到該字型；但是FR_NOT_ENUM可以讓其他應用程式選到該字型
+		0)
 	if numFont == 0 {
 		return
 	}
 
 	defer func() {
-		if err := gdi32dll.RemoveFontResourceEx(ttfPath, w32.FR_NOT_ENUM, 0); err == 0 {
+		if err := gdi32dll.RemoveFontResourceEx(ttfPath,
+			w32.FR_NOT_ENUM, // flag 要與AddFontResourceEx所使用的flag一致
+			0,
+		); err == 0 {
 			log.Fatal(err)
 		}
 	}()
@@ -57,7 +62,7 @@ func ExampleGdi32DLL_AddFontResourceEx() {
 	// Output:
 }
 
-func ExampleNewFontMemResourceByName() {
+func ExampleNewFontMemResource() {
 	kernel32dll := w32.NewKernel32DLL(w32.PNLoadLibrary)
 	hExe := kernel32dll.LoadLibrary("./testdata/exe/writeWithFont.exe")
 	fontMemResource, err := w32.NewFontMemResource(hExe, w32.MakeIntResource(666)) // 該應用程式的RT_FONT資源下存在一個ID為666的字型檔案。實際上的ID代碼會依應用程式而定，非定值

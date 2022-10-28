@@ -52,7 +52,7 @@ func (dll *Gdi32DLL) RemoveFontResource(name string) int {
 	return int(r1)
 }
 
-// AddFontResourceEx 使用此函數，可以讓字型只能被自己使用，其他程式不能訪問其資源 https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-addfontresourceexw
+// AddFontResourceEx 使用此函數，可以讓字型只能被自己使用，其他程式不能訪問其資源(用FR_PRIVATE而非FR_NOT_ENUM) https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-addfontresourceexw
 // 一般來說，所有試用版本的字型，它們如果加載到記憶體之中，都不會使用這個函數，因為這樣除了自己以外的應用程式都沒辦法使用到該字型
 // 因此使用者取得該試用字型，如果不能在自己熟悉的應用程式中查看效果，將大大降低使用者的體驗。
 // reserved: Reserved. Must be zero.
