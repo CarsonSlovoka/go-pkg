@@ -1,6 +1,7 @@
 package w32_test
 
 import (
+	"fmt"
 	"github.com/CarsonSlovoka/go-pkg/v2/w32"
 	"log"
 	"os"
@@ -24,7 +25,7 @@ func TestCreateMutex(t *testing.T) {
 		t.Error("not as expected")
 	}
 
-	if err = kernel32dll.CloseHandle(handle); err != nil {
+	if !kernel32dll.CloseHandle(handle) {
 		t.Error(err)
 	}
 	// err = kernel32dll.CloseHandle(handle) // If you are debugging it will panic!
@@ -32,18 +33,23 @@ func TestCreateMutex(t *testing.T) {
 
 	// We can create again since we have closed.
 	handle, _ = kernel32dll.CreateMutex("hello world")
-	if err = kernel32dll.CloseHandle(handle); err != nil {
+	if !kernel32dll.CloseHandle(handle) {
 		t.Error(err)
 	}
 }
 
-// TODO 有待驗證
 // https://learn.microsoft.com/en-us/windows/win32/menurc/using-resources
 func ExampleKernel32DLL_CreateFile() {
 	kernel32dll := w32.NewKernel32DLL(
 		w32.PNCreateFile,
+		w32.PNCloseHandle,
+		w32.PNGetLastError,
+
+		w32.PNCopyFile,
 	)
-	hFile := kernel32dll.CreateFile("resinfo.txt", // name of file
+
+	targetPath, _ := filepath.Abs("testdata/temp.txt") // 避免反斜線問題
+	hFile := kernel32dll.CreateFile(targetPath,        // name of file
 		w32.GENERIC_READ|w32.GENERIC_WRITE, // access mode
 		0,                                  // share mode
 		0,                                  // default security
@@ -51,10 +57,38 @@ func ExampleKernel32DLL_CreateFile() {
 		w32.FILE_ATTRIBUTE_NORMAL,          // file attributes
 		0,                                  // no template
 	)
+
 	if int(hFile) == w32.INVALID_HANDLE_VALUE {
-		log.Fatal("Could not open file.")
+		fmt.Println("Could not create file.") // 有可能是目錄路徑不存在
+		return
 	}
-	log.Println(hFile)
+	if !kernel32dll.CloseHandle(hFile) {
+		fmt.Println("error: CloseHandle")
+		return
+	}
+
+	_ = os.WriteFile(targetPath, []byte("Hello World"), 0x666)
+
+	// test copy file
+	{
+		copyFilepath := "testdata/temp-copy.txt"
+		if !kernel32dll.CopyFile(targetPath, copyFilepath, false) {
+			fmt.Println("error: copy file")
+			return
+		}
+		bs, _ := os.ReadFile(copyFilepath)
+		_ = os.Remove(copyFilepath)
+		fmt.Println(string(bs))
+	}
+
+	defer func() {
+		if err := os.Remove(targetPath); err != nil { // 刪除測試檔案
+			fmt.Println("error: remove file")
+		}
+	}()
+
+	// Output:
+	// Hello World
 }
 
 func ExampleKernel32DLL_GetModuleHandle() {
@@ -209,7 +243,6 @@ func ExampleKernel32DLL_FindResource() {
 	}
 	kernel32dll := w32.NewKernel32DLL(
 		w32.PNLoadLibrary,
-		w32.PNCreateFile,
 		w32.PNFindResource,
 		w32.PNLoadResource,
 		w32.PNSizeofResource,
@@ -292,7 +325,6 @@ func ExampleKernel32DLL_FindResource() {
 func ExampleKernel32DLL_FindResource_icon() {
 	kernel32dll := w32.NewKernel32DLL(
 		w32.PNLoadLibrary,
-		w32.PNCreateFile,
 		w32.PNFindResource,
 		w32.PNLoadResource,
 		w32.PNSizeofResource,

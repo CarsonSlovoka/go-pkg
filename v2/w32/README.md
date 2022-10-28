@@ -70,6 +70,8 @@ HANDLE | uintptr
 
 至於struct的定義，宣告再多都不會影響執行檔大小(看的是用了多少)
 
+const的內容在`-ldflags -s -w`啟用的狀態下，也不會影響(仍然是有用到才會計算)，而就算沒啟用，實際上所增加的大小也非常小
+
 如果要把`lxn/win`所有的init也包含進去<sup>
 例如其中之一的[ user32.go.init](https://github.com/lxn/win/blob/7a0e89e/user32.go#L1903-L2059)</sup>
 

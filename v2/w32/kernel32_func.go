@@ -15,6 +15,7 @@ const (
 	PNFreeLibrary         ProcName = "FreeLibrary"
 	PNGetLastError        ProcName = "GetLastError"
 	PNCreateFile          ProcName = "CreateFileW"
+	PNCopyFile            ProcName = "CopyFileW"
 	PNFindResource        ProcName = "FindResourceW"
 	PNLoadLibrary         ProcName = "LoadLibraryW"
 	PNSizeofResource      ProcName = "SizeofResource"
@@ -36,14 +37,12 @@ func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 
 // CloseHandle Closes an open object handle.
 // https://docs.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-closehandle?redirectedfrom=MSDN
-func (dll *Kernel32DLL) CloseHandle(handle uintptr) error {
+// Returns TRUE if successful or FALSE otherwise.
+func (dll *Kernel32DLL) CloseHandle(handle uintptr) bool {
 	proc := dll.mustProc(PNCloseHandle)
-	// r0, _, err := proc.Call(handle) // 其為syscall.SyscallN的封裝(多了檢查的動作)，如果已經確定，可以直接用syscall.SyscallN會更有效率
-	r0, _, errno := syscall.SyscallN(proc.Addr(), handle)
-	if r0 == 0 {
-		return errno
-	}
-	return nil
+	// r1, _, err := proc.Call(handle) // 其為syscall.SyscallN的封裝(多了檢查的動作)，如果已經確定，可以直接用syscall.SyscallN會更有效率
+	r1, _, _ := syscall.SyscallN(proc.Addr(), handle)
+	return r1 != 0
 }
 
 // CreateMutex You can use it to restrict to a single instance of executable
@@ -104,6 +103,7 @@ func (dll *Kernel32DLL) GetLastError() uint32 {
 
 // CreateFile https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew
 // error => r1 == INVALID_HANDLE_VALUE
+// 不用的時候記得呼叫CloseHandle來關閉
 func (dll *Kernel32DLL) CreateFile(lpFileName string, dwDesiredAccess, dwShareMode uint32,
 	lpSecurityAttributes uintptr,
 	dwCreationDisposition, dwFlagsAndAttributes uint32,
@@ -119,6 +119,28 @@ func (dll *Kernel32DLL) CreateFile(lpFileName string, dwDesiredAccess, dwShareMo
 		uintptr(dwFlagsAndAttributes),
 		hTemplateFile)
 	return r1
+}
+
+// CopyFile https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-copyfilew
+// - bFailIfExists: TRUE在已經存在時，會引發錯誤；FALSE如果引經存在則會覆蓋
+// If this parameter is TRUE and the new file specified by lpNewFileName already exists, the function fails.
+// If this parameter is FALSE and the new file already exists, the function overwrites the existing file and succeeds.
+//
+// Returns TRUE if successful or FALSE otherwise.
+func (dll *Kernel32DLL) CopyFile(existingFileName string, newFileName string, bFailIfExists bool) bool {
+	proc := dll.mustProc(PNCopyFile)
+	var failIfExists uintptr
+	if bFailIfExists {
+		failIfExists = 1
+	} else {
+		failIfExists = 0
+	}
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		UintptrFromStr(existingFileName),
+		UintptrFromStr(newFileName),
+		failIfExists,
+	)
+	return r1 != 0
 }
 
 // FindResource https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-findresourcew
