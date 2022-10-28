@@ -14,19 +14,21 @@ func ExampleUser32DLL_GetWindowText() {
 	})
 
 	curHwnd, err := user32dll.GetForegroundWindow()
-	fmt.Println("current window HWND:", curHwnd) // 當前窗口的識別號
+	log.Println("current window HWND:", curHwnd) // 當前窗口的識別號
 
 	clsName, err := user32dll.GetClassName(curHwnd)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("window class Name:", clsName)
+	log.Println("window class Name:", clsName)
 
 	winText, err := user32dll.GetWindowText(curHwnd)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("window text Name:", winText)
+	log.Println("window text Name:", winText)
+
+	// Output:
 }
 
 func ExampleUser32DLL_MessageBox() {
