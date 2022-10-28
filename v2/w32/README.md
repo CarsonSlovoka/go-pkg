@@ -22,17 +22,38 @@ func main() {
 }
 ```
 
-## 型別與GO的對照
+## [型別與GO的對照](https://learn.microsoft.com/en-us/windows/win32/winprog/windows-data-types)
 
 | C++ | Go  |
 |-----|-----|
+BOOLEAN | byte
+BYTE | byte
+UCHAR | byte
+ |
+USHORT | uint16
 WORD | uint16
+WORD | uint16
+WCHAR  xxx[128] | [128]uint16
+LPWSTR | *uint16
+LPCWSTR | *uint16
+|
+BOOL | uint32 建議用bool替換
 DWORD | uint32
 DWORD_PTR | *uint32
-WCHAR  xxx[128] | [128]uint16
-USHORT | uint16
-UCHAR | byte
-LPVOID | unsafe.Pointer
+|
+DWORD64 | uint64
+LARGE_INTEGER | int64
+|
+SIZE_T | uintptr
+ULONGLONG | uint64
+|
+CHAR | int8
+LPCSTR | *uint8
+|
+LONG | int32
+|
+LPVOID | uintptr
+HANDLE | uintptr
 
 ## 使用go來調用windows api的專案
 
