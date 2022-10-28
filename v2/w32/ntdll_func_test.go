@@ -18,12 +18,12 @@ import (
 // Rev = 1202 (修訂版)
 func TestGetVersion(t *testing.T) {
 
-	ntDll := w32.NewNtDLL([]w32.ProcName{
+	ntDll := w32.NewNtDLL(
 		w32.PNRtlGetVersion,
-	})
-	user32Dll := w32.NewUser32DLL([]w32.ProcName{
+	)
+	user32Dll := w32.NewUser32DLL(
 		w32.PNGetSystemMetrics,
-	})
+	)
 	kernel32Dll := w32.NewKernel32DLL(
 		w32.PNGetNativeSystemInfo,
 	)

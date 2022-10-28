@@ -15,7 +15,7 @@ type NtDLL struct {
 	*dLL
 }
 
-func NewNtDLL(procList []ProcName) *NtDLL {
+func NewNtDLL(procList ...ProcName) *NtDLL {
 	dll := newDll(DNNtdll, procList)
 	return &NtDLL{dll}
 }

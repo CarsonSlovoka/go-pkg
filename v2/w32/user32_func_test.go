@@ -7,11 +7,11 @@ import (
 )
 
 func ExampleUser32DLL_GetWindowText() {
-	user32dll := w32.NewUser32DLL([]w32.ProcName{
+	user32dll := w32.NewUser32DLL(
 		w32.PNGetForegroundWindow,
 		w32.PNGetClassName,
 		w32.PNGetWindowText,
-	})
+	)
 
 	curHwnd, err := user32dll.GetForegroundWindow()
 	log.Println("current window HWND:", curHwnd) // 當前窗口的識別號
@@ -32,9 +32,9 @@ func ExampleUser32DLL_GetWindowText() {
 }
 
 func ExampleUser32DLL_MessageBox() {
-	user32dll := w32.NewUser32DLL([]w32.ProcName{
+	user32dll := w32.NewUser32DLL(
 		w32.PNMessageBox,
-	})
+	)
 
 	hwndTop := uintptr(w32.HWND_TOP)
 	response, _ := user32dll.MessageBox(hwndTop, "title", "body message", w32.MB_OK)
@@ -81,7 +81,7 @@ rn`
 // 抓取icon畫在notepad應用程式上(如果要執行，請確保您有運行nodepad.exe)
 // https://learn.microsoft.com/en-us/windows/win32/menurc/using-icons#creating-an-icon
 func ExampleUser32DLL_DrawIcon() {
-	user32dll := w32.NewUser32DLL([]w32.ProcName{
+	user32dll := w32.NewUser32DLL(
 		w32.PNLoadIcon,
 		w32.PNDrawIcon,
 		w32.PNGetDC,
@@ -91,7 +91,7 @@ func ExampleUser32DLL_DrawIcon() {
 		w32.PNFindWindow,
 
 		w32.PNReleaseDC,
-	})
+	)
 
 	// 獲取HICON{question, chrome}
 	var hIconQuestion, hIconChrome uintptr
@@ -165,18 +165,18 @@ func ExampleUser32DLL_DrawIcon() {
 }
 
 func ExampleUser32DLL_PostMessage() {
-	user32dll := w32.NewUser32DLL([]w32.ProcName{
+	user32dll := w32.NewUser32DLL(
 		w32.PNPostMessage,
-	})
+	)
 	if _, _, err := user32dll.PostMessage(uintptr(w32.HWND_BROADCAST), w32.WM_FONTCHANGE, 0, 0); err != nil {
 		panic(err)
 	}
 }
 
 func ExampleUser32DLL_FindWindow() {
-	user32dll := w32.NewUser32DLL([]w32.ProcName{
+	user32dll := w32.NewUser32DLL(
 		w32.PNFindWindow,
-	})
+	)
 
 	// Chrome
 	// "Chrome_WidgetWin_1" You can find this information from Spy++ tool
@@ -186,19 +186,17 @@ func ExampleUser32DLL_FindWindow() {
 }
 
 func ExampleUser32DLL_FindWindowEx() {
-	user32dll := w32.NewUser32DLL([]w32.ProcName{
-		w32.PNFindWindowEx,
-	})
+	user32dll := w32.NewUser32DLL(w32.PNFindWindowEx)
 	hwnd, _ := user32dll.FindWindowEx(0, 0, "Notepad", "")
 	log.Println(hwnd)
 	// Output:
 }
 
 func ExampleUser32DLL_SendMessage() {
-	user32dll := w32.NewUser32DLL([]w32.ProcName{
+	user32dll := w32.NewUser32DLL(
 		w32.PNSendMessage,
 		w32.PNFindWindow,
-	})
+	)
 
 	hIcon, _, _ := user32dll.SendMessage(0, w32.WM_GETICON, w32.ICON_SMALL, 0)
 	log.Println(hIcon)

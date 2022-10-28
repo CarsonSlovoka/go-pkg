@@ -215,7 +215,7 @@ func ExampleKernel32DLL_FindResource() {
 		w32.PNSizeofResource,
 		w32.PNLockResource,
 	)
-	user32dll := w32.NewUser32DLL([]w32.ProcName{
+	user32dll := w32.NewUser32DLL(
 		w32.PNLookupIconIdFromDirectoryEx,
 		w32.PNCreateIconFromResourceEx,
 
@@ -223,7 +223,7 @@ func ExampleKernel32DLL_FindResource() {
 		w32.PNReleaseDC,
 		w32.PNDrawIcon,
 		w32.PNGetDC,
-	})
+	)
 	hExe := kernel32dll.LoadLibrary(exePath)
 	if hExe == 0 {
 		// not found
@@ -298,14 +298,14 @@ func ExampleKernel32DLL_FindResource_icon() {
 		w32.PNSizeofResource,
 		w32.PNLockResource,
 	)
-	user32dll := w32.NewUser32DLL([]w32.ProcName{
+	user32dll := w32.NewUser32DLL(
 		w32.PNCreateIconFromResourceEx,
 
 		w32.PNFindWindow,
 		w32.PNReleaseDC,
 		w32.PNDrawIcon,
 		w32.PNGetDC,
-	})
+	)
 	exePath := filepath.Join(os.Getenv("windir"), "System32/fontview.exe")
 	hExe := kernel32dll.LoadLibrary(exePath)
 	if hExe == 0 {

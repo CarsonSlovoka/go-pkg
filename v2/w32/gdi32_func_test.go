@@ -11,7 +11,7 @@ import (
 func ExampleGdi32DLL_AddFontResource() {
 	ttfPath := "./testdata/fonts/teamviewer15.otf"
 	gdi32dll := w32.NewGdi32DLL(w32.PNAddFontResource, w32.PNRemoveFontResource)
-	user32dll := w32.NewUser32DLL([]w32.ProcName{w32.PNPostMessage})
+	user32dll := w32.NewUser32DLL(w32.PNPostMessage)
 	numFont := gdi32dll.AddFontResource(ttfPath)
 	if numFont == 0 {
 		return
@@ -36,7 +36,7 @@ func ExampleGdi32DLL_AddFontResource() {
 func ExampleGdi32DLL_AddFontResourceEx() {
 	ttfPath := "./testdata/fonts/teamviewer15.otf"
 	gdi32dll := w32.NewGdi32DLL(w32.PNAddFontResourceEx, w32.PNRemoveFontResourceEx)
-	user32dll := w32.NewUser32DLL([]w32.ProcName{w32.PNPostMessage})
+	user32dll := w32.NewUser32DLL(w32.PNPostMessage)
 	numFont := gdi32dll.AddFontResourceEx(ttfPath,
 		w32.FR_NOT_ENUM, // 若使用FR_PRIVATE程式結束會自動刪除，同時FR_PRIVATE沒有辦法讓其他應用程式訪問到該字型，即其他應用程式沒辦法選到該字型；但是FR_NOT_ENUM可以讓其他應用程式選到該字型
 		0)

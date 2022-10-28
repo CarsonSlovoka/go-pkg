@@ -30,7 +30,7 @@ type User32DLL struct {
 	*dLL
 }
 
-func NewUser32DLL(procList []ProcName) *User32DLL {
+func NewUser32DLL(procList ...ProcName) *User32DLL {
 	dll := newDll(DNUser32, procList)
 	// dll.mustProc = ...
 	return &User32DLL{dll}

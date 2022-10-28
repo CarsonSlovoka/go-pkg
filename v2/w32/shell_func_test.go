@@ -29,12 +29,12 @@ func ExampleShellDLL_ExtractIcon() {
 
 	// 以下只是把hicon畫在notepad.exe上而已
 	{
-		user32dll := w32.NewUser32DLL([]w32.ProcName{
+		user32dll := w32.NewUser32DLL(
 			w32.PNFindWindow,
 			w32.PNGetDC,
 			w32.PNReleaseDC,
 			w32.PNDrawIcon,
-		})
+		)
 
 		hwndNotepad, err := user32dll.FindWindow("Notepad", "")
 		if err != nil {
@@ -75,12 +75,12 @@ func ExampleShellDLL_ExtractIcon_count() {
 
 	// 作圖在notepad.exe上
 	{
-		user32dll := w32.NewUser32DLL([]w32.ProcName{
+		user32dll := w32.NewUser32DLL(
 			w32.PNFindWindow,
 			w32.PNGetDC,
 			w32.PNReleaseDC,
 			w32.PNDrawIcon,
-		})
+		)
 
 		hwndNotepad, err := user32dll.FindWindow("Notepad", "")
 		if err != nil {
