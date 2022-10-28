@@ -231,8 +231,8 @@ func ExampleKernel32DLL_FindResource() {
 	}
 
 	hResource := kernel32dll.FindResource(hExe,
-		w32.MakeIntResource(w32.StrToLPCWSTR("IDI_BTH_UD_TASK")), // w32.MakeIntResource(150) // 該資源有哪些ID，可以安裝Resource Hacker去查看。以微軟的fontview.exe，它擁有Icon Group: 150: 1033這個資源
-		w32.MakeIntResource(w32.RT_GROUP_ICON),                   // w32.MakeIntResource(w32.StrToLPCWSTR("xfont"))
+		w32.MakeIntResource(w32.UintptrFromStr("IDI_BTH_UD_TASK")), // w32.MakeIntResource(150) // 該資源有哪些ID，可以安裝Resource Hacker去查看。以微軟的fontview.exe，它擁有Icon Group: 150: 1033這個資源
+		w32.MakeIntResource(w32.RT_GROUP_ICON),                     // w32.MakeIntResource(w32.UintptrFromStr("xfont"))
 	)
 
 	hMem := kernel32dll.LoadResource(hExe, hResource)

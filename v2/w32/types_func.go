@@ -12,8 +12,9 @@ func StrToCharPtr(str string) *uint8 {
 	return &chars[0]
 }
 
-// StrToLPCWSTR 用在W的方法中
-func StrToLPCWSTR(str string) uintptr {
+// UintptrFromStr 用在W的方法中
+// 先將str轉成utf16ptr再轉成uintptr
+func UintptrFromStr(str string) uintptr {
 	// wchars := utf16.Encode([]rune(str + "\x00"))
 	// return &wchars[0] // *uint16
 

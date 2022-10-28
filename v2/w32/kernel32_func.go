@@ -111,7 +111,7 @@ func (dll *Kernel32DLL) CreateFile(lpFileName string, dwDesiredAccess, dwShareMo
 ) uintptr {
 	proc := dll.mustProc(PNCreateFile)
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
-		StrToLPCWSTR(lpFileName),
+		UintptrFromStr(lpFileName),
 		uintptr(dwDesiredAccess),
 		uintptr(dwShareMode),
 		lpSecurityAttributes,
@@ -152,7 +152,7 @@ func (dll *Kernel32DLL) FindResource(hModule uintptr, lpName, lpType *uint16) HR
 func (dll *Kernel32DLL) LoadLibrary(lpLibFileName string) (handle uintptr) {
 	proc := dll.mustProc(PNLoadLibrary)
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
-		StrToLPCWSTR(lpLibFileName),
+		UintptrFromStr(lpLibFileName),
 	)
 	return r1
 }

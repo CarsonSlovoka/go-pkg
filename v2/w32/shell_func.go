@@ -33,7 +33,7 @@ func (dll *ShellDLL) ExtractIcon(hInst uintptr, // 透過哪一個對象來呼�
 	proc := dll.mustProc(PNExtractIcon)
 	hIcon, _, _ = syscall.SyscallN(proc.Addr(),
 		hInst,
-		StrToLPCWSTR(exeFileName),
+		UintptrFromStr(exeFileName),
 		uintptr(nIconIndex),
 	)
 	return hIcon

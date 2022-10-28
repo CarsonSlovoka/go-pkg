@@ -40,8 +40,8 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 func (dll *User32DLL) FindWindow(className, windowName string) (hwnd uintptr, err error) {
 	proc := dll.mustProc(PNFindWindow)
 	hwnd, _, err = syscall.SyscallN(proc.Addr(),
-		StrToLPCWSTR(className),
-		StrToLPCWSTR(windowName),
+		UintptrFromStr(className),
+		UintptrFromStr(windowName),
 	)
 	if hwnd == 0 {
 		return 0, lastError("FindWindow")
@@ -57,8 +57,8 @@ func (dll *User32DLL) FindWindowEx(hWndParent, hWndChildAfter uintptr, className
 	hwnd, _, err = syscall.SyscallN(proc.Addr(),
 		hWndParent,
 		hWndChildAfter,
-		StrToLPCWSTR(className), // uintptr(unsafe.Pointer(lpClassName)) // 這樣其實也可以，不過如果是NULL就會有問題，要給0
-		StrToLPCWSTR(windowName),
+		UintptrFromStr(className), // uintptr(unsafe.Pointer(lpClassName)) // 這樣其實也可以，不過如果是NULL就會有問題，要給0
+		UintptrFromStr(windowName),
 	)
 	if hwnd == 0 {
 		return 0, lastError("FindWindowEx")

@@ -36,7 +36,7 @@ func NewGdi32DLL(procList ...ProcName) *Gdi32DLL {
 // 2. HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts : 這裡面的數值，必須寫入字型檔案的絕對路徑 https://github.com/CarsonSlovoka/font-install/blob/8b9fb28d0b299ca0ac061e0d0eefc03faf4ea7ad/install_windows.go#L50-L66
 func (dll *Gdi32DLL) AddFontResource(fontPath string) int {
 	proc := dll.mustProc(PNAddFontResource)
-	r1, _, _ := syscall.SyscallN(proc.Addr(), StrToLPCWSTR(fontPath))
+	r1, _, _ := syscall.SyscallN(proc.Addr(), UintptrFromStr(fontPath))
 	return int(r1)
 }
 
@@ -46,7 +46,7 @@ func (dll *Gdi32DLL) AddFontResource(fontPath string) int {
 func (dll *Gdi32DLL) RemoveFontResource(name string) int {
 	proc := dll.mustProc(PNRemoveFontResource)
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
-		StrToLPCWSTR(name),
+		UintptrFromStr(name),
 		0,
 		0)
 	return int(r1)
@@ -64,7 +64,7 @@ func (dll *Gdi32DLL) RemoveFontResource(name string) int {
 func (dll *Gdi32DLL) AddFontResourceEx(fontPath string, flag uint32, reserved uintptr) int {
 	proc := dll.mustProc(PNAddFontResourceEx)
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
-		StrToLPCWSTR(fontPath),
+		UintptrFromStr(fontPath),
 		uintptr(flag),
 		reserved,
 	)
@@ -77,7 +77,7 @@ func (dll *Gdi32DLL) AddFontResourceEx(fontPath string, flag uint32, reserved ui
 func (dll *Gdi32DLL) RemoveFontResourceEx(name string, flag uint32, reserved uintptr) int {
 	proc := dll.mustProc(PNRemoveFontResourceEx)
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
-		StrToLPCWSTR(name),
+		UintptrFromStr(name),
 		uintptr(flag),
 		reserved,
 	)
