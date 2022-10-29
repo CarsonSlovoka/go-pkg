@@ -12,6 +12,13 @@ func StrToCharPtr(str string) *uint8 {
 	return &chars[0]
 }
 
+func UintptrFromBool(b bool) uintptr {
+	if b {
+		return 1
+	}
+	return 0
+}
+
 // UintptrFromStr 用在W的方法中
 // 先將str轉成utf16ptr再轉成uintptr
 func UintptrFromStr(str string) uintptr {

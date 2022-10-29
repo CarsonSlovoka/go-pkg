@@ -129,16 +129,10 @@ func (dll *Kernel32DLL) CreateFile(lpFileName string, dwDesiredAccess, dwShareMo
 // Returns TRUE if successful or FALSE otherwise.
 func (dll *Kernel32DLL) CopyFile(existingFileName string, newFileName string, bFailIfExists bool) bool {
 	proc := dll.mustProc(PNCopyFile)
-	var failIfExists uintptr
-	if bFailIfExists {
-		failIfExists = 1
-	} else {
-		failIfExists = 0
-	}
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
 		UintptrFromStr(existingFileName),
 		UintptrFromStr(newFileName),
-		failIfExists,
+		UintptrFromBool(bFailIfExists),
 	)
 	return r1 != 0
 }
@@ -200,15 +194,9 @@ func (dll *Kernel32DLL) BeginUpdateResource(filePath string, bDeleteExistingReso
 	if err != nil {
 		panic(err)
 	}
-	var uintptrDeleteExistingResources uintptr
-	if bDeleteExistingResources {
-		uintptrDeleteExistingResources = 1
-	} else {
-		uintptrDeleteExistingResources = 0
-	}
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(unsafe.Pointer(utf16ptrFilepath)),
-		uintptrDeleteExistingResources,
+		UintptrFromBool(bDeleteExistingResources),
 	)
 	return r1
 }
@@ -240,15 +228,8 @@ func (dll *Kernel32DLL) UpdateResource(handle uintptr,
 // Returns TRUE if function succeeds; FALSE otherwise.
 func (dll *Kernel32DLL) EndUpdateResource(hUpdate uintptr, fDiscard bool) bool {
 	proc := dll.mustProc(PNEndUpdateResource)
-	var uintptrForceDiscard uintptr
-	if fDiscard {
-		uintptrForceDiscard = 1
-	} else {
-		uintptrForceDiscard = 0
-	}
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
-		hUpdate,
-		uintptrForceDiscard,
+		UintptrFromBool(fDiscard),
 	)
 	return r1 == 1
 }

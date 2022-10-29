@@ -240,7 +240,7 @@ func (dll *User32DLL) LookupIconIdFromDirectoryEx(presBits uintptr,
 	proc := dll.mustProc(PNLookupIconIdFromDirectoryEx)
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
 		presBits,
-		uintptr(unsafe.Pointer(&fIcon)),
+		UintptrFromBool(fIcon),
 		uintptr(cxDesired), uintptr(cyDesired),
 		uintptr(flags),
 	)
@@ -270,7 +270,7 @@ func (dll *User32DLL) CreateIconFromResourceEx(
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
 		presBits,
 		uintptr(dwResSize),
-		uintptr(unsafe.Pointer(&fIcon)),
+		UintptrFromBool(fIcon),
 		uintptr(dwVer),
 		uintptr(cxDesired), uintptr(cyDesired),
 		uintptr(flags),
