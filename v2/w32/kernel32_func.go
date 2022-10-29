@@ -69,10 +69,12 @@ func (dll *Kernel32DLL) CreateMutex(name string) (handle uintptr, err error) {
 
 // GetNativeSystemInfo
 // https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getnativesysteminfo
-func (dll *Kernel32DLL) GetNativeSystemInfo() (info SYSTEM_INFO) {
+func (dll *Kernel32DLL) GetNativeSystemInfo() *SYSTEM_INFO {
+	info := new(SYSTEM_INFO)
 	proc := dll.mustProc(PNGetNativeSystemInfo)
-	_, _, _ = syscall.SyscallN(proc.Addr(), uintptr(unsafe.Pointer(&info)))
-	return
+	// _, _, _ = syscall.SyscallN(proc.Addr(), uintptr(unsafe.Pointer(&info))) // 適用回傳 (info SYSTEM_INFO)
+	_, _, _ = syscall.SyscallN(proc.Addr(), uintptr(unsafe.Pointer(info)))
+	return info
 }
 
 // GetModuleHandle https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-getmodulehandlew

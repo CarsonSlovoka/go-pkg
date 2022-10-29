@@ -165,6 +165,27 @@ func ExampleUser32DLL_DrawIcon() {
 	// Output:
 }
 
+func ExampleUser32DLL_GetIconInfo() {
+	user32dll := w32.NewUser32DLL(
+		w32.PNLoadIcon,
+		w32.PNGetIconInfo,
+	)
+	hIconQuestion, err := user32dll.LoadIcon(0, w32.MakeIntResource(w32.IDI_QUESTION))
+	if err != nil {
+		return
+	}
+
+	var iInfo w32.ICONINFO
+	if !user32dll.GetIconInfo(hIconQuestion, &iInfo) {
+		return
+	}
+	log.Printf("%+v\n", iInfo)
+	fmt.Println("ok")
+
+	// Output:
+	// ok
+}
+
 func ExampleUser32DLL_PostMessage() {
 	user32dll := w32.NewUser32DLL(
 		w32.PNPostMessage,

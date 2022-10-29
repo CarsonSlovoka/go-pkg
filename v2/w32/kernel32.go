@@ -72,9 +72,9 @@ const (
 	LOCALE_SISO639LANGNAME2  LCTYPE = 0x67
 )
 
-// https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/ns-sysinfoapi-system_info
+// SYSTEM_INFO https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/ns-sysinfoapi-system_info
 type SYSTEM_INFO struct {
-	ProcessorArchitecture     uint16
+	ProcessorArchitecture     uint16 // PROCESSOR_ARCHITECTURE_AMD64, PROCESSOR_ARCHITECTURE_ARM64, PROCESSOR_ARCHITECTURE_IA64, ...
 	Reserved                  uint16
 	PageSize                  uint32
 	MinimumApplicationAddress LPCVOID

@@ -20,6 +20,7 @@ const (
 	PNGetDC                       ProcName = "GetDC"
 	PNReleaseDC                   ProcName = "ReleaseDC"
 	PNDrawIcon                    ProcName = "DrawIcon"
+	PNGetIconInfo                 ProcName = "GetIconInfo"
 	PNPostMessage                 ProcName = "PostMessageW"
 	PNSendMessage                 ProcName = "SendMessageW"
 	PNLookupIconIdFromDirectoryEx ProcName = "LookupIconIdFromDirectoryEx"
@@ -207,6 +208,17 @@ func (dll *User32DLL) DrawIcon(hdc HDC, x, y int, hIcon HICON) error {
 		return lastError("DrawIcon")
 	}
 	return nil
+}
+
+// GetIconInfo https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-geticoninfo
+// Returns TRUE if successful or FALSE otherwise.
+func (dll *User32DLL) GetIconInfo(hIcon HICON, pIconInfo *ICONINFO) bool {
+	proc := dll.mustProc(PNGetIconInfo)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hIcon),
+		uintptr(unsafe.Pointer(pIconInfo)),
+	)
+	return r1 != 0
 }
 
 // PostMessage https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage

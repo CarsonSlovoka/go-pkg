@@ -38,6 +38,14 @@ func TestCreateMutex(t *testing.T) {
 	}
 }
 
+func ExampleKernel32DLL_GetNativeSystemInfo() {
+	kernel32dll := w32.NewKernel32DLL(w32.PNGetNativeSystemInfo)
+	info := kernel32dll.GetNativeSystemInfo()
+	// ProcessorArchitecture: https://github.com/CarsonSlovoka/go-pkg/blob/8d251b6a295cc4177593e9dae7455955e769e88d/v2/w32/const.go#L7-L12
+	log.Println(info.ProcessorArchitecture)
+	// Output:
+}
+
 // https://learn.microsoft.com/en-us/windows/win32/menurc/using-resources
 func ExampleKernel32DLL_CreateFile() {
 	kernel32dll := w32.NewKernel32DLL(
