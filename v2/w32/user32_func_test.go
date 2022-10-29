@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/CarsonSlovoka/go-pkg/v2/w32"
 	"log"
+	"unsafe"
 )
 
 func ExampleUser32DLL_GetWindowText() {
@@ -165,11 +166,23 @@ func ExampleUser32DLL_DrawIcon() {
 	// Output:
 }
 
+// 本範例流程
+// 1. HICON: 取得hIcon
+// 2. ICONINFO: 由該hIcon透過GetIconInfo取得到ICONINFO的結構資料
+// 3. init BITMAP: 建立空的BITMAP對象(初始化參照ICONINFO.HbmColor)
+// 4. copy to BITMAP: 透過CopyImage將ICONINFO.HbmColor複製到我們所建立的BITMAP之中
 func ExampleUser32DLL_GetIconInfo() {
 	user32dll := w32.NewUser32DLL(
 		w32.PNLoadIcon,
 		w32.PNGetIconInfo,
+		w32.PNCopyImage,
 	)
+
+	gdi32dll := w32.NewGdi32DLL(
+		w32.PNGetObject,
+		w32.PNDeleteObject,
+	)
+
 	hIconQuestion, err := user32dll.LoadIcon(0, w32.MakeIntResource(w32.IDI_QUESTION))
 	if err != nil {
 		return
@@ -179,11 +192,43 @@ func ExampleUser32DLL_GetIconInfo() {
 	if !user32dll.GetIconInfo(hIconQuestion, &iInfo) {
 		return
 	}
+	// 當獲取成功之後，如果不用時，要把所有HBITMAP的對象釋放掉
+	defer func() {
+		if !gdi32dll.DeleteObject(w32.HGDIOBJ(iInfo.HbmColor)) {
+			fmt.Println("error DeleteObject HbmColor")
+		}
+		if !gdi32dll.DeleteObject(w32.HGDIOBJ(iInfo.HbmMask)) {
+			fmt.Println("error DeleteObject HbmMask")
+		}
+	}()
 	log.Printf("%+v\n", iInfo)
 	fmt.Println("ok")
 
+	// 以下為copyImage的測試，沿用上面取得到的icon
+	{
+		// 以ICONINFO的資料建立一個空的BITMAP
+		bmp := w32.BITMAP{}
+		if gdi32dll.GetObject(w32.HANDLE(iInfo.HbmColor), int32(unsafe.Sizeof(bmp)), uintptr(unsafe.Pointer(&bmp))) == 0 {
+			return
+		}
+
+		w32.NewUser32DLL()
+		var hBmp w32.HBITMAP
+		hBmpHandle, errno := user32dll.CopyImage(w32.HANDLE(iInfo.HbmColor), w32.IMAGE_BITMAP, 0, 0, 0)
+		if errno != 0 {
+			return
+		}
+		hBmp = w32.HBITMAP(hBmpHandle)
+		fmt.Println("copyImage OK")
+		log.Println(hBmp)
+
+		if !gdi32dll.DeleteObject(w32.HGDIOBJ(hBmp)) {
+			fmt.Println("error")
+		}
+	}
 	// Output:
 	// ok
+	// copyImage OK
 }
 
 func ExampleUser32DLL_PostMessage() {

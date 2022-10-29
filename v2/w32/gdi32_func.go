@@ -14,6 +14,8 @@ const (
 	PNAddFontResourceEx       ProcName = "AddFontResourceExW"
 	PNRemoveFontResource      ProcName = "RemoveFontResourceW"
 	PNRemoveFontResourceEx    ProcName = "RemoveFontResourceExW"
+	PNGetObject               ProcName = "GetObjectW"
+	PNDeleteObject            ProcName = "DeleteObject"
 )
 
 type Gdi32DLL struct {
@@ -166,4 +168,27 @@ func (fmr *FontMemResource) Remove() error {
 		fmr.hFontResource = 0
 	}
 	return nil
+}
+
+// GetObject https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-getobjectw
+// If the function fails, the return value is zero.
+func (dll *Gdi32DLL) GetObject(h HANDLE, size int32, output uintptr) int32 {
+	proc := dll.mustProc(PNGetObject)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(h),
+		uintptr(size),
+		output)
+	return int32(r1)
+}
+
+// DeleteObject https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-deleteobject
+// hObject: A handle to a logical pen, brush, font, bitmap, region, or palette.
+// If the function succeeds, the return value is nonzero.
+// If the specified handle is not valid or is currently selected into a DC, the return value is zero.
+func (dll *Gdi32DLL) DeleteObject(hObject HGDIOBJ) bool {
+	proc := dll.mustProc(PNDeleteObject)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hObject),
+	)
+	return r1 != 0
 }

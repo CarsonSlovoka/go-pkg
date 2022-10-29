@@ -25,6 +25,7 @@ const (
 	PNSendMessage                 ProcName = "SendMessageW"
 	PNLookupIconIdFromDirectoryEx ProcName = "LookupIconIdFromDirectoryEx"
 	PNCreateIconFromResourceEx    ProcName = "CreateIconFromResourceEx"
+	PNCopyImage                   ProcName = "CopyImage"
 )
 
 type User32DLL struct {
@@ -288,4 +289,18 @@ func (dll *User32DLL) CreateIconFromResourceEx(
 		uintptr(flags),
 	)
 	return HICON(r1)
+}
+
+// CopyImage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-copyimage
+// If the function fails, the return value is NULL.
+func (dll *User32DLL) CopyImage(h HANDLE, imgType uint32, cx, cy int32, flags uint32) (HANDLE, syscall.Errno) {
+	proc := dll.mustProc(PNCopyImage)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(h),
+		uintptr(imgType),
+		uintptr(cx),
+		uintptr(cy),
+		uintptr(flags),
+	)
+	return HANDLE(r1), errno
 }

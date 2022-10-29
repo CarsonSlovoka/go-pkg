@@ -15,6 +15,7 @@ type (
 	HMODULE       uintptr // HMODULE 是代表應用程序載入的模塊
 	HWINEVENTHOOK HANDLE
 	HRSRC         uintptr
+	LPVOID        uintptr
 )
 
 type (
@@ -26,6 +27,11 @@ type (
 	HMONITOR  HANDLE
 	HRAWINPUT HANDLE
 	HWND      HANDLE
+)
+
+type (
+	UINT uint32
+	// INT int32
 )
 
 type (
