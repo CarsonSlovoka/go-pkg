@@ -46,8 +46,50 @@ func ExampleKernel32DLL_GetNativeSystemInfo() {
 	// Output:
 }
 
-// https://learn.microsoft.com/en-us/windows/win32/menurc/using-resources
 func ExampleKernel32DLL_CreateFile() {
+	kernel32dll := w32.NewKernel32DLL(
+		w32.PNCreateFile,
+		w32.PNCloseHandle,
+	)
+	testFilePath := "testdata/temp.txt"
+	hFile, errno := kernel32dll.CreateFile(testFilePath,
+		w32.GENERIC_READ|w32.GENERIC_WRITE,
+		0,
+		0,
+		w32.CREATE_ALWAYS,
+		w32.FILE_ATTRIBUTE_NORMAL,
+		0,
+	)
+	if errno != 0 { // w32.NO_ERROR
+		return
+	}
+	if !kernel32dll.CloseHandle(hFile) {
+		return
+	}
+	defer os.Remove(testFilePath)
+	hFile, errno = kernel32dll.CreateFile(testFilePath,
+		w32.GENERIC_READ|w32.GENERIC_WRITE,
+		0,
+		0,
+		w32.CREATE_ALWAYS, // 如果檔案已經存在，還是可以創建成功，但是錯誤代碼會回傳:183(ERROR_ALREADY_EXISTS)
+		w32.FILE_ATTRIBUTE_NORMAL,
+		0,
+	)
+	if !kernel32dll.CloseHandle(hFile) {
+		return
+	}
+	if errno != w32.ERROR_ALREADY_EXISTS {
+		return
+	}
+	fmt.Println(hFile)
+	fmt.Println("ok")
+	// Output:
+	// ok
+	// 0
+}
+
+// https://learn.microsoft.com/en-us/windows/win32/menurc/using-resources
+func ExampleKernel32DLL_CopyFile() {
 	kernel32dll := w32.NewKernel32DLL(
 		w32.PNCreateFile,
 		w32.PNCloseHandle,
@@ -57,7 +99,7 @@ func ExampleKernel32DLL_CreateFile() {
 	)
 
 	targetPath, _ := filepath.Abs("testdata/temp.txt") // 避免反斜線問題
-	hFile := kernel32dll.CreateFile(targetPath,        // name of file
+	hFile, _ := kernel32dll.CreateFile(targetPath,     // name of file
 		w32.GENERIC_READ|w32.GENERIC_WRITE, // access mode
 		0,                                  // share mode
 		0,                                  // default security

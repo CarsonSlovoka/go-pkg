@@ -106,15 +106,16 @@ func (dll *Kernel32DLL) GetLastError() uint32 {
 }
 
 // CreateFile https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew
-// error => r1 == INVALID_HANDLE_VALUE
-// 不用的時候記得呼叫CloseHandle來關閉
+// 不能單靠errno來判斷到底有沒有創建成功，errno應該視為取得更多的創建資訊。
+// 如果創建失敗，那麼r1所回傳的數值一定是: INVALID_HANDLE_VALUE (-1)
+// 注意！ 不用的時候記得呼叫CloseHandle來關閉
 func (dll *Kernel32DLL) CreateFile(lpFileName string, dwDesiredAccess, dwShareMode uint32,
 	lpSecurityAttributes uintptr,
 	dwCreationDisposition, dwFlagsAndAttributes uint32,
 	hTemplateFile uintptr,
-) HANDLE {
+) (HANDLE, syscall.Errno) {
 	proc := dll.mustProc(PNCreateFile)
-	r1, _, _ := syscall.SyscallN(proc.Addr(),
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
 		UintptrFromStr(lpFileName),
 		uintptr(dwDesiredAccess),
 		uintptr(dwShareMode),
@@ -122,7 +123,7 @@ func (dll *Kernel32DLL) CreateFile(lpFileName string, dwDesiredAccess, dwShareMo
 		uintptr(dwCreationDisposition),
 		uintptr(dwFlagsAndAttributes),
 		hTemplateFile)
-	return HANDLE(r1)
+	return HANDLE(r1), errno
 }
 
 // CopyFile https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-copyfilew
