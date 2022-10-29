@@ -113,7 +113,7 @@ func (dll *Gdi32DLL) RemoveFontMemResourceEx(h HANDLE) bool {
 // NewFontMemResource 這不是屬於winapi正統的函數，是一個包裝，方便使用AddFontMemResourceEx
 // resourceID: 您的字型資源8(RT_FONT)資源下，要取得其子項目的ID代號
 // 如果您的resourceID是字串，請使用syscall.UTF16PtrFromString(resourceName)即可轉成*uint16
-func NewFontMemResource(hModule uintptr, resourceID *uint16) (*FontMemResource, error) {
+func NewFontMemResource(hModule HMODULE, resourceID *uint16) (*FontMemResource, error) {
 	kernel32dll := NewKernel32DLL(
 		PNFindResource,
 		PNSizeofResource,

@@ -105,7 +105,7 @@ func ExampleKernel32DLL_GetModuleHandle() {
 		w32.PNLoadLibrary,
 		w32.PNFreeLibrary,
 	)
-	hModule := kernel32dll.GetModuleHandle(nil) // nil表示應用程式自己本身
+	hModule := kernel32dll.GetModuleHandle("") // nil表示應用程式自己本身
 	if hModule == 0 {
 		log.Fatal("GetModuleHandle")
 	}
@@ -123,19 +123,15 @@ func ExampleKernel32DLL_GetModuleHandle() {
 			log.Fatal("LoadLibrary")
 		}
 
-		defer func(hmodule uintptr) {
+		defer func(hModule w32.HMODULE) {
 			// 注意freeLibrary的對象不要使用GetModuleHandle出來的handle，有可能會出問題！ 要使用LoadLibrary的handle
-			if ok := kernel32dll.FreeLibrary(hmodule); !ok {
+			if ok := kernel32dll.FreeLibrary(hModule); !ok {
 				log.Fatal("FreeLibrary")
 			}
 		}(hExe)
 
-		uint16prtModulePath, err := syscall.UTF16PtrFromString(exePath)
-		if err != nil {
-			return
-		}
-		hModule2 := kernel32dll.GetModuleHandle(uint16prtModulePath)
-		if hModule != 0 {
+		hModule2 := kernel32dll.GetModuleHandle(exePath)
+		if hModule2 != 0 {
 			log.Println(hModule2)
 		}
 	}
@@ -180,8 +176,11 @@ func ExampleKernel32DLL_UpdateResource() {
 	}
 	*/
 
-	var lpResLock, hExe uintptr
-	var hRes w32.HRSRC
+	var (
+		hExe      w32.HMODULE
+		hRes      w32.HRSRC
+		lpResLock uintptr
+	)
 	{
 		hExe = kernel32dll.LoadLibrary(sourcePath)
 		if hExe == 0 {

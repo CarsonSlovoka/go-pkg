@@ -38,19 +38,20 @@ func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 // CloseHandle Closes an open object handle.
 // https://docs.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-closehandle?redirectedfrom=MSDN
 // Returns TRUE if successful or FALSE otherwise.
-func (dll *Kernel32DLL) CloseHandle(handle uintptr) bool {
+func (dll *Kernel32DLL) CloseHandle(handle HANDLE) bool {
 	proc := dll.mustProc(PNCloseHandle)
 	// r1, _, err := proc.Call(handle) // 其為syscall.SyscallN的封裝(多了檢查的動作)，如果已經確定，可以直接用syscall.SyscallN會更有效率
-	r1, _, _ := syscall.SyscallN(proc.Addr(), handle)
+	r1, _, _ := syscall.SyscallN(proc.Addr(), uintptr(handle))
 	return r1 != 0
 }
 
 // CreateMutex You can use it to restrict to a single instance of executable
 // https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-createmutexW#return-value
-func (dll *Kernel32DLL) CreateMutex(name string) (handle uintptr, err error) {
+// If the function fails, the return value is NULL.
+func (dll *Kernel32DLL) CreateMutex(name string) (HANDLE, error) {
 	proc := dll.mustProc(PNCreateMutex)
 	lpName, _ := syscall.UTF16PtrFromString(name) // LPCWSTR
-	handle, _, errno := syscall.SyscallN(proc.Addr(), 0, 0, uintptr(unsafe.Pointer(lpName)))
+	r1, _, errno := syscall.SyscallN(proc.Addr(), 0, 0, uintptr(unsafe.Pointer(lpName)))
 	/*
 		handle, _, err = proc.Call(
 			0,
@@ -62,9 +63,9 @@ func (dll *Kernel32DLL) CreateMutex(name string) (handle uintptr, err error) {
 		}
 	*/
 	if errno == 0 {
-		return handle, nil
+		return HANDLE(r1), nil
 	}
-	return handle, errno
+	return 0, errno
 }
 
 // GetNativeSystemInfo
@@ -81,16 +82,17 @@ func (dll *Kernel32DLL) GetNativeSystemInfo() *SYSTEM_INFO {
 // If the function fails, the return value is NULL.
 // do not pass a handle returned by GetModuleHandle to the FreeLibrary function.
 // Doing so can cause a DLL module to be unmapped prematurely.
-func (dll *Kernel32DLL) GetModuleHandle(lpModuleName *uint16) (hmodule uintptr) {
+// 如果您要取得自己，傳入空字串即可。UintptrFromStr("")會回傳傳0
+func (dll *Kernel32DLL) GetModuleHandle(moduleName string) HMODULE {
 	proc := dll.mustProc(PNGetModuleHandle)
-	hmodule, _, _ = syscall.SyscallN(proc.Addr(), uintptr(unsafe.Pointer(lpModuleName)))
-	return hmodule
+	hModule, _, _ := syscall.SyscallN(proc.Addr(), UintptrFromStr(moduleName))
+	return HMODULE(hModule)
 }
 
 // FreeLibrary https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-freelibrary
-func (dll *Kernel32DLL) FreeLibrary(hLibModule uintptr) bool {
+func (dll *Kernel32DLL) FreeLibrary(hLibModule HMODULE) bool {
 	proc := dll.mustProc(PNFreeLibrary)
-	r1, _, _ := syscall.SyscallN(proc.Addr(), hLibModule)
+	r1, _, _ := syscall.SyscallN(proc.Addr(), uintptr(hLibModule))
 	return r1 != 0
 }
 
@@ -110,7 +112,7 @@ func (dll *Kernel32DLL) CreateFile(lpFileName string, dwDesiredAccess, dwShareMo
 	lpSecurityAttributes uintptr,
 	dwCreationDisposition, dwFlagsAndAttributes uint32,
 	hTemplateFile uintptr,
-) uintptr {
+) HANDLE {
 	proc := dll.mustProc(PNCreateFile)
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
 		UintptrFromStr(lpFileName),
@@ -120,7 +122,7 @@ func (dll *Kernel32DLL) CreateFile(lpFileName string, dwDesiredAccess, dwShareMo
 		uintptr(dwCreationDisposition),
 		uintptr(dwFlagsAndAttributes),
 		hTemplateFile)
-	return r1
+	return HANDLE(r1)
 }
 
 // CopyFile https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-copyfilew
@@ -155,10 +157,10 @@ func (dll *Kernel32DLL) CopyFile(existingFileName string, newFileName string, bF
 //	1: 1033 (ID: 1 語系對應1033即英文)
 //
 // ...其他的資源類型以此類推
-func (dll *Kernel32DLL) FindResource(hModule uintptr, lpName, lpType *uint16) HRSRC {
+func (dll *Kernel32DLL) FindResource(hModule HMODULE, lpName, lpType *uint16) HRSRC {
 	proc := dll.mustProc(PNFindResource)
 	ret, _, _ := syscall.SyscallN(proc.Addr(),
-		hModule,
+		uintptr(hModule),
 		uintptr(unsafe.Pointer(lpName)),
 		uintptr(unsafe.Pointer(lpType)), // https://learn.microsoft.com/en-us/windows/win32/menurc/resource-types
 	)
@@ -167,20 +169,20 @@ func (dll *Kernel32DLL) FindResource(hModule uintptr, lpName, lpType *uint16) HR
 
 // LoadLibrary https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryw
 // If the function fails, the return value is NULL
-func (dll *Kernel32DLL) LoadLibrary(lpLibFileName string) (handle uintptr) {
+func (dll *Kernel32DLL) LoadLibrary(lpLibFileName string) HMODULE {
 	proc := dll.mustProc(PNLoadLibrary)
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
 		UintptrFromStr(lpLibFileName),
 	)
-	return r1
+	return HMODULE(r1)
 }
 
 // SizeofResource https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-sizeofresource
 // If the function fails, the return value is NULL (0)
-func (dll *Kernel32DLL) SizeofResource(hModule uintptr, hResInfo HRSRC) uint32 {
+func (dll *Kernel32DLL) SizeofResource(hModule HMODULE, hResInfo HRSRC) uint32 {
 	proc := dll.mustProc(PNSizeofResource)
 	ret, _, _ := syscall.SyscallN(proc.Addr(),
-		hModule,
+		uintptr(hModule),
 		uintptr(hResInfo),
 		0,
 	)
@@ -189,7 +191,7 @@ func (dll *Kernel32DLL) SizeofResource(hModule uintptr, hResInfo HRSRC) uint32 {
 
 // BeginUpdateResource https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-beginupdateresourceW
 // Returns handle if successful or FALSE otherwise.
-func (dll *Kernel32DLL) BeginUpdateResource(filePath string, bDeleteExistingResources bool) (handle uintptr) {
+func (dll *Kernel32DLL) BeginUpdateResource(filePath string, bDeleteExistingResources bool) HANDLE {
 	proc := dll.mustProc(PNBeginUpdateResource)
 
 	utf16ptrFilepath, err := syscall.UTF16PtrFromString(filePath) // *uint16, err
@@ -200,13 +202,13 @@ func (dll *Kernel32DLL) BeginUpdateResource(filePath string, bDeleteExistingReso
 		uintptr(unsafe.Pointer(utf16ptrFilepath)),
 		UintptrFromBool(bDeleteExistingResources),
 	)
-	return r1
+	return HANDLE(r1)
 }
 
 // UpdateResource https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-updateresourcew
 // Returns TRUE if successful or FALSE otherwise.
 // Example: https://learn.microsoft.com/en-us/windows/win32/menurc/using-resources
-func (dll *Kernel32DLL) UpdateResource(handle uintptr,
+func (dll *Kernel32DLL) UpdateResource(handle HANDLE,
 	lpType uint16, // RT_FONT, RT_DIALOG, ...
 	lpName *uint16, // id代號，隨便您定. MakeIntResource(123)
 	wLanguage uint16, // MakeLangID(w32.LANG_ENGLISH, w32.SUBLANG_ENGLISH_US)
@@ -215,7 +217,7 @@ func (dll *Kernel32DLL) UpdateResource(handle uintptr,
 ) bool {
 	proc := dll.mustProc(PNUpdateResource)
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
-		handle,
+		uintptr(handle),
 		uintptr(lpType),
 		uintptr(unsafe.Pointer(lpName)),
 		uintptr(wLanguage),
@@ -228,9 +230,10 @@ func (dll *Kernel32DLL) UpdateResource(handle uintptr,
 // EndUpdateResource https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-endupdateresourcew
 // fDiscard: FALSE會真的更新, TRUE僅是測試用，不會更新. Indicates whether to write the resource updates to the file. If this parameter is TRUE, no changes are made. If it is FALSE, the changes are made: the resource updates will take effect.
 // Returns TRUE if function succeeds; FALSE otherwise.
-func (dll *Kernel32DLL) EndUpdateResource(hUpdate uintptr, fDiscard bool) bool {
+func (dll *Kernel32DLL) EndUpdateResource(hUpdate HANDLE, fDiscard bool) bool {
 	proc := dll.mustProc(PNEndUpdateResource)
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hUpdate),
 		UintptrFromBool(fDiscard),
 	)
 	return r1 == 1
@@ -238,10 +241,10 @@ func (dll *Kernel32DLL) EndUpdateResource(hUpdate uintptr, fDiscard bool) bool {
 
 // LoadResource https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadresource
 // If the function fails, the return value is NULL (0)
-func (dll *Kernel32DLL) LoadResource(hModule uintptr, hResInfo HRSRC) (hglobal HGLOBAL) {
+func (dll *Kernel32DLL) LoadResource(hModule HMODULE, hResInfo HRSRC) HGLOBAL {
 	proc := dll.mustProc(PNLoadResource)
 	ret, _, _ := syscall.SyscallN(proc.Addr(),
-		hModule,
+		uintptr(hModule),
 		uintptr(hResInfo),
 	)
 	return HGLOBAL(ret)
