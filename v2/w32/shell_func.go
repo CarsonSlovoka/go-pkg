@@ -29,12 +29,12 @@ func NewShellDLL(procList []ProcName) *ShellDLL {
 func (dll *ShellDLL) ExtractIcon(hInst uintptr, // 透過哪一個對象來呼叫此dll函數，一般用本身應用程式自身0就可以了
 	exeFileName string, // {相對路徑, 絕對路徑, 只有運用程式名稱(要系統路徑能找到)}，這三類都可以
 	nIconIndex int,
-) (hIcon uintptr) {
+) HICON {
 	proc := dll.mustProc(PNExtractIcon)
-	hIcon, _, _ = syscall.SyscallN(proc.Addr(),
+	hIcon, _, _ := syscall.SyscallN(proc.Addr(),
 		hInst,
 		UintptrFromStr(exeFileName),
 		uintptr(nIconIndex),
 	)
-	return hIcon
+	return HICON(hIcon)
 }

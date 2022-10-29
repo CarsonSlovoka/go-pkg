@@ -157,7 +157,7 @@ func (dll *User32DLL) GetSystemMetrics(targetIdx int) int {
 }
 
 // LoadIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadiconw
-func (dll *User32DLL) LoadIcon(hInstance uintptr, lpIconName *uint16) (hIcon uintptr, err error) {
+func (dll *User32DLL) LoadIcon(hInstance uintptr, lpIconName *uint16) (hIcon HICON, err error) {
 	proc := dll.mustProc(PNLoadIcon)
 	hwnd, _, _ := syscall.SyscallN(proc.Addr(),
 		hInstance,
@@ -167,7 +167,7 @@ func (dll *User32DLL) LoadIcon(hInstance uintptr, lpIconName *uint16) (hIcon uin
 	if hwnd == 0 {
 		return 0, lastError("LoadIcon")
 	}
-	return hwnd, nil
+	return HICON(hwnd), nil
 }
 
 // GetDC LoadIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getdc
@@ -194,13 +194,13 @@ func (dll *User32DLL) ReleaseDC(hwnd HWND, hdc HDC) error {
 }
 
 // DrawIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-drawicon
-func (dll *User32DLL) DrawIcon(hdc HDC, x, y int, hicon uintptr) error {
+func (dll *User32DLL) DrawIcon(hdc HDC, x, y int, hIcon HICON) error {
 	proc := dll.mustProc(PNDrawIcon)
 	hwnd, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(hdc),
 		uintptr(x),
 		uintptr(y),
-		hicon,
+		uintptr(hIcon),
 	)
 
 	if hwnd == 0 {
@@ -265,7 +265,7 @@ func (dll *User32DLL) CreateIconFromResourceEx(
 	cxDesired int,
 	cyDesired int,
 	flags uint, // combination of the following values:
-) (hicon uintptr) {
+) HICON {
 	proc := dll.mustProc(PNCreateIconFromResourceEx)
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
 		presBits,
@@ -275,5 +275,5 @@ func (dll *User32DLL) CreateIconFromResourceEx(
 		uintptr(cxDesired), uintptr(cyDesired),
 		uintptr(flags),
 	)
-	return r1
+	return HICON(r1)
 }

@@ -21,9 +21,9 @@ func ExampleShellDLL_ExtractIcon() {
 		log.Printf("not found %q", exePath)
 	}
 
-	hicon := shell32dll.ExtractIcon(0, exePath, 0)
+	hIcon := shell32dll.ExtractIcon(0, exePath, 0)
 
-	if hicon == 0 {
+	if hIcon == 0 {
 		return
 	}
 
@@ -50,7 +50,7 @@ func ExampleShellDLL_ExtractIcon() {
 			}
 		}()
 
-		if err := user32dll.DrawIcon(curHDC, 50, 100, hicon); err != nil {
+		if err := user32dll.DrawIcon(curHDC, 50, 100, hIcon); err != nil {
 			panic(err)
 		}
 	}

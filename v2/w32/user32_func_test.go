@@ -94,7 +94,7 @@ func ExampleUser32DLL_DrawIcon() {
 	)
 
 	// 獲取HICON{question, chrome}
-	var hIconQuestion, hIconChrome uintptr
+	var hIconQuestion, hIconChrome w32.HICON
 	{
 		var err error
 		// 取得系統圖標question
@@ -111,7 +111,8 @@ func ExampleUser32DLL_DrawIcon() {
 			return
 		}
 
-		hIconChrome, _, _ = user32dll.SendMessage(uintptr(hwndChrome), w32.WM_GETICON, w32.ICON_SMALL, 0)
+		hIcon, _, _ := user32dll.SendMessage(uintptr(hwndChrome), w32.WM_GETICON, w32.ICON_SMALL, 0)
+		hIconChrome = w32.HICON(hIcon)
 		if hIconChrome == 0 {
 			log.Println("chrome圖標獲取失敗")
 
@@ -149,7 +150,7 @@ func ExampleUser32DLL_DrawIcon() {
 		for _, d := range []struct {
 			x     int // 要畫在哪一個位置
 			y     int
-			hIcon uintptr
+			hIcon w32.HICON
 		}{
 			{50, 100, hIconQuestion},
 			{50, 200, hIconQuestion},
