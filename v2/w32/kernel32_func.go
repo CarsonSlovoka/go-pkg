@@ -38,20 +38,24 @@ func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 // CloseHandle Closes an open object handle.
 // https://docs.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-closehandle?redirectedfrom=MSDN
 // Returns TRUE if successful or FALSE otherwise.
-func (dll *Kernel32DLL) CloseHandle(handle HANDLE) bool {
+func (dll *Kernel32DLL) CloseHandle(handle HANDLE) (bool, syscall.Errno) {
 	proc := dll.mustProc(PNCloseHandle)
 	// r1, _, err := proc.Call(handle) // 其為syscall.SyscallN的封裝(多了檢查的動作)，如果已經確定，可以直接用syscall.SyscallN會更有效率
-	r1, _, _ := syscall.SyscallN(proc.Addr(), uintptr(handle))
-	return r1 != 0
+	r1, _, errno := syscall.SyscallN(proc.Addr(), uintptr(handle))
+	return r1 != 0, errno
 }
 
 // CreateMutex You can use it to restrict to a single instance of executable
 // https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-createmutexW#return-value
 // If the function fails, the return value is NULL.
-func (dll *Kernel32DLL) CreateMutex(name string) (HANDLE, error) {
+func (dll *Kernel32DLL) CreateMutex(lpMutexAttributes *SECURITY_ATTRIBUTES, bInitialOwner bool, name string) (HANDLE, syscall.Errno) {
 	proc := dll.mustProc(PNCreateMutex)
-	lpName, _ := syscall.UTF16PtrFromString(name) // LPCWSTR
-	r1, _, errno := syscall.SyscallN(proc.Addr(), 0, 0, uintptr(unsafe.Pointer(lpName)))
+	// r1, _, errno := syscall.SyscallN(proc.Addr(), 0, 0, uintptr(unsafe.Pointer(lpName)))
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(unsafe.Pointer(lpMutexAttributes)),
+		UintptrFromBool(bInitialOwner),
+		UintptrFromStr(name),
+	)
 	/*
 		handle, _, err = proc.Call(
 			0,
@@ -62,10 +66,7 @@ func (dll *Kernel32DLL) CreateMutex(name string) (HANDLE, error) {
 			return handle, nil
 		}
 	*/
-	if errno == 0 {
-		return HANDLE(r1), nil
-	}
-	return 0, errno
+	return HANDLE(r1), errno
 }
 
 // GetNativeSystemInfo

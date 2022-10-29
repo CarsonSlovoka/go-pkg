@@ -37,7 +37,7 @@ WCHAR  xxx[128] | [128]uint16
 LPWSTR | *uint16
 LPCWSTR | *uint16
 |
-BOOL | uint32 建議用bool替換
+**BOOL** | int32 你會看到文檔在該回傳值為此類型時，常常只有提到0表示錯誤，但不會說TRUE代表什麼，因為非0的數值不見得一定都是1，有可能是其他的數值。
 DWORD | uint32
 DWORD_PTR | *uint32
 |

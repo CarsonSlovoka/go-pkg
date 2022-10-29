@@ -15,27 +15,62 @@ func TestCreateMutex(t *testing.T) {
 		w32.PNCreateMutex,
 		w32.PNCloseHandle,
 	)
-	handle, err := kernel32dll.CreateMutex("hello world")
-	if err != nil {
+	handle1, err := kernel32dll.CreateMutex(nil, false, "hello world")
+	if err != 0 {
 		t.Fatal(err)
 	}
 
-	_, err = kernel32dll.CreateMutex("hello world")
-	if err == nil || err != syscall.ERROR_ALREADY_EXISTS {
-		t.Error("not as expected")
+	// 再嘗試創建一個相同的Mutex，它會報錯，但是截至目前為止已經有兩個"hello world"所創建的Mutex(錯誤的也算在內)
+	// 如果沒把所有該名稱相符的Mutex都Close掉，即便已經關閉了一個，之後再次創建仍然會報ERROR_ALREADY_EXISTS的訊息
+	handle2, err := kernel32dll.CreateMutex(nil, false, "hello world")
+	if err != syscall.ERROR_ALREADY_EXISTS {
+		t.Fatal("not as expected")
 	}
 
-	if !kernel32dll.CloseHandle(handle) {
-		t.Error(err)
+	if ok, err := kernel32dll.CloseHandle(handle1); !ok {
+		t.Fatal(err)
 	}
-	// err = kernel32dll.CloseHandle(handle) // If you are debugging it will panic!
-	// fmt.Printf("%+v\n%d", err, err.(syscall.Errno))     // The Handle is invalid.  6
+	if ok, err := kernel32dll.CloseHandle(handle2); !ok { // 如果我們省略了這個closeHandle之後再嘗試創建一次，會報ERROR_ALREADY_EXISTS的錯誤
+		t.Fatal(err)
+	}
+
+	// We can create again since we have closed (close ALL)
+	handle3, err := kernel32dll.CreateMutex(nil, false, "hello world")
+	if err != w32.NO_ERROR {
+		t.Fatal(err)
+	}
+	if ok, err := kernel32dll.CloseHandle(handle3); !ok {
+		t.Fatal(err)
+	}
+}
+
+func ExampleKernel32DLL_CreateMutex() {
+	kernel32dll := w32.NewKernel32DLL(
+		w32.PNCreateMutex,
+		w32.PNCloseHandle,
+	)
+	handle, err := kernel32dll.CreateMutex(nil, false, "hello world")
+	if err != 0 {
+		return
+	}
+
+	if ok, err := kernel32dll.CloseHandle(handle); !ok {
+		fmt.Println(err)
+		return
+	}
 
 	// We can create again since we have closed.
-	handle, _ = kernel32dll.CreateMutex("hello world")
-	if !kernel32dll.CloseHandle(handle) {
-		t.Error(err)
+	handle, err = kernel32dll.CreateMutex(nil, false, "hello world")
+	if err != w32.NO_ERROR {
+		return
 	}
+	if ok, _ := kernel32dll.CloseHandle(handle); !ok {
+		return
+	}
+	fmt.Println("ok")
+	// Output:
+	// ok
+
 }
 
 func ExampleKernel32DLL_GetNativeSystemInfo() {
@@ -63,7 +98,7 @@ func ExampleKernel32DLL_CreateFile() {
 	if errno != 0 { // w32.NO_ERROR
 		return
 	}
-	if !kernel32dll.CloseHandle(hFile) {
+	if ok, _ := kernel32dll.CloseHandle(hFile); !ok {
 		return
 	}
 	defer os.Remove(testFilePath)
@@ -75,17 +110,17 @@ func ExampleKernel32DLL_CreateFile() {
 		w32.FILE_ATTRIBUTE_NORMAL,
 		0,
 	)
-	if !kernel32dll.CloseHandle(hFile) {
+	if ok, _ := kernel32dll.CloseHandle(hFile); !ok {
 		return
 	}
 	if errno != w32.ERROR_ALREADY_EXISTS {
 		return
 	}
-	fmt.Println(hFile)
+	fmt.Printf("%s\n", errno)
 	fmt.Println("ok")
 	// Output:
+	// Cannot create a file when that file already exists.
 	// ok
-	// 0
 }
 
 // https://learn.microsoft.com/en-us/windows/win32/menurc/using-resources
@@ -112,7 +147,7 @@ func ExampleKernel32DLL_CopyFile() {
 		fmt.Println("Could not create file.") // 有可能是目錄路徑不存在
 		return
 	}
-	if !kernel32dll.CloseHandle(hFile) {
+	if ok, _ := kernel32dll.CloseHandle(hFile); !ok {
 		fmt.Println("error: CloseHandle")
 		return
 	}
