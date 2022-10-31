@@ -137,12 +137,12 @@ func (dll *User32DLL) GetWindowText(hwnd HWND) (string, error) {
 
 // MessageBox
 // https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-messageboxw
-func (dll *User32DLL) MessageBox(hwnd uintptr, caption, text string, btnFlag uintptr) (clickBtnValue uintptr, errno error) {
+func (dll *User32DLL) MessageBox(hwnd HWND, caption, text string, btnFlag uintptr) (clickBtnValue uintptr, errno error) {
 	proc := dll.mustProc(PNMessageBox)
 	pCaption, _ := syscall.UTF16PtrFromString(caption)
 	pText, _ := syscall.UTF16PtrFromString(text)
 	clickBtnValue, _, errno = syscall.SyscallN(proc.Addr(),
-		hwnd,
+		uintptr(hwnd),
 		uintptr(unsafe.Pointer(pText)),
 		uintptr(unsafe.Pointer(pCaption)),
 		btnFlag,

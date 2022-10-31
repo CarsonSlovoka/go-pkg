@@ -37,7 +37,7 @@ func ExampleUser32DLL_MessageBox() {
 		w32.PNMessageBox,
 	)
 
-	hwndTop := uintptr(w32.HWND_TOP)
+	hwndTop := w32.HWND_TOP
 	response, _ := user32dll.MessageBox(hwndTop, "title", "body message", w32.MB_OK)
 	switch response {
 	case w32.IDYES:
