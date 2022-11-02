@@ -6,7 +6,9 @@ import (
 	"github.com/CarsonSlovoka/go-pkg/v2/w32"
 	"log"
 	"os"
+	"os/exec"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
@@ -110,11 +112,21 @@ func ExampleGdi32DLL_CreateCompatibleBitmap() {
 		w32.PNCloseHandle,
 	)
 
-	hwndNotepad := user32dll.FindWindow("Notepad", "")
+	var hwndNotepad w32.HWND
+	hwndNotepad = user32dll.FindWindow("Notepad", "")
 	if hwndNotepad == 0 {
-		log.Println("Please open Notepad.exe for testing.")
-		fmt.Println("ok")
-		return
+		if err := exec.Command("notepad.exe").Start(); err != nil {
+			log.Println(err)
+			fmt.Println("ok")
+			return
+		}
+		time.Sleep(200 * time.Millisecond) // waiting for the notepad.exe to open
+		hwndNotepad = user32dll.FindWindow("Notepad", "")
+		if hwndNotepad == 0 {
+			log.Println("notepad.exe not found.")
+			fmt.Println("ok")
+			return
+		}
 	}
 	hdcScreen := user32dll.GetDC(0)
 	defer user32dll.ReleaseDC(0, hdcScreen)
