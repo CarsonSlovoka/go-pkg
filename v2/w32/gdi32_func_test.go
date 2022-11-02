@@ -12,6 +12,12 @@ import (
 	"unsafe"
 )
 
+func ExampleRGB() {
+	fmt.Println(0xff80ff == w32.RGB(255, 128, 255))
+	// Output:
+	// true
+}
+
 // 添加字型，不需要安裝。重開機或執行RemoveFontResource將會被移除
 func ExampleGdi32DLL_AddFontResource() {
 	ttfPath := "./testdata/fonts/teamviewer15.otf"
@@ -70,9 +76,9 @@ func ExampleGdi32DLL_AddFontResourceEx() {
 func ExampleNewFontMemResource() {
 	kernel32dll := w32.NewKernel32DLL(w32.PNLoadLibrary)
 	hExe := kernel32dll.LoadLibrary("./testdata/exe/writeWithFont.exe")
-	fontMemResource, err := w32.NewFontMemResource(hExe, w32.MakeIntResource(666)) // 該應用程式的RT_FONT資源下存在一個ID為666的字型檔案。實際上的ID代碼會依應用程式而定，非定值
-	if err != nil {
-		panic(err)
+	fontMemResource, errno := w32.NewFontMemResource(hExe, w32.MakeIntResource(666)) // 該應用程式的RT_FONT資源下存在一個ID為666的字型檔案。實際上的ID代碼會依應用程式而定，非定值
+	if fontMemResource == nil {
+		log.Fatal(errno)
 	}
 	defer fontMemResource.Remove()
 	fmt.Println("ok")

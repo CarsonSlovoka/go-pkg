@@ -3,6 +3,7 @@
 package w32
 
 import (
+	"fmt"
 	"syscall"
 	"unsafe"
 )
@@ -165,6 +166,7 @@ func (dll *Kernel32DLL) CopyFile(existingFileName string, newFileName string, bF
 }
 
 // FindResource https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-findresourcew
+// If the function fails, the return value is NULL.
 // lpName: 資源的ID或者名稱 MakeIntResource(150)
 // lpType: w32.MakeIntResource(w32.RT_GROUP_ICON)
 // Resource的資料可能有以下這些，而在每一個分類底下，又有該資源的各個ID
@@ -180,14 +182,14 @@ func (dll *Kernel32DLL) CopyFile(existingFileName string, newFileName string, bF
 //	1: 1033 (ID: 1 語系對應1033即英文)
 //
 // ...其他的資源類型以此類推
-func (dll *Kernel32DLL) FindResource(hModule HMODULE, lpName, lpType *uint16) HRSRC {
+func (dll *Kernel32DLL) FindResource(hModule HMODULE, lpName, lpType *uint16) (HRSRC, syscall.Errno) {
 	proc := dll.mustProc(PNFindResource)
-	ret, _, _ := syscall.SyscallN(proc.Addr(),
+	ret, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hModule),
 		uintptr(unsafe.Pointer(lpName)),
 		uintptr(unsafe.Pointer(lpType)), // https://learn.microsoft.com/en-us/windows/win32/menurc/resource-types
 	)
-	return HRSRC(ret)
+	return HRSRC(ret), errno
 }
 
 // LoadLibrary https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryw
@@ -202,13 +204,21 @@ func (dll *Kernel32DLL) LoadLibrary(lpLibFileName string) HMODULE {
 
 // SizeofResource https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-sizeofresource
 // If the function fails, the return value is NULL (0)
-func (dll *Kernel32DLL) SizeofResource(hModule HMODULE, hResInfo HRSRC) uint32 {
+func (dll *Kernel32DLL) SizeofResource(hModule HMODULE, hResInfo HRSRC) (uint32, syscall.Errno) {
 	proc := dll.mustProc(PNSizeofResource)
-	ret, _, _ := syscall.SyscallN(proc.Addr(),
+	ret, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hModule),
 		uintptr(hResInfo),
 	)
-	return uint32(ret)
+	return uint32(ret), errno
+}
+
+func (dll *Kernel32DLL) MustSizeofResource(hModule HMODULE, hResInfo HRSRC) uint32 {
+	r1, errno := dll.SizeofResource(hModule, hResInfo)
+	if r1 == 0 {
+		panic(fmt.Sprintf("%s", errno))
+	}
+	return r1
 }
 
 // BeginUpdateResource https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-beginupdateresourceW
@@ -263,13 +273,13 @@ func (dll *Kernel32DLL) EndUpdateResource(hUpdate HANDLE, fDiscard bool) bool {
 
 // LoadResource https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadresource
 // If the function fails, the return value is NULL (0)
-func (dll *Kernel32DLL) LoadResource(hModule HMODULE, hResInfo HRSRC) HGLOBAL {
+func (dll *Kernel32DLL) LoadResource(hModule HMODULE, hResInfo HRSRC) (HGLOBAL, syscall.Errno) {
 	proc := dll.mustProc(PNLoadResource)
-	ret, _, _ := syscall.SyscallN(proc.Addr(),
+	ret, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hModule),
 		uintptr(hResInfo),
 	)
-	return HGLOBAL(ret)
+	return HGLOBAL(ret), errno
 }
 
 // LockResource https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-lockresource

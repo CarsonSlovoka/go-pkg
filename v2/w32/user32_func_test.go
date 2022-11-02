@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/CarsonSlovoka/go-pkg/v2/w32"
 	"log"
+	"syscall"
 	"unsafe"
 )
 
@@ -97,11 +98,12 @@ func ExampleUser32DLL_DrawIcon() {
 	// 獲取HICON{question, chrome}
 	var hIconQuestion, hIconChrome w32.HICON
 	{
-		var err error
+		var errno syscall.Errno
+
 		// 取得系統圖標question
-		hIconQuestion, err = user32dll.LoadIcon(0, w32.MakeIntResource(w32.IDI_QUESTION))
-		if err != nil {
-			log.Println("系統圖標: QUESTION 找不到")
+		hIconQuestion, errno = user32dll.LoadIcon(0, w32.MakeIntResource(w32.IDI_QUESTION))
+		if hIconQuestion == 0 {
+			log.Printf("系統圖標: QUESTION 找不到 %s\n", errno)
 			return
 		}
 
@@ -157,8 +159,8 @@ func ExampleUser32DLL_DrawIcon() {
 			{50, 200, hIconQuestion},
 			{50, 300, hIconChrome},
 		} {
-			if err := user32dll.DrawIcon(curHDC, d.x, d.y, d.hIcon); err != nil {
-				panic(err)
+			if ok, errno := user32dll.DrawIcon(curHDC, d.x, d.y, d.hIcon); !ok {
+				log.Fatalf("%s", errno)
 			}
 		}
 	}
@@ -183,9 +185,9 @@ func ExampleUser32DLL_GetIconInfo() {
 		w32.PNDeleteObject,
 	)
 
-	hIconQuestion, err := user32dll.LoadIcon(0, w32.MakeIntResource(w32.IDI_QUESTION))
-	if err != nil {
-		return
+	hIconQuestion, errno := user32dll.LoadIcon(0, w32.MakeIntResource(w32.IDI_QUESTION))
+	if hIconQuestion == 0 {
+		log.Fatalf("%s", errno)
 	}
 
 	var iInfo w32.ICONINFO

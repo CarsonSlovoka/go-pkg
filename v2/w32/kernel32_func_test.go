@@ -274,17 +274,17 @@ func ExampleKernel32DLL_UpdateResource() {
 			}
 		}()
 
-		hRes = kernel32dll.FindResource(hExe,
+		hRes, errno := kernel32dll.FindResource(hExe,
 			w32.MakeIntResource(666), // 這是該應用程式所對應的resourceID
 			w32.MakeIntResource(w32.RT_FONT),
 		)
 		if hRes == 0 {
-			log.Fatal("Could not locate font.")
+			log.Fatalf("Could not locate font. %s", errno)
 		}
 
-		hResLoad := kernel32dll.LoadResource(hExe, hRes)
+		hResLoad, errno := kernel32dll.LoadResource(hExe, hRes)
 		if hResLoad == 0 {
-			log.Fatal("Could not locate font resource.")
+			log.Fatalf("Could not locate font resource. %s", errno)
 		}
 
 		lpResLock = kernel32dll.LockResource(hResLoad)
@@ -300,12 +300,16 @@ func ExampleKernel32DLL_UpdateResource() {
 		return
 	}
 
+	sizeofRes, errno := kernel32dll.SizeofResource(hExe, hRes)
+	if errno == 0 {
+		log.Fatalf("%s", errno)
+	}
 	if ok := kernel32dll.UpdateResource(hUpdateRes,
 		w32.RT_FONT,
 		w32.MakeIntResource(666),
 		w32.MakeLangID(w32.LANG_ENGLISH, w32.SUBLANG_ENGLISH_US),
 		lpResLock,
-		kernel32dll.SizeofResource(hExe, hRes),
+		sizeofRes,
 	); !ok {
 		log.Fatal("Could not add resource.")
 	}
@@ -347,12 +351,12 @@ func ExampleKernel32DLL_FindResource() {
 		return
 	}
 
-	hResource := kernel32dll.FindResource(hExe,
+	hResource, _ := kernel32dll.FindResource(hExe,
 		w32.MakeIntResource(w32.UintptrFromStr("IDI_BTH_UD_TASK")), // w32.MakeIntResource(150) // 該資源有哪些ID，可以安裝Resource Hacker去查看。以微軟的fontview.exe，它擁有Icon Group: 150: 1033這個資源
 		w32.MakeIntResource(w32.RT_GROUP_ICON),                     // w32.MakeIntResource(w32.UintptrFromStr("xfont"))
 	)
 
-	hMem := kernel32dll.LoadResource(hExe, hResource)
+	hMem, _ := kernel32dll.LoadResource(hExe, hResource)
 
 	lpResource := kernel32dll.LockResource(hMem)
 
@@ -366,17 +370,17 @@ func ExampleKernel32DLL_FindResource() {
 	)
 
 	// Find the bits for the nID icon.
-	hResource = kernel32dll.FindResource(hExe,
+	hResource, _ = kernel32dll.FindResource(hExe,
 		w32.MakeIntResource(uintptr(nID)),
 		w32.MakeIntResource(w32.RT_ICON),
 	)
 
 	// Load and lock the icon.
-	hMem = kernel32dll.LoadResource(hExe, hResource)
+	hMem, _ = kernel32dll.LoadResource(hExe, hResource)
 	lpResource = kernel32dll.LockResource(hMem)
 
 	hIcon1 := user32dll.CreateIconFromResourceEx(lpResource,
-		kernel32dll.SizeofResource(hExe, hResource), true, 0x00030000,
+		kernel32dll.MustSizeofResource(hExe, hResource), true, 0x00030000,
 		w32.SM_CXICON, w32.SM_CYICON, w32.LR_DEFAULTCOLOR)
 
 	// init HDC
@@ -398,8 +402,8 @@ func ExampleKernel32DLL_FindResource() {
 	}
 
 	// Draw the icon in the client area.
-	if err := user32dll.DrawIcon(hdc, 10, 20, hIcon1); err != nil {
-		log.Fatal("DrawIcon")
+	if ok, errno := user32dll.DrawIcon(hdc, 10, 20, hIcon1); !ok {
+		log.Fatalf("%s", errno)
 	}
 	// Output:
 }
@@ -429,7 +433,7 @@ func ExampleKernel32DLL_FindResource_icon() {
 		return
 	}
 
-	hResource := kernel32dll.FindResource(hExe,
+	hResource, _ := kernel32dll.FindResource(hExe,
 		w32.MakeIntResource(1), // 抓取ICON中ID為1的資源
 		w32.MakeIntResource(w32.RT_ICON),
 	)
@@ -437,11 +441,11 @@ func ExampleKernel32DLL_FindResource_icon() {
 	// 載入資源兩個動作:
 	// 1. LoadResource
 	// 2. LockResource
-	hMem := kernel32dll.LoadResource(hExe, hResource)
+	hMem, _ := kernel32dll.LoadResource(hExe, hResource)
 	lpResource := kernel32dll.LockResource(hMem)
 
 	hIcon := user32dll.CreateIconFromResourceEx(lpResource,
-		kernel32dll.SizeofResource(hExe, hResource),
+		kernel32dll.MustSizeofResource(hExe, hResource),
 		true, 0x00030000,
 		w32.SM_CXICON, w32.SM_CYICON, w32.LR_DEFAULTCOLOR)
 
@@ -464,8 +468,8 @@ func ExampleKernel32DLL_FindResource_icon() {
 	}
 
 	// Draw the icon in the client area.
-	if err := user32dll.DrawIcon(hdc, 10, 20, hIcon); err != nil {
-		log.Fatal("DrawIcon")
+	if ok, errno := user32dll.DrawIcon(hdc, 10, 20, hIcon); !ok {
+		log.Fatalf("%s", errno)
 	}
 	// Output:
 }

@@ -7,10 +7,12 @@ import (
 
 // StrToCharPtr
 // 可以用在A的函數 procA.Call(uintptr(unsafe.Pointer(StrToCharPtr(name))))
+/* 暫時不加上，沒有用到
 func StrToCharPtr(str string) *uint8 {
 	chars := append([]byte(str), 0) // null terminated
 	return &chars[0]
 }
+*/
 
 func UintptrFromBool(b bool) uintptr {
 	if b {

@@ -50,8 +50,8 @@ func ExampleShellDLL_ExtractIcon() {
 			}
 		}()
 
-		if err := user32dll.DrawIcon(curHDC, 50, 100, hIcon); err != nil {
-			panic(err)
+		if ok, errno := user32dll.DrawIcon(curHDC, 50, 100, hIcon); !ok {
+			log.Fatalf("%s", errno)
 		}
 	}
 	// Output:
@@ -98,8 +98,8 @@ func ExampleShellDLL_ExtractIcon_count() {
 		for iconIdx := 0; iconIdx < int(numIcon); iconIdx++ {
 			hicon := shell32dll.ExtractIcon(0, exeFileName, iconIdx)
 
-			if err := user32dll.DrawIcon(curHDC, 50, 50*(iconIdx+1), hicon); err != nil {
-				panic(err)
+			if ok, errno := user32dll.DrawIcon(curHDC, 50, 50*(iconIdx+1), hicon); !ok {
+				log.Fatalf("%s", errno)
 			}
 		}
 	}

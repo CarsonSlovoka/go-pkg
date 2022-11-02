@@ -3,6 +3,7 @@
 package w32
 
 import (
+	"fmt"
 	"syscall"
 	"unsafe"
 )
@@ -32,6 +33,10 @@ type Gdi32DLL struct {
 func NewGdi32DLL(procList ...ProcName) *Gdi32DLL {
 	dll := newDll(DNGdi32, procList)
 	return &Gdi32DLL{dll}
+}
+
+func RGB(r, g, b byte) COLORREF {
+	return COLORREF(r) | (COLORREF(g) << 8) | (COLORREF(b) << 16)
 }
 
 // AddFontResource https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-addfontresourcew
@@ -122,7 +127,7 @@ func (dll *Gdi32DLL) RemoveFontMemResourceEx(h HANDLE) bool {
 // NewFontMemResource 這不是屬於winapi正統的函數，是一個包裝，方便使用AddFontMemResourceEx
 // resourceID: 您的字型資源8(RT_FONT)資源下，要取得其子項目的ID代號
 // 如果您的resourceID是字串，請使用syscall.UTF16PtrFromString(resourceName)即可轉成*uint16
-func NewFontMemResource(hModule HMODULE, resourceID *uint16) (*FontMemResource, error) {
+func NewFontMemResource(hModule HMODULE, resourceID *uint16) (*FontMemResource, syscall.Errno) {
 	kernel32dll := NewKernel32DLL(
 		PNFindResource,
 		PNSizeofResource,
@@ -130,27 +135,27 @@ func NewFontMemResource(hModule HMODULE, resourceID *uint16) (*FontMemResource, 
 		PNLockResource,
 	)
 
-	hRes := kernel32dll.FindResource(hModule,
+	hRes, errno := kernel32dll.FindResource(hModule,
 		resourceID,
 		MakeIntResource(RT_FONT), // 此函數針對Font，所以直接這邊寫死
 	)
 	if hRes == HRSRC(0) {
-		return nil, lastError("FindResource")
+		return nil, errno
 	}
 
-	size := kernel32dll.SizeofResource(hModule, hRes) // 如果它顯示149008，其實代表149008bytes=>145KB
+	size, errno := kernel32dll.SizeofResource(hModule, hRes) // 如果它顯示149008，其實代表149008bytes=>145KB
 	if size == 0 {
-		return nil, lastError("SizeofResource")
+		return nil, errno
 	}
 
-	hLoadRes := kernel32dll.LoadResource(hModule, hRes)
+	hLoadRes, errno := kernel32dll.LoadResource(hModule, hRes)
 	if hLoadRes == HGLOBAL(0) {
-		return nil, lastError("LoadResource")
+		return nil, errno
 	}
 
 	ptr := kernel32dll.LockResource(hLoadRes)
 	if ptr == 0 {
-		return nil, lastError("LockResource")
+		return nil, 0
 	}
 
 	numFonts := uint32(0) // 回傳值
@@ -159,10 +164,10 @@ func NewFontMemResource(hModule HMODULE, resourceID *uint16) (*FontMemResource, 
 	hFontResource := gdi32dll.AddFontMemResourceEx(ptr, size, nil, &numFonts)
 
 	if hFontResource == HANDLE(0) || numFonts == 0 {
-		return nil, lastError("AddFontMemResource")
+		return nil, 0
 	}
 
-	return &FontMemResource{hFontResource: hFontResource}, nil
+	return &FontMemResource{hFontResource: hFontResource}, 0
 }
 
 // Remove removes the font resource from memory
@@ -170,7 +175,7 @@ func (fmr *FontMemResource) Remove() error {
 	if fmr.hFontResource != 0 {
 		gdi32dll := NewGdi32DLL(PNRemoveFontMemResourceEx)
 		if ok := gdi32dll.RemoveFontMemResourceEx(fmr.hFontResource); !ok {
-			return lastError("RemoveFontMemResourceEx")
+			return fmt.Errorf("RemoveFontMemResourceEx")
 		}
 		fmr.hFontResource = 0
 	}
@@ -229,7 +234,7 @@ func (dll *Gdi32DLL) DeleteObject(hObject HGDIOBJ) bool {
 }
 
 // CreateCompatibleDC creates a memory device context (DC) compatible with the specified device.
-//https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createcompatibledc
+// https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createcompatibledc
 // If the function fails, the return value is NULL.
 func (dll *Gdi32DLL) CreateCompatibleDC(hdc HDC) HDC {
 	proc := dll.mustProc(PNCreateCompatibleDC)
