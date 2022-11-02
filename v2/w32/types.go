@@ -30,8 +30,18 @@ type (
 )
 
 type (
-	UINT uint32
+	DWORD   uint32
+	LPDWORD *uint32
+	UINT    uint32
 	// INT int32
+	UINT8     uint8
+	UINT_PTR  uintptr
+	ULONG     uint32
+	ULONG64   uint64
+	ULONGLONG uint64
+	ULONG_PTR *uint32
+
+	PVOID uintptr
 )
 
 type (

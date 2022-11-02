@@ -15,6 +15,7 @@ const (
 	PNFreeLibrary         ProcName = "FreeLibrary"
 	PNGetLastError        ProcName = "GetLastError"
 	PNCreateFile          ProcName = "CreateFileW"
+	PNWriteFile           ProcName = "WriteFile"
 	PNCopyFile            ProcName = "CopyFileW"
 	PNFindResource        ProcName = "FindResourceW"
 	PNLoadLibrary         ProcName = "LoadLibraryW"
@@ -24,6 +25,10 @@ const (
 	PNEndUpdateResource   ProcName = "EndUpdateResourceW"
 	PNLoadResource        ProcName = "LoadResource"
 	PNLockResource        ProcName = "LockResource"
+	PNGlobalAlloc         ProcName = "GlobalAlloc"
+	PNGlobalLock          ProcName = "GlobalLock"
+	PNGlobalUnlock        ProcName = "GlobalUnlock"
+	PNGlobalFree          ProcName = "GlobalFree"
 )
 
 type Kernel32DLL struct {
@@ -99,10 +104,7 @@ func (dll *Kernel32DLL) FreeLibrary(hLibModule HMODULE) bool {
 
 func (dll *Kernel32DLL) GetLastError() uint32 {
 	proc := dll.mustProc(PNGetLastError)
-	ret, _, _ := syscall.SyscallN(proc.Addr(),
-		0,
-		0,
-		0)
+	ret, _, _ := syscall.SyscallN(proc.Addr())
 	return uint32(ret)
 }
 
@@ -125,6 +127,25 @@ func (dll *Kernel32DLL) CreateFile(lpFileName string, dwDesiredAccess, dwShareMo
 		uintptr(dwFlagsAndAttributes),
 		hTemplateFile)
 	return HANDLE(r1), errno
+}
+
+// WriteFile https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-writefile
+// If the function succeeds, the return value is nonzero (TRUE).
+func (dll *Kernel32DLL) WriteFile(hFile HANDLE,
+	lpBuffer uintptr,
+	nNumberOfBytesToWrite uint32,
+	lpNumberOfBytesWritten *uint32, // out
+	lpOverlapped *OVERLAPPED,
+) (bool, syscall.Errno) {
+	proc := dll.mustProc(PNWriteFile)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hFile),
+		lpBuffer,
+		uintptr(nNumberOfBytesToWrite),
+		uintptr(unsafe.Pointer(lpNumberOfBytesWritten)),
+		uintptr(unsafe.Pointer(lpOverlapped)),
+	)
+	return r1 != 0, errno
 }
 
 // CopyFile https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-copyfilew
@@ -186,7 +207,6 @@ func (dll *Kernel32DLL) SizeofResource(hModule HMODULE, hResInfo HRSRC) uint32 {
 	ret, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(hModule),
 		uintptr(hResInfo),
-		0,
 	)
 	return uint32(ret)
 }
@@ -257,8 +277,48 @@ func (dll *Kernel32DLL) LockResource(hResData HGLOBAL) uintptr {
 	proc := dll.mustProc(PNLockResource)
 	ret, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(hResData),
-		0,
-		0,
 	)
 	return ret
+}
+
+// GlobalAlloc https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-globalalloc
+// If the function fails, the return value is NULL.
+func (dll *Kernel32DLL) GlobalAlloc(uFlags UINT, dwBytes SIZE_T) (HGLOBAL, syscall.Errno) {
+	proc := dll.mustProc(PNGlobalAlloc)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(uFlags),
+		uintptr(dwBytes),
+	)
+	return HGLOBAL(r1), errno
+}
+
+// GlobalLock https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-globallock
+// If the function fails, the return value is NULL.
+func (dll *Kernel32DLL) GlobalLock(hMem HGLOBAL) (LPVOID, syscall.Errno) {
+	proc := dll.mustProc(PNGlobalLock)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hMem),
+	)
+	return LPVOID(r1), errno
+}
+
+// GlobalUnlock https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-globalunlock
+// If the function fails, the return value is zero
+func (dll *Kernel32DLL) GlobalUnlock(hMem HGLOBAL) bool {
+	proc := dll.mustProc(PNGlobalUnlock)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hMem),
+	)
+	return r1 != 0
+}
+
+// GlobalFree https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-globalfree
+// If the function **succeeds**, the return value is NULL.
+// If the function fails, the return value is equal to a handle to the global memory object.
+func (dll *Kernel32DLL) GlobalFree(hMem HGLOBAL) HGLOBAL {
+	proc := dll.mustProc(PNGlobalFree)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hMem),
+	)
+	return HGLOBAL(r1)
 }

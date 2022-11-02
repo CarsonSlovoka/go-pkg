@@ -3,7 +3,6 @@
 package w32
 
 import (
-	"fmt"
 	"syscall"
 	"unsafe"
 )
@@ -26,6 +25,7 @@ const (
 	PNLookupIconIdFromDirectoryEx ProcName = "LookupIconIdFromDirectoryEx"
 	PNCreateIconFromResourceEx    ProcName = "CreateIconFromResourceEx"
 	PNCopyImage                   ProcName = "CopyImage"
+	PNGetClientRect               ProcName = "GetClientRect"
 )
 
 type User32DLL struct {
@@ -152,10 +152,11 @@ func (dll *User32DLL) MessageBox(hwnd HWND, caption, text string, btnFlag uintpt
 
 // GetSystemMetrics 依據所傳入的參數回傳您所要查詢的數值資料
 // https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getsystemmetrics#parameters
-func (dll *User32DLL) GetSystemMetrics(targetIdx int) int {
+// If the function fails, the return value is 0
+func (dll *User32DLL) GetSystemMetrics(targetIdx int32) int32 {
 	proc := dll.mustProc(PNGetSystemMetrics)
 	r0, _, _ := syscall.SyscallN(proc.Addr(), uintptr(targetIdx))
-	return int(r0)
+	return int32(r0)
 }
 
 // LoadIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadiconw
@@ -182,17 +183,14 @@ func (dll *User32DLL) GetDC(hwnd HWND) HDC {
 }
 
 // ReleaseDC https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-releasedc
-// 返回值0表示沒有被釋放, 1表示釋放成功
-func (dll *User32DLL) ReleaseDC(hwnd HWND, hdc HDC) error {
+// If the DC was released, the return value is 1 or 0 otherwise.
+func (dll *User32DLL) ReleaseDC(hwnd HWND, hdc HDC) int32 {
 	proc := dll.mustProc(PNReleaseDC)
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(hwnd),
 		uintptr(hdc),
 	)
-	if int(r1) == 0 {
-		return fmt.Errorf("ERROR: ReleaseDC")
-	}
-	return nil
+	return int32(r1)
 }
 
 // DrawIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-drawicon
@@ -248,7 +246,7 @@ func (dll *User32DLL) LookupIconIdFromDirectoryEx(presBits uintptr,
 	fIcon bool, // Indicates whether an icon or a cursor is sought. If this parameter is TRUE, the function is searching for an icon; if the parameter is FALSE, the function is searching for a cursor.
 	cxDesired, // The desired width, in pixels, of the icon. If this parameter is zero, the function uses the SM_CXICON or SM_CXCURSOR system metric value.
 	cyDesired int, // 0, SM_CYICON, SM_CYCURSOR
-	flags uint, // LR_DEFAULTCOLOR or LR_MONOCHROME
+	flags uint,    // LR_DEFAULTCOLOR or LR_MONOCHROME
 ) int {
 	proc := dll.mustProc(PNLookupIconIdFromDirectoryEx)
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
@@ -303,4 +301,14 @@ func (dll *User32DLL) CopyImage(h HANDLE, imgType uint32, cx, cy int32, flags ui
 		uintptr(flags),
 	)
 	return HANDLE(r1), errno
+}
+
+// GetClientRect https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getclientrect
+func (dll *User32DLL) GetClientRect(hwnd HWND, lpRect *RECT) (bool, syscall.Errno) {
+	proc := dll.mustProc(PNGetClientRect)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hwnd),
+		uintptr(unsafe.Pointer(lpRect)),
+	)
+	return r1 != 0, errno
 }

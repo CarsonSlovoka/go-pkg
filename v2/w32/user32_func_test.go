@@ -139,8 +139,8 @@ func ExampleUser32DLL_DrawIcon() {
 
 		defer func() {
 			if curHDC != 0 {
-				if err := user32dll.ReleaseDC(hwndNotepad, curHDC); err != nil {
-					log.Fatal(err)
+				if user32dll.ReleaseDC(hwndNotepad, curHDC) == 0 {
+					log.Fatal("ReleaseDC")
 				}
 			}
 		}()
@@ -207,7 +207,7 @@ func ExampleUser32DLL_GetIconInfo() {
 	// 以下為copyImage的測試，沿用上面取得到的icon
 	{
 		// 以ICONINFO的資料建立一個空的BITMAP
-		bmp := w32.BITMAP{}
+		bmp := w32.Bitmap{}
 		if gdi32dll.GetObject(w32.HANDLE(iInfo.HbmColor), int32(unsafe.Sizeof(bmp)), uintptr(unsafe.Pointer(&bmp))) == 0 {
 			return
 		}

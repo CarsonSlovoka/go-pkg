@@ -524,3 +524,22 @@ const (
 func MakeLangID(primaryLanguage, subLanguage uint16) uint16 {
 	return subLanguage<<10 | primaryLanguage
 }
+
+// File Access Rights Constants
+// https://learn.microsoft.com/en-us/windows/win32/fileio/file-access-rights-constants
+const (
+	FILE_ADD_FILE             = 2
+	FILE_ADD_SUBDIRECTORY     = 4
+	FILE_APPEND_DATA          = 4
+	FILE_CREATE_PIPE_INSTANCE = 4
+	FILE_DELETE_CHILD         = 64
+	FILE_EXECUTE              = 32
+	FILE_LIST_DIRECTORY       = 1
+	FILE_READ_ATTRIBUTES      = 128
+	FILE_READ_DATA            = 1
+	FILE_READ_EA              = 8
+	FILE_TRAVERSE             = 32
+	FILE_WRITE_ATTRIBUTES     = 256
+	FILE_WRITE_DATA           = 2
+	FILE_WRITE_EA             = 16
+)

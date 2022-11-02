@@ -14,8 +14,15 @@ const (
 	PNAddFontResourceEx       ProcName = "AddFontResourceExW"
 	PNRemoveFontResource      ProcName = "RemoveFontResourceW"
 	PNRemoveFontResourceEx    ProcName = "RemoveFontResourceExW"
+	PNGetDIBits               ProcName = "GetDIBits"
 	PNGetObject               ProcName = "GetObjectW"
+	PNSelectObject            ProcName = "SelectObject"
 	PNDeleteObject            ProcName = "DeleteObject"
+	PNCreateCompatibleDC      ProcName = "CreateCompatibleDC"
+	PNCreateCompatibleBitmap  ProcName = "CreateCompatibleBitmap"
+	PNSetStretchBltMode       ProcName = "SetStretchBltMode"
+	PNBitBlt                  ProcName = "BitBlt"
+	PNStretchBlt              ProcName = "StretchBlt"
 )
 
 type Gdi32DLL struct {
@@ -170,6 +177,23 @@ func (fmr *FontMemResource) Remove() error {
 	return nil
 }
 
+// GetDIBits retrieves the bits of the specified compatible bitmap and copies them into a buffer as a DIB(Device-Independent Bitmap) using the specified format.
+// https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-getdibits
+// If the function fails, the return value is zero.
+func (dll *Gdi32DLL) GetDIBits(hdc HDC, hbm HBITMAP, start UINT, cLines UINT, lpvBits LPVOID, lpbmi *BitmapInfo, usage UINT) int32 {
+	proc := dll.mustProc(PNGetDIBits)
+	ret1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+		uintptr(hbm),
+		uintptr(start),
+		uintptr(cLines),
+		uintptr(lpvBits),               // [out]
+		uintptr(unsafe.Pointer(lpbmi)), // [out]
+		uintptr(usage),
+	)
+	return int32(ret1)
+}
+
 // GetObject https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-getobjectw
 // If the function fails, the return value is zero.
 func (dll *Gdi32DLL) GetObject(h HANDLE, size int32, output uintptr) int32 {
@@ -181,6 +205,17 @@ func (dll *Gdi32DLL) GetObject(h HANDLE, size int32, output uintptr) int32 {
 	return int32(r1)
 }
 
+// SelectObject https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-selectobject
+// The SelectObject function selects an object into the specified device context (DC)
+func (dll *Gdi32DLL) SelectObject(hdc HDC, h HGDIOBJ) HGDIOBJ {
+	proc := dll.mustProc(PNSelectObject)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+		uintptr(h),
+	)
+	return HGDIOBJ(r1)
+}
+
 // DeleteObject https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-deleteobject
 // hObject: A handle to a logical pen, brush, font, bitmap, region, or palette.
 // If the function succeeds, the return value is nonzero.
@@ -189,6 +224,91 @@ func (dll *Gdi32DLL) DeleteObject(hObject HGDIOBJ) bool {
 	proc := dll.mustProc(PNDeleteObject)
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(hObject),
+	)
+	return r1 != 0
+}
+
+// CreateCompatibleDC creates a memory device context (DC) compatible with the specified device.
+//https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createcompatibledc
+// If the function fails, the return value is NULL.
+func (dll *Gdi32DLL) CreateCompatibleDC(hdc HDC) HDC {
+	proc := dll.mustProc(PNCreateCompatibleDC)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+	)
+	return HDC(r1)
+}
+
+// CreateCompatibleBitmap https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createcompatiblebitmap
+// If the function fails, the return value is NULL.
+func (dll *Gdi32DLL) CreateCompatibleBitmap(hdc HDC, cx int32, cy int32) HBITMAP {
+	proc := dll.mustProc(PNCreateCompatibleBitmap)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+		uintptr(cx),
+		uintptr(cy),
+	)
+	return HBITMAP(r1)
+}
+
+// SetStretchBltMode https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-setstretchbltmode
+// If the function fails, the return value is zero.
+func (dll *Gdi32DLL) SetStretchBltMode(hdc HDC, mode int32) int32 {
+	proc := dll.mustProc(PNSetStretchBltMode)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+		uintptr(mode),
+	)
+	return int32(r1)
+}
+
+// BitBlt https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-bitblt
+// 將src的點集資料傳送到dst中 (類似把圖複製到dst中去)
+func (dll *Gdi32DLL) BitBlt(
+	dstHDC HDC,
+	dstX int32, dstY int32, dstCx int32, dstCy int32,
+	srcHDC HDC,
+	srcX int32, srcY int32,
+	rasterOperation DWORD,
+) (bool, syscall.Errno) {
+	proc := dll.mustProc(PNBitBlt)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(dstHDC),
+		uintptr(dstX),
+		uintptr(dstY),
+		uintptr(dstCx),
+		uintptr(dstCy),
+		uintptr(srcHDC),
+		uintptr(srcX),
+		uintptr(srcY),
+		uintptr(rasterOperation),
+	)
+	return r1 != 0, errno
+}
+
+// StretchBlt https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-stretchblt
+// 與BitBlt類似，但可以提供一些選項
+func (dll *Gdi32DLL) StretchBlt(
+	dstHDC HDC,
+	dstX int32, dstY int32, dstW int32, dstH int32,
+	srcHDC HDC,
+	srcX int32, srcY int32, srcW int32, srcH int32,
+	rasterOperation DWORD,
+) bool {
+	proc := dll.mustProc(PNStretchBlt)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(dstHDC),
+		uintptr(dstX),
+		uintptr(dstY),
+		uintptr(dstW),
+		uintptr(dstH),
+
+		uintptr(srcHDC),
+		uintptr(srcX),
+		uintptr(srcY),
+		uintptr(srcW),
+		uintptr(srcH),
+		uintptr(rasterOperation),
 	)
 	return r1 != 0
 }

@@ -29,7 +29,7 @@ func main() {
 BOOLEAN | byte
 BYTE | byte
 UCHAR | byte
- |
+|
 USHORT | uint16
 WORD | uint16
 WORD | uint16
@@ -39,6 +39,7 @@ LPCWSTR | *uint16
 |
 **BOOL** | int32 你會看到文檔在該回傳值為此類型時，常常只有提到0表示錯誤，但不會說TRUE代表什麼，因為非0的數值不見得一定都是1，有可能是其他的數值。
 DWORD | uint32
+LPDWORD   | *uint32
 DWORD_PTR | *uint32
 |
 DWORD64 | uint64
@@ -56,6 +57,10 @@ LPVOID | uintptr
 HANDLE | uintptr
 
 ## 使用go來調用windows api的專案
+
+### [kbinani/win](https://github.com/kbinani/win)
+
+`lxn/win`沒有把dll中的所有方法都實現，相較於`lxn/win`這個較為齊全。
 
 ### [lxn/win]
 

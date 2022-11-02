@@ -2,10 +2,6 @@
 
 package w32
 
-import (
-	"unsafe"
-)
-
 // GetDeviceCaps index constants
 const (
 	DRIVERVERSION   = 0
@@ -654,12 +650,13 @@ const (
 	CAPTUREBLT     = 0x40000000
 )
 
+// https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-setstretchbltmode#parameters
 // StretchBlt modes
 const (
-	BLACKONWHITE        = 1
+	BLACKONWHITE        = 1 // 執行AND運算 // 讓原本白點轉偏黑
 	WHITEONBLACK        = 2
 	COLORONCOLOR        = 3
-	HALFTONE            = 4
+	HALFTONE            = 4 // 半色調, 取平均後近似色 最接近原圖
 	MAXSTRETCHBLTMODE   = 4
 	STRETCH_ANDSCANS    = BLACKONWHITE
 	STRETCH_ORSCANS     = WHITEONBLACK
@@ -917,22 +914,71 @@ type CIEXYZTRIPLE struct {
 	CiexyzRed, CiexyzGreen, CiexyzBlue CIEXYZ
 }
 
-type BITMAPINFOHEADER struct {
-	BiSize          uint32
-	BiWidth         int32
-	BiHeight        int32
-	BiPlanes        uint16
-	BiBitCount      uint16
-	BiCompression   uint32
-	BiSizeImage     uint32
-	BiXPelsPerMeter int32
-	BiYPelsPerMeter int32
-	BiClrUsed       uint32
-	BiClrImportant  uint32
+// BitmapFileHeader https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmapfileheader
+// https://upload.wikimedia.org/wikipedia/commons/7/75/BMPfileFormat.svg
+// ★ https://learn.microsoft.com/en-us/windows/win32/gdi/bitmap-header-types 有正規文檔紀錄的DIP文件就只有4個類型
+// ★ all the integer values are stored in "little-endian" format
+// Size: 14
+type BitmapFileHeader struct { // 14bytes
+	Type       uint16 // The file type; must be "BM". => BM  B: 0x42, M: 0x4D
+	Size       uint32 // The size, in bytes, of the bitmap file.
+	Reserved1  uint16
+	Reserved2  uint16
+	OffsetBits uint32 // raw data(bitmap bits)從哪裡開始寫起 即Sizeof(FileHeader)+Sizeof(DIPHeader)
 }
 
-type BITMAPV4HEADER struct {
-	BITMAPINFOHEADER
+// ----
+// 所有DIB表頭集 (按舊至新排序)(不一定都是越來越大，有的版本把先前的一些訊息拿掉了)
+
+// BitmapCoreHeader
+// Size: 12
+// Bitmap有很多種格式，其中不一樣的地方在於DIP Header，
+// 而區分DIP Header的方式就是讀取每一個DIP的前4byte，他的前4碼表示大小，又由於不同的DIP表頭，有不同的大小，所以透過大小，我們就能得到它到底用哪一個版本的DIP表頭
+type BitmapCoreHeader struct {
+	Size     uint32 // 這個很重要因為DIB的表頭，有很多種格式，所以我們要透過Size來得知，當前的bitmap的DIB HEADER用的是哪一個表
+	Width    uint16
+	Height   uint16
+	Planes   uint16 // 只有1是有效的
+	BitCount uint16 // 每個像素所佔位數, 即圖像色深, 典型值為1, 4, 8, 24
+}
+
+// BitmapCoreHeader2
+// Size: 64
+// 文檔中的下段有提到，它不是提及完整的內容，只寫擴增的部分Offset (dec)從54開始 https://en.wikipedia.org/wiki/BMP_file_format#DIB_header_(bitmap_information_header)
+// 如果沒有特別提到(signed integer)，就是用unsigned
+type BitmapCoreHeader2 struct {
+	BitmapCoreHeader
+	EnumVal         uint16
+	Padding         uint16 // Ignored and should be zero
+	Direction       uint16
+	Algorithm       uint16
+	HalfToningPara1 uint32
+	HalfToningPara2 uint32
+	ColorEncoding   uint32
+	Identifier      uint32
+}
+
+// BitmapInfoHeader https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmapinfoheader
+// Size: 40
+type BitmapInfoHeader struct {
+	Size          uint32 // 4+4+4+2+2+4+4+4+4+4+4=40
+	Width         int32
+	Height        int32
+	Planes        uint16 // Specifies the number of planes for the target device. This value must be set to 1. // 位元圖數, 只能設定為1
+	BitCount      uint16 // Bits/pixel 1：單色點陣圖（使用 2 色調色盤）,... 8：8 位元點陣圖（使用 256 色調色盤）. 32：32 位元全彩點陣圖（不一定使用調色盤）
+	Compression   uint32 // 壓縮方式, {0為為壓縮縮BI_RGB, BI_RLE8, BI_RLE4, BI_BITFIELDS}
+	SizeImage     uint32 // 指定圖像的大小，如果是為壓縮的RGB圖，可以設定為0
+	XPelsPerMeter int32
+	YPelsPerMeter int32
+	ClrUsed       uint32
+	ClrImportant  uint32
+}
+
+// BitmapV2InfoHeader Size: 52 // 沒有官方文件 但只比BitmapInfoHeader多出了RGB, 所以SIZE多12也很合理
+// BitmapV3InfoHeader Size: 56 // 沒有官方文件 比BitmapV2InfoHeader多了alpha channel
+
+type BitmapV4Header struct {
+	BitmapInfoHeader
 	BV4RedMask    uint32
 	BV4GreenMask  uint32
 	BV4BlueMask   uint32
@@ -944,39 +990,41 @@ type BITMAPV4HEADER struct {
 	BV4GammaBlue  uint32
 }
 
-type BITMAPV5HEADER struct {
-	BITMAPV4HEADER
+type BitmapV5Header struct {
+	BitmapV4Header
 	BV5Intent      uint32
 	BV5ProfileData uint32
 	BV5ProfileSize uint32
 	BV5Reserved    uint32
 }
 
-type RGBQUAD struct {
+type RGBQuad struct {
 	RgbBlue     byte
 	RgbGreen    byte
 	RgbRed      byte
 	RgbReserved byte
 }
 
-type BITMAPINFO struct {
-	BmiHeader BITMAPINFOHEADER
-	BmiColors *RGBQUAD
+// BitmapInfo https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmapinfo
+type BitmapInfo struct {
+	Header BitmapInfoHeader
+	Colors *RGBQuad
 }
 
-type BITMAP struct {
-	BmType       int32
-	BmWidth      int32
-	BmHeight     int32
-	BmWidthBytes int32
-	BmPlanes     uint16
-	BmBitsPixel  uint16
-	BmBits       unsafe.Pointer
+// Bitmap https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmap
+type Bitmap struct {
+	Type       int32
+	Width      int32
+	Height     int32
+	WidthBytes int32
+	Planes     uint16
+	BitsPixel  uint16
+	Bits       uintptr // LPVOID
 }
 
 type DIBSECTION struct {
-	DsBm        BITMAP
-	DsBmih      BITMAPINFOHEADER
+	DsBm        Bitmap
+	DsBmih      BitmapInfoHeader
 	DsBitfields [3]uint32
 	DshSection  HANDLE
 	DsOffset    uint32

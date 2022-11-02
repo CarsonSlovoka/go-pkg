@@ -44,8 +44,8 @@ func ExampleShellDLL_ExtractIcon() {
 		curHDC := user32dll.GetDC(hwndNotepad)
 		defer func() {
 			if curHDC != 0 {
-				if err := user32dll.ReleaseDC(hwndNotepad, curHDC); err != nil {
-					log.Fatal(err)
+				if user32dll.ReleaseDC(hwndNotepad, curHDC) == 0 {
+					log.Fatal("ReleaseDC")
 				}
 			}
 		}()
@@ -90,8 +90,8 @@ func ExampleShellDLL_ExtractIcon_count() {
 		curHDC := user32dll.GetDC(hwndNotepad)
 		defer func() {
 			if curHDC != 0 {
-				if err := user32dll.ReleaseDC(hwndNotepad, curHDC); err != nil {
-					log.Fatal(err)
+				if user32dll.ReleaseDC(hwndNotepad, curHDC) == 0 {
+					log.Fatal("ReleaseDC")
 				}
 			}
 		}()

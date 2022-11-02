@@ -390,8 +390,8 @@ func ExampleKernel32DLL_FindResource() {
 
 		defer func() {
 			if hdc != 0 {
-				if err := user32dll.ReleaseDC(hwndNotepad, hdc); err != nil {
-					log.Fatal(err)
+				if user32dll.ReleaseDC(hwndNotepad, hdc) == 0 {
+					log.Fatal("ReleaseDC")
 				}
 			}
 		}()
@@ -456,8 +456,8 @@ func ExampleKernel32DLL_FindResource_icon() {
 
 		defer func() {
 			if hdc != 0 {
-				if err := user32dll.ReleaseDC(hwndNotepad, hdc); err != nil {
-					log.Fatal(err)
+				if user32dll.ReleaseDC(hwndNotepad, hdc) == 0 {
+					log.Fatal("ReleaseDC")
 				}
 			}
 		}()
