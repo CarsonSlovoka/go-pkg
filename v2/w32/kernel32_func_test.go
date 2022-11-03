@@ -274,7 +274,8 @@ func ExampleKernel32DLL_UpdateResource() {
 			}
 		}()
 
-		hRes, errno := kernel32dll.FindResource(hExe,
+		var errno syscall.Errno
+		hRes, errno = kernel32dll.FindResource(hExe,
 			w32.MakeIntResource(666), // 這是該應用程式所對應的resourceID
 			w32.MakeIntResource(w32.RT_FONT),
 		)
@@ -301,7 +302,7 @@ func ExampleKernel32DLL_UpdateResource() {
 	}
 
 	sizeofRes, errno := kernel32dll.SizeofResource(hExe, hRes)
-	if errno == 0 {
+	if sizeofRes == 0 {
 		log.Fatalf("%s", errno)
 	}
 	if ok := kernel32dll.UpdateResource(hUpdateRes,
