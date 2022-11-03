@@ -21,13 +21,15 @@ jobs:
     runs-on: ${{ matrix.platform }}
     name: Integration tests
     steps:
+      - name: Check out code into the Go module directory. # 先checkout，這樣才會有go.sum檔案，才有辦法確認是否要用cache
+        uses: actions/checkout@v3
       - name: Install Go.
         uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go-version }}
-
-      - name: Check out code into the Go module directory.
-        uses: actions/checkout@v3
+          check-latest: true # 如果指定的go-version不是最新的，會去下載最新的go版本, 預設為false
+          cache: true # 用go.sum來決定是否要在setupGo
+          cache-dependency-path: go.sum # subdir/go.sum
 
       - name: go mod tidy
         run: go mod tidy
