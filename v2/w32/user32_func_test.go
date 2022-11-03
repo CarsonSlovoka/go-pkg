@@ -98,8 +98,6 @@ rn`
 	_, _ = messageBox(0, "OK", "Test", w32.MB_OK|w32.MB_ICONQUESTION)
 	_, _ = messageBox(0, "OK", "Test", w32.MB_OK|w32.MB_ICONWARNING)
 	_, _ = messageBox(0, "OK", "Test", w32.MB_OK|w32.MB_ICONINFORMATION)
-
-	// Output:
 }
 
 // 抓取icon畫在notepad應用程式上(如果要執行，請確保您有運行nodepad.exe)
