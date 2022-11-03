@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"syscall"
 	"time"
 	"unsafe"
 )
@@ -34,9 +33,9 @@ func ExampleGdi32DLL_AddFontResource() {
 		}
 	}()
 
-	_, _, err := user32dll.PostMessage(uintptr(w32.HWND_BROADCAST), w32.WM_FONTCHANGE, 0, 0)
-	if err != syscall.Errno(0x0) {
-		log.Fatal(err)
+	ok, errno := user32dll.PostMessage(w32.HWND_BROADCAST, w32.WM_FONTCHANGE, 0, 0)
+	if !ok {
+		log.Fatal(fmt.Sprintf("%s", errno))
 	}
 
 	log.Println(numFont)
@@ -64,9 +63,9 @@ func ExampleGdi32DLL_AddFontResourceEx() {
 		}
 	}()
 
-	_, _, err := user32dll.PostMessage(uintptr(w32.HWND_BROADCAST), w32.WM_FONTCHANGE, 0, 0)
-	if err != syscall.Errno(0x0) {
-		log.Fatal(err)
+	ok, errno := user32dll.PostMessage(w32.HWND_BROADCAST, w32.WM_FONTCHANGE, 0, 0)
+	if !ok {
+		log.Fatal(fmt.Sprintf("%s", errno))
 	}
 
 	log.Println(numFont)

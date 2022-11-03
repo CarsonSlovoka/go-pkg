@@ -135,19 +135,17 @@ func (dll *User32DLL) GetWindowText(hwnd HWND) (string, error) {
 	return syscall.UTF16ToString(textName), nil
 }
 
-// MessageBox
-// https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-messageboxw
-func (dll *User32DLL) MessageBox(hwnd HWND, caption, text string, btnFlag uintptr) (clickBtnValue uintptr, errno error) {
+// MessageBox https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-messageboxw
+// If the function fails, the return value is zero.
+func (dll *User32DLL) MessageBox(hwnd HWND, text, caption string, btnFlag uint32) (clickBtnValue uintptr, errno syscall.Errno) {
 	proc := dll.mustProc(PNMessageBox)
-	pCaption, _ := syscall.UTF16PtrFromString(caption)
-	pText, _ := syscall.UTF16PtrFromString(text)
 	clickBtnValue, _, errno = syscall.SyscallN(proc.Addr(),
 		uintptr(hwnd),
-		uintptr(unsafe.Pointer(pText)),
-		uintptr(unsafe.Pointer(pCaption)),
-		btnFlag,
+		UintptrFromStr(text),
+		UintptrFromStr(caption),
+		uintptr(btnFlag),
 	)
-	return
+	return clickBtnValue, errno
 }
 
 // GetSystemMetrics 依據所傳入的參數回傳您所要查詢的數值資料
@@ -161,10 +159,10 @@ func (dll *User32DLL) GetSystemMetrics(targetIdx int32) int32 {
 
 // LoadIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadiconw
 // If the function fails, the return value is NULL.
-func (dll *User32DLL) LoadIcon(hInstance uintptr, lpIconName *uint16) (hIcon HICON, err syscall.Errno) {
+func (dll *User32DLL) LoadIcon(hInstance HINSTANCE, lpIconName *uint16) (hIcon HICON, err syscall.Errno) {
 	proc := dll.mustProc(PNLoadIcon)
 	hwnd, _, errno := syscall.SyscallN(proc.Addr(),
-		hInstance,
+		uintptr(hInstance),
 		uintptr(unsafe.Pointer(lpIconName)),
 	)
 
@@ -216,23 +214,19 @@ func (dll *User32DLL) GetIconInfo(hIcon HICON, pIconInfo *ICONINFO) bool {
 	return r1 != 0
 }
 
-// PostMessage https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage
-func (dll *User32DLL) PostMessage(hwnd uintptr, wmMsgID int, wParam, lParam uintptr) (r1, r2 uintptr, err error) {
+// PostMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-postmessagew
+// If the function succeeds, the return value is nonzero.
+func (dll *User32DLL) PostMessage(hwnd HWND, wmMsgID uint32, wParam, lParam uintptr) (bool, syscall.Errno) {
 	proc := dll.mustProc(PNPostMessage)
-	return syscall.SyscallN(proc.Addr(), hwnd, uintptr(wmMsgID), wParam, lParam)
-	/*
-		if err != syscall.Errno(0x0) {
-			return err
-		}
-		return nil
-	*/
+	r1, _, errno := syscall.SyscallN(proc.Addr(), uintptr(hwnd), uintptr(wmMsgID), wParam, lParam)
+	return r1 != 0, errno
 }
 
 // SendMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendmessage
 // 注意，他會等待回應，會造成程式當掉的錯覺 https://social.msdn.microsoft.com/Forums/en-US/6900f74f-6ece-47da-88fc-f9c8bcd40206/sendmessage-api-slow?forum=wpf
-func (dll *User32DLL) SendMessage(hwnd uintptr, wmMsgID int, wParam, lParam uintptr) (r1, r2 uintptr, err error) {
+func (dll *User32DLL) SendMessage(hwnd HWND, wmMsgID uint32, wParam, lParam uintptr) (r1, r2 uintptr, err error) {
 	proc := dll.mustProc(PNSendMessage)
-	return syscall.SyscallN(proc.Addr(), hwnd, uintptr(wmMsgID), wParam, lParam)
+	return syscall.SyscallN(proc.Addr(), uintptr(hwnd), uintptr(wmMsgID), wParam, lParam)
 }
 
 // LookupIconIdFromDirectoryEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-lookupiconidfromdirectoryex
@@ -242,7 +236,7 @@ func (dll *User32DLL) LookupIconIdFromDirectoryEx(presBits uintptr,
 	fIcon bool, // Indicates whether an icon or a cursor is sought. If this parameter is TRUE, the function is searching for an icon; if the parameter is FALSE, the function is searching for a cursor.
 	cxDesired, // The desired width, in pixels, of the icon. If this parameter is zero, the function uses the SM_CXICON or SM_CXCURSOR system metric value.
 	cyDesired int, // 0, SM_CYICON, SM_CYCURSOR
-	flags uint,    // LR_DEFAULTCOLOR or LR_MONOCHROME
+	flags uint, // LR_DEFAULTCOLOR or LR_MONOCHROME
 ) int {
 	proc := dll.mustProc(PNLookupIconIdFromDirectoryEx)
 	r1, _, _ := syscall.SyscallN(proc.Addr(),

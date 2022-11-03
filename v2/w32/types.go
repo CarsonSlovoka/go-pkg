@@ -46,6 +46,9 @@ type (
 
 type (
 	LPCVOID unsafe.Pointer
+	LRESULT uintptr
+	WPARAM  uintptr
+	LPARAM  uintptr
 )
 
 type Handle interface {

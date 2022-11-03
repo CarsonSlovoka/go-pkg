@@ -5,6 +5,8 @@ import (
 	"github.com/CarsonSlovoka/go-pkg/v2/w32"
 	"log"
 	"syscall"
+	"testing"
+	"time"
 	"unsafe"
 )
 
@@ -33,13 +35,32 @@ func ExampleUser32DLL_GetWindowText() {
 	// Output:
 }
 
+// 自動關閉MessageBox對話框
+func TestMessageBox(t *testing.T) {
+	user32dll := w32.NewUser32DLL(
+		w32.PNMessageBox,
+		w32.PNFindWindow,
+		w32.PNSendMessage,
+		w32.PNPostMessage,
+	)
+	go func() {
+		_, _ = user32dll.MessageBox(0, "...", "TestBox", w32.MB_OK)
+	}()
+	time.Sleep(200 * time.Millisecond)
+	hwnd := user32dll.FindWindow("", "TestBox")
+	if hwnd != 0 {
+		// _, _ = user32dll.PostMessage(hwnd, w32.WM_CLOSE, 0, 0) // 如果想直接送了就不管，可以使用這個
+		_, _, _ = user32dll.SendMessage(hwnd, w32.WM_CLOSE, 0, 0)
+	}
+}
+
 func ExampleUser32DLL_MessageBox() {
 	user32dll := w32.NewUser32DLL(
 		w32.PNMessageBox,
 	)
 
 	hwndTop := w32.HWND_TOP
-	response, _ := user32dll.MessageBox(hwndTop, "title", "body message", w32.MB_OK)
+	response, _ := user32dll.MessageBox(hwndTop, "body message", "title", w32.MB_OK)
 	switch response {
 	case w32.IDYES:
 		fmt.Println("Yes")
@@ -50,34 +71,35 @@ func ExampleUser32DLL_MessageBox() {
 	}
 
 	messageBox := user32dll.MessageBox
-	_, _ = messageBox(hwndTop, "Test", "OK", w32.MB_OK)
-	_, _ = messageBox(hwndTop, "Test", "Yes No Cancel", w32.MB_YESNOCANCEL)
-	_, _ = messageBox(hwndTop, "Test", "OK", w32.MB_OK)
-	_, _ = messageBox(hwndTop, "Test", "Help button", w32.MB_HELP)
-	_, _ = messageBox(hwndTop, "Test", "OK CANCEL", w32.MB_OKCANCEL)
-	_, _ = messageBox(hwndTop, "Test", "ABORT RETRY IGNORE", w32.MB_ABORTRETRYIGNORE)
-	_, _ = messageBox(hwndTop, "Test", "RETRY CANCEL", w32.MB_RETRYCANCEL)
-	_, _ = messageBox(hwndTop, "Test", "CANCEL TRY CONTINUE", w32.MB_CANCELTRYCONTINUE)
+	_, _ = messageBox(hwndTop, "OK", "Test", w32.MB_OK)
+	_, _ = messageBox(hwndTop, "Yes No Cancel", "Test", w32.MB_YESNOCANCEL)
+	_, _ = messageBox(hwndTop, "OK", "Test", w32.MB_OK)
+	_, _ = messageBox(hwndTop, "Help button", "Test", w32.MB_HELP)
+	_, _ = messageBox(hwndTop, "OK CANCEL", "Test", w32.MB_OKCANCEL)
+	_, _ = messageBox(hwndTop, "ABORT RETRY IGNORE", "Test", w32.MB_ABORTRETRYIGNORE)
+	_, _ = messageBox(hwndTop, "RETRY CANCEL", "Test", w32.MB_RETRYCANCEL)
+	_, _ = messageBox(hwndTop, "CANCEL TRY CONTINUE", "Test", w32.MB_CANCELTRYCONTINUE)
 
 	// newline
-	_, _ = messageBox(hwndTop, "Test", "row1\nrow2\nrow3", w32.MB_OK)
+	_, _ = messageBox(hwndTop, "row1\nrow2\nrow3", "Test", w32.MB_OK)
 
 	body := `r1
 r2
 ...
 rn`
-	_, _ = messageBox(hwndTop, "Test", body, w32.MB_OK)
+	_, _ = messageBox(hwndTop, body, "Test", w32.MB_OK)
 
 	// Icon
-	_, _ = messageBox(0, "Test", "OK", w32.MB_OK|w32.MB_ICONSTOP|
+	_, _ = messageBox(0, "OK", "Test", w32.MB_OK|w32.MB_ICONSTOP|
 		w32.MB_RIGHT| // text right-justified
 		// w32.MB_TOPMOST,
 		w32.MB_SYSTEMMODAL, // 比使用MB_TOPMOST好
 	)
-	_, _ = messageBox(0, "Test", "OK", w32.MB_OK|w32.MB_ICONQUESTION)
-	_, _ = messageBox(0, "Test", "OK", w32.MB_OK|w32.MB_ICONWARNING)
-	_, _ = messageBox(0, "Test", "OK", w32.MB_OK|w32.MB_ICONINFORMATION)
-	// Output
+	_, _ = messageBox(0, "OK", "Test", w32.MB_OK|w32.MB_ICONQUESTION)
+	_, _ = messageBox(0, "OK", "Test", w32.MB_OK|w32.MB_ICONWARNING)
+	_, _ = messageBox(0, "OK", "Test", w32.MB_OK|w32.MB_ICONINFORMATION)
+
+	// Output:
 }
 
 // 抓取icon畫在notepad應用程式上(如果要執行，請確保您有運行nodepad.exe)
@@ -114,13 +136,13 @@ func ExampleUser32DLL_DrawIcon() {
 			return
 		}
 
-		hIcon, _, _ := user32dll.SendMessage(uintptr(hwndChrome), w32.WM_GETICON, w32.ICON_SMALL, 0)
+		hIcon, _, _ := user32dll.SendMessage(hwndChrome, w32.WM_GETICON, w32.ICON_SMALL, 0)
 		hIconChrome = w32.HICON(hIcon)
 		if hIconChrome == 0 {
 			log.Println("chrome圖標獲取失敗")
 
 			// 嘗試使用LoadIcon函數取得
-			hIconChrome, _ = user32dll.LoadIcon(uintptr(hwndChrome), w32.MakeIntResource(w32.IDI_APPLICATION))
+			hIconChrome, _ = user32dll.LoadIcon(w32.HINSTANCE(hwndChrome), w32.MakeIntResource(w32.IDI_APPLICATION))
 			if hIconChrome == 0 {
 				// Alternative method. Use OS default icon
 				hIconChrome, _ = user32dll.LoadIcon(0, w32.MakeIntResource(w32.IDI_APPLICATION))
@@ -237,8 +259,8 @@ func ExampleUser32DLL_PostMessage() {
 	user32dll := w32.NewUser32DLL(
 		w32.PNPostMessage,
 	)
-	if _, _, err := user32dll.PostMessage(uintptr(w32.HWND_BROADCAST), w32.WM_FONTCHANGE, 0, 0); err != nil {
-		panic(err)
+	if ok, errno := user32dll.PostMessage(w32.HWND_BROADCAST, w32.WM_FONTCHANGE, 0, 0); !ok {
+		panic(fmt.Sprintf("%s", errno))
 	}
 }
 
