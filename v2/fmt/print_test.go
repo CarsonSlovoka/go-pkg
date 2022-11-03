@@ -49,6 +49,9 @@ func ExampleColorPrinter() {
 
 	p.SetFGColor(0, 0, 255)
 	log.Println(p.Sprintf("%d %s %q", 123, "Hi", "quote"))
+
+	p.SetColor(255, 255, 255, 255, 0, 0)
+	log.Println(p.Sprintf("%d %s %q", 123, "Hi", "quote"))
 	// Output:
 }
 
