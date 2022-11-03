@@ -10,7 +10,8 @@ on:
 defaults:
   run:
     # 指如果run的這些屬性沒有設定的時候，其預設值改為我們這裡所設定的數值
-    working-directory: ./v2
+    # working-directory: ./v2  # 這不適用在使用套件(uses)的情況下
+    shell: pwsh # default shell used on Windows
 jobs:
   test:
     strategy:
@@ -29,7 +30,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
           check-latest: true # 如果指定的go-version不是最新的，會去下載最新的go版本, 預設為false
           cache: true # 用go.sum來決定是否要在setupGo
-          cache-dependency-path: ./v2/go.sum # subdir/go.sum
+          # cache-dependency-path: # 有多個相依文件才需考慮
 
       - name: go mod tidy
         run: go mod tidy
