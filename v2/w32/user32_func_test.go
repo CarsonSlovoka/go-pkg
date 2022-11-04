@@ -228,8 +228,6 @@ func ExampleUser32DLL_GetIconInfo() {
 		if gdi32dll.GetObject(w32.HANDLE(iInfo.HbmColor), int32(unsafe.Sizeof(bmp)), uintptr(unsafe.Pointer(&bmp))) == 0 {
 			return
 		}
-
-		w32.NewUser32DLL()
 		var hBmp w32.HBITMAP
 		hBmpHandle, errno := user32dll.CopyImage(w32.HANDLE(iInfo.HbmColor), w32.IMAGE_BITMAP, 0, 0, 0)
 		if errno != 0 {
@@ -246,7 +244,7 @@ func ExampleUser32DLL_GetIconInfo() {
 		}()
 	}
 
-	// Save HICON TO BITMAP
+	// Save Bitmap to a file.
 	var (
 		bitmapFileHeader w32.BitmapFileHeader // https://en.wikipedia.org/wiki/BMP_file_format#Bitmap_file_header
 		bitmapInfoHeader w32.BitmapInfoHeader // https://en.wikipedia.org/wiki/BMP_file_format#DIB_header_(bitmap_information_header)

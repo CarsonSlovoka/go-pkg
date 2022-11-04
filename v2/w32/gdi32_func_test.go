@@ -297,3 +297,127 @@ func ExampleGdi32DLL_CreateCompatibleBitmap() {
 	// Output:
 	// ok
 }
+
+// Example_saveFileIconAsBitmap
+// Step:
+// get HICON
+// get ICONINFO from HICON
+// get Bitmap from ICONINFO
+// save Bitmap to a File
+// Note: To make the example look simple, I ignore all possible errors handling.
+func Example_saveFileIconAsBitmap() {
+	user32dll := w32.NewUser32DLL()
+	kernel32dll := w32.NewKernel32DLL()
+	gdi32dll := w32.NewGdi32DLL()
+
+	var hIcon w32.HICON
+	{
+		// Because I already know the iconID(myResourceID) I want, I can load it directly.
+		// If you want to find the appropriate iconID after searching through RT_GROUP_ICON you can refer to this example:
+		// https://github.com/CarsonSlovoka/go-pkg/blob/34e5d2c1fc97bf149bf626acaaf8773fe1509d64/v2/w32/kernel32_func_test.go#L331-L353
+
+		hmExe := kernel32dll.LoadLibrary("./testdata/exe/writeWithFont.exe") // writeWithFont.exe is in here: https://github.com/CarsonSlovoka/go-pkg/tree/983a2c1/v2/w32/testdata/exe
+		myResourceID := uintptr(1)                                           // You can use resourceHacker.exe to help you find the ID.
+		hRes, _ := kernel32dll.FindResource(hmExe,
+			w32.MakeIntResource(myResourceID),
+			w32.MakeIntResource(w32.RT_ICON),
+		)
+		hMem, _ := kernel32dll.LoadResource(hmExe, hRes)
+		lpResource := kernel32dll.LockResource(hMem)
+
+		hIcon = user32dll.CreateIconFromResourceEx(lpResource,
+			kernel32dll.MustSizeofResource(hmExe, hRes), true, 0x00030000,
+			32, 32, // size X, Y
+			w32.LR_DEFAULTCOLOR,
+		)
+	}
+
+	var iInfo w32.ICONINFO
+	{
+		if !user32dll.GetIconInfo(hIcon, &iInfo) {
+			return
+		}
+		// Remember to release when you are not using the HBITMAP.
+		defer func() {
+			_ = gdi32dll.DeleteObject(w32.HGDIOBJ(iInfo.HbmColor))
+			_ = gdi32dll.DeleteObject(w32.HGDIOBJ(iInfo.HbmMask))
+		}()
+	}
+
+	bmp := w32.Bitmap{}
+	{
+		// Create an empty BITMAP by ICONINFO
+		gdi32dll.GetObject(w32.HANDLE(iInfo.HbmColor), int32(unsafe.Sizeof(bmp)), uintptr(unsafe.Pointer(&bmp)))
+
+		w32.NewUser32DLL()
+		hBmpHandle, _ := user32dll.CopyImage(w32.HANDLE(iInfo.HbmColor), w32.IMAGE_BITMAP, 0, 0, 0)
+		defer gdi32dll.DeleteObject(w32.HGDIOBJ(hBmpHandle))
+	}
+
+	// Save Bitmap to a file.
+	var (
+		bitmapFileHeader w32.BitmapFileHeader // https://en.wikipedia.org/wiki/BMP_file_format#Bitmap_file_header
+		bitmapInfoHeader w32.BitmapInfoHeader // https://en.wikipedia.org/wiki/BMP_file_format#DIB_header_(bitmap_information_header)
+	)
+	{
+		bitmapInfoHeader = w32.BitmapInfoHeader{
+			Size:  uint32(unsafe.Sizeof(bitmapInfoHeader)), // 40
+			Width: bmp.Width, Height: bmp.Height,
+			Planes:      1,
+			BitCount:    32,
+			Compression: w32.BI_RGB,
+		}
+		bmpSize := ((bmp.Width*int32(bitmapInfoHeader.BitCount) + 31) / 32) * 4 /* uint32 */ * bmp.Height // see the wiki: https://en.wikipedia.org/wiki/BMP_file_format#Pixel_storage
+
+		sizeofDIB := 14 + uint32(unsafe.Sizeof(bitmapInfoHeader)) + uint32(bmpSize)
+		bitmapFileHeader = w32.BitmapFileHeader{
+			Type:       0x4D42,    // BM. // B: 42, M: 4D  //  All of the integer values are stored in little-endian format
+			Size:       sizeofDIB, // HEADER + INFO + DATA
+			OffsetBits: 14 + uint32(unsafe.Sizeof(bitmapInfoHeader)),
+		}
+
+		hdc := user32dll.GetDC(0)
+
+		var lpBitmap w32.LPVOID
+		hDIB, _ := kernel32dll.GlobalAlloc(w32.GHND, w32.SIZE_T(bmpSize))
+		lpBitmap, _ = kernel32dll.GlobalLock(hDIB)
+		defer func() {
+			kernel32dll.GlobalUnlock(hDIB)
+			kernel32dll.GlobalFree(hDIB)
+		}()
+		gdi32dll.GetDIBits(
+			hdc, iInfo.HbmColor,
+			0,
+			w32.UINT(bmp.Height),
+			lpBitmap, // [out]
+			&w32.BitmapInfo{Header: bitmapInfoHeader},
+			w32.DIB_RGB_COLORS,
+		)
+		outputBmpPath := "testdata/temp001.bmp"
+		// Write: FileHeader, DIPHeader, bitmapData
+		{
+			f, _ := os.Create(outputBmpPath)
+			defer func() {
+				_ = os.Remove(outputBmpPath) // Remove test data. If you want to see the result, delete this line to see the final data.
+			}()
+
+			// FileHeader
+			_ = binary.Write(f, binary.LittleEndian, bitmapFileHeader)
+
+			// DIP Header
+			_ = binary.Write(f, binary.LittleEndian, bitmapInfoHeader)
+
+			// bitmapData
+			bmpDatas := make([]byte, sizeofDIB)
+			var offset uint32 = 0
+			for offset = 0; offset < sizeofDIB; offset += 1 {
+				curByteAddr := unsafe.Pointer(uintptr(lpBitmap) + uintptr(offset))
+				bmpDatas[offset] = *(*byte)(curByteAddr)
+			}
+			_ = binary.Write(f, binary.LittleEndian, bmpDatas)
+
+			_ = f.Close()
+		}
+	}
+	// Output:
+}
