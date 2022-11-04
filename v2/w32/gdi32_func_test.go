@@ -89,33 +89,9 @@ func ExampleNewFontMemResource() {
 // https://zh.wikipedia.org/zh-tw/BMP
 // 本範例簡述: 抓取當前的視窗，畫在notepad上，之後再保存在檔案之中，完成後檔案(testdata/captureNotepad.bmp)會刪除
 func ExampleGdi32DLL_CreateCompatibleBitmap() {
-	user32dll := w32.NewUser32DLL(
-		w32.PNFindWindow,
-		w32.PNGetDC,
-		w32.PNGetClientRect,
-		w32.PNGetSystemMetrics,
-		w32.PNReleaseDC,
-	)
-	gdi32dll := w32.NewGdi32DLL(
-		w32.PNCreateCompatibleDC,
-		w32.PNSetStretchBltMode,
-		w32.PNStretchBlt,
-		w32.PNSelectObject,
-		w32.PNCreateCompatibleBitmap,
-		w32.PNBitBlt,
-		w32.PNGetDIBits,
-		w32.PNGetObject,
-		w32.PNDeleteObject,
-	)
-	kernel32dll := w32.NewKernel32DLL(
-		w32.PNGlobalAlloc,
-		w32.PNGlobalLock,
-		w32.PNCreateFile,
-		w32.PNWriteFile,
-		w32.PNGlobalUnlock,
-		w32.PNGlobalFree,
-		w32.PNCloseHandle,
-	)
+	user32dll := w32.NewUser32DLL()
+	gdi32dll := w32.NewGdi32DLL()
+	kernel32dll := w32.NewKernel32DLL()
 
 	var hwndNotepad w32.HWND
 	hwndNotepad = user32dll.FindWindow("Notepad", "")

@@ -36,7 +36,35 @@ type Kernel32DLL struct {
 	*dLL
 }
 
+// NewKernel32DLL You can import the interested process only instead of the whole process.
+// We will load the entire process list if you do not give any parameters.
+// // We encourage you to fill in only the items you are using, as importing the all item will cause unnecessary waste.
 func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
+	if len(procList) == 0 {
+		procList = []ProcName{
+			PNCreateMutex,
+			PNCloseHandle,
+			PNGetNativeSystemInfo,
+			PNGetModuleHandle,
+			PNFreeLibrary,
+			PNGetLastError,
+			PNCreateFile,
+			PNWriteFile,
+			PNCopyFile,
+			PNFindResource,
+			PNLoadLibrary,
+			PNSizeofResource,
+			PNBeginUpdateResource,
+			PNUpdateResource,
+			PNEndUpdateResource,
+			PNLoadResource,
+			PNLockResource,
+			PNGlobalAlloc,
+			PNGlobalLock,
+			PNGlobalUnlock,
+			PNGlobalFree,
+		}
+	}
 	dll := newDll(DNKernel32, procList)
 	return &Kernel32DLL{dll}
 }

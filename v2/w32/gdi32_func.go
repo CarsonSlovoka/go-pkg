@@ -30,7 +30,29 @@ type Gdi32DLL struct {
 	*dLL
 }
 
+// NewGdi32DLL You can import the interested process only instead of the whole process.
+// We will load the entire process list if you do not give any parameters.
+// We encourage you to fill in only the items you are using, as importing the all item will cause unnecessary waste.
 func NewGdi32DLL(procList ...ProcName) *Gdi32DLL {
+	if len(procList) == 0 {
+		procList = []ProcName{
+			PNAddFontMemResourceEx,
+			PNRemoveFontMemResourceEx,
+			PNAddFontResource,
+			PNAddFontResourceEx,
+			PNRemoveFontResource,
+			PNRemoveFontResourceEx,
+			PNGetDIBits,
+			PNGetObject,
+			PNSelectObject,
+			PNDeleteObject,
+			PNCreateCompatibleDC,
+			PNCreateCompatibleBitmap,
+			PNSetStretchBltMode,
+			PNBitBlt,
+			PNStretchBlt,
+		}
+	}
 	dll := newDll(DNGdi32, procList)
 	return &Gdi32DLL{dll}
 }

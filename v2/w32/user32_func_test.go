@@ -195,19 +195,10 @@ func ExampleUser32DLL_DrawIcon() {
 // 2. ICONINFO: 由該hIcon透過GetIconInfo取得到ICONINFO的結構資料
 // 3. init BITMAP: 建立空的BITMAP對象(初始化參照ICONINFO.HbmColor)
 // 4. copy to BITMAP: 透過CopyImage將ICONINFO.HbmColor複製到我們所建立的BITMAP之中
+// 5. (可選) 把圖標存成檔案(範例執行完之後會刪除)
 func ExampleUser32DLL_GetIconInfo() {
-	user32dll := w32.NewUser32DLL(
-		w32.PNLoadIcon,
-		w32.PNGetIconInfo,
-		w32.PNCopyImage,
-		w32.PNGetDC,
-	)
-
-	gdi32dll := w32.NewGdi32DLL(
-		w32.PNGetObject,
-		w32.PNDeleteObject,
-		w32.PNGetDIBits,
-	)
+	user32dll := w32.NewUser32DLL()
+	gdi32dll := w32.NewGdi32DLL()
 
 	hIconQuestion, errno := user32dll.LoadIcon(0, w32.MakeIntResource(w32.IDI_QUESTION))
 	if hIconQuestion == 0 {
@@ -279,12 +270,7 @@ func ExampleUser32DLL_GetIconInfo() {
 
 		hdc := user32dll.GetDC(0)
 
-		kernel32dll := w32.NewKernel32DLL(
-			w32.PNGlobalAlloc,
-			w32.PNGlobalLock,
-			w32.PNGlobalUnlock,
-			w32.PNGlobalFree,
-		)
+		kernel32dll := w32.NewKernel32DLL()
 
 		var lpBitmap w32.LPVOID
 		hDIB, _ := kernel32dll.GlobalAlloc(w32.GHND, w32.SIZE_T(bmpSize))

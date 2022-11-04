@@ -32,9 +32,33 @@ type User32DLL struct {
 	*dLL
 }
 
+// NewUser32DLL You can import the interested process only instead of the whole process.
+// We will load the entire process list if you do not give any parameters.
+// We encourage you to fill in only the items you are using, as importing the all item will cause unnecessary waste.
 func NewUser32DLL(procList ...ProcName) *User32DLL {
+	if len(procList) == 0 {
+		procList = []ProcName{
+			PNFindWindow,
+			PNFindWindowEx,
+			PNGetForegroundWindow,
+			PNGetClassName,
+			PNGetWindowText,
+			PNMessageBox,
+			PNGetSystemMetrics,
+			PNLoadIcon,
+			PNGetDC,
+			PNReleaseDC,
+			PNDrawIcon,
+			PNGetIconInfo,
+			PNPostMessage,
+			PNSendMessage,
+			PNLookupIconIdFromDirectoryEx,
+			PNCreateIconFromResourceEx,
+			PNCopyImage,
+			PNGetClientRect,
+		}
+	}
 	dll := newDll(DNUser32, procList)
-	// dll.mustProc = ...
 	return &User32DLL{dll}
 }
 

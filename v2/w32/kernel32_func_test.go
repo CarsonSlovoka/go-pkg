@@ -218,17 +218,7 @@ func ExampleKernel32DLL_GetModuleHandle() {
 // https://learn.microsoft.com/en-us/windows/win32/menurc/using-resources#updating-resources
 // 從A應用程式抓取其資源，放入到B應用程式之中
 func ExampleKernel32DLL_UpdateResource() {
-	kernel32dll := w32.NewKernel32DLL(
-		w32.PNLoadLibrary,
-		w32.PNFindResource,
-		w32.PNLoadResource,
-		w32.PNLockResource,
-		w32.PNBeginUpdateResource,
-		w32.PNSizeofResource,
-		w32.PNUpdateResource,
-		w32.PNEndUpdateResource,
-		w32.PNFreeLibrary,
-	)
+	kernel32dll := w32.NewKernel32DLL()
 
 	// 最好透過filepath，避免反斜線錯邊的問題(backslash or forward slash)
 	sourcePath := filepath.Join("testdata/exe", "writeWithFont.exe") // 資源的來源
@@ -330,22 +320,8 @@ func ExampleKernel32DLL_FindResource() {
 	if _, err := os.Stat(exePath); os.IsNotExist(err) {
 		return
 	}
-	kernel32dll := w32.NewKernel32DLL(
-		w32.PNLoadLibrary,
-		w32.PNFindResource,
-		w32.PNLoadResource,
-		w32.PNSizeofResource,
-		w32.PNLockResource,
-	)
-	user32dll := w32.NewUser32DLL(
-		w32.PNLookupIconIdFromDirectoryEx,
-		w32.PNCreateIconFromResourceEx,
-
-		w32.PNFindWindow,
-		w32.PNReleaseDC,
-		w32.PNDrawIcon,
-		w32.PNGetDC,
-	)
+	kernel32dll := w32.NewKernel32DLL()
+	user32dll := w32.NewUser32DLL()
 	hExe := kernel32dll.LoadLibrary(exePath)
 	if hExe == 0 {
 		// not found
@@ -412,21 +388,8 @@ func ExampleKernel32DLL_FindResource() {
 // 類似ExampleKernel32DLL_FindResource，不過本範例直接抓取ICON不再從Icon Group去找尋
 // 建議您安裝[Resource Hacker](http://www.angusj.com/resourcehacker/)去查看微軟的fontView.exe會對本範例更了解
 func ExampleKernel32DLL_FindResource_icon() {
-	kernel32dll := w32.NewKernel32DLL(
-		w32.PNLoadLibrary,
-		w32.PNFindResource,
-		w32.PNLoadResource,
-		w32.PNSizeofResource,
-		w32.PNLockResource,
-	)
-	user32dll := w32.NewUser32DLL(
-		w32.PNCreateIconFromResourceEx,
-
-		w32.PNFindWindow,
-		w32.PNReleaseDC,
-		w32.PNDrawIcon,
-		w32.PNGetDC,
-	)
+	kernel32dll := w32.NewKernel32DLL()
+	user32dll := w32.NewUser32DLL()
 	exePath := filepath.Join(os.Getenv("windir"), "System32/fontview.exe")
 	hExe := kernel32dll.LoadLibrary(exePath)
 	if hExe == 0 {
