@@ -105,17 +105,7 @@ rn`
 // 抓取icon畫在notepad應用程式上(如果要執行，請確保您有運行nodepad.exe)
 // https://learn.microsoft.com/en-us/windows/win32/menurc/using-icons#creating-an-icon
 func ExampleUser32DLL_DrawIcon() {
-	user32dll := w32.NewUser32DLL(
-		w32.PNLoadIcon,
-		w32.PNDrawIcon,
-		w32.PNGetDC,
-		w32.PNFindWindow,
-
-		w32.PNSendMessage,
-		w32.PNFindWindow,
-
-		w32.PNReleaseDC,
-	)
+	user32dll := w32.NewUser32DLL()
 
 	// 獲取HICON{question, chrome}
 	var hIconQuestion, hIconChrome w32.HICON
@@ -186,7 +176,46 @@ func ExampleUser32DLL_DrawIcon() {
 			}
 		}
 	}
+	// Output:
+}
 
+func ExampleUser32DLL_DrawIconEx() {
+	user32dll := w32.NewUser32DLL()
+	hIcon, _ := user32dll.LoadIcon(0, w32.MakeIntResource(w32.IDI_QUESTION))
+
+	// 準備一個作圖用的HDC, 我會建議畫在notepad上，可以方便查看
+	var hdcScreen w32.HDC
+	{
+		hwndNotepad := user32dll.FindWindowEx(0, 0, "Notepad", "")
+		if hwndNotepad == 0 { // 如果您當前的應用程式會刷新，那可能看不到畫的結果，因為馬上就會被更新掉
+			hdcScreen = user32dll.GetDC(0)
+			defer user32dll.ReleaseDC(0, hdcScreen)
+		} else {
+			hdcScreen = user32dll.GetDC(hwndNotepad)
+			defer user32dll.ReleaseDC(hwndNotepad, hdcScreen)
+		}
+	}
+
+	_, _ = user32dll.DrawIconEx(hdcScreen, 10, 20, hIcon, 0, 0, 0, 0, w32.DI_NORMAL)
+
+	var xLeft int32 = 40
+	for i, d := range []struct {
+		width, height int32
+		diFlag        uint32
+	}{
+		{0, 0, w32.DI_DEFAULTSIZE},                    // w, h用SM_CXICON, SM_CYICON取代
+		{w32.SM_CXICON, w32.SM_CYICON, w32.DI_NORMAL}, // w=11, h=12
+		{0, 0, w32.DI_NORMAL},                         // w=0, h=0, DI_DEFAULTSIZE沒有設定 => 原始資源大小
+		{64, 128, w32.DI_NORMAL},                      // 自定義大小 w=64, h=128
+
+		// 以下大小都是原尺寸
+		{0, 0, w32.DI_IMAGE},  // 整張圖
+		{0, 0, w32.DI_MASK},   // Mask的區塊
+		{0, 0, w32.DI_NORMAL}, // 他會用IMAGE和MASK做運算，結果的圖形會只有Mask的部分會呈現出來
+	} {
+		var yTop = 100 * (int32(i) + 1)
+		_, _ = user32dll.DrawIconEx(hdcScreen, xLeft, yTop, hIcon, d.width, d.height, 0, 0, d.diFlag)
+	}
 	// Output:
 }
 
@@ -221,27 +250,33 @@ func ExampleUser32DLL_GetIconInfo() {
 	log.Printf("%+v\n", iInfo)
 	fmt.Println("ok")
 
-	// Test copyImage with using the above iInfo.
 	bmp := w32.Bitmap{}
 	{
-		// 以ICONINFO的資料建立一個空的BITMAP
-		if gdi32dll.GetObject(w32.HANDLE(iInfo.HbmColor), int32(unsafe.Sizeof(bmp)), uintptr(unsafe.Pointer(&bmp))) == 0 {
-			return
-		}
-		var hBmp w32.HBITMAP
-		hBmpHandle, errno := user32dll.CopyImage(w32.HANDLE(iInfo.HbmColor), w32.IMAGE_BITMAP, 0, 0, 0)
-		if errno != 0 {
-			return
-		}
-		hBmp = w32.HBITMAP(hBmpHandle)
-		fmt.Println("copyImage OK")
-		log.Println(hBmp)
+		modifyImg := true
 
-		defer func() {
-			if !gdi32dll.DeleteObject(w32.HGDIOBJ(hBmp)) {
-				fmt.Println("error")
+		if !modifyImg {
+			// 可以直接透過以下的方式就可以得到圖像，但我想要測試CopyImage，所以強制跑else的選項
+			// 以ICONINFO的資料建立BITMAP
+			if gdi32dll.GetObject(w32.HANDLE(iInfo.HbmColor), int32(unsafe.Sizeof(bmp)), uintptr(unsafe.Pointer(&bmp))) == 0 {
+				return
 			}
-		}()
+		} else {
+			hwndCopy, errno := user32dll.CopyImage(w32.HANDLE(iInfo.HbmColor), w32.IMAGE_BITMAP, 10, 20, w32.LR_DEFAULTCOLOR)
+			if hwndCopy == 0 {
+				log.Printf("%s\n", errno)
+				return
+			}
+			defer func() {
+				if !gdi32dll.DeleteObject(w32.HGDIOBJ(hwndCopy)) {
+					fmt.Println("error")
+				}
+			}()
+
+			// 以該HWND的資料建立BITMAP
+			if gdi32dll.GetObject(hwndCopy, int32(unsafe.Sizeof(bmp)), uintptr(unsafe.Pointer(&bmp))) == 0 {
+				return
+			}
+		}
 	}
 
 	// Save Bitmap to a file.
@@ -319,7 +354,6 @@ func ExampleUser32DLL_GetIconInfo() {
 	}
 	// Output:
 	// ok
-	// copyImage OK
 }
 
 func ExampleUser32DLL_PostMessage() {

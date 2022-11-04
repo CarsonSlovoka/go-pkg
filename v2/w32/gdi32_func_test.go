@@ -346,12 +346,8 @@ func Example_saveFileIconAsBitmap() {
 
 	bmp := w32.Bitmap{}
 	{
-		// Create an empty BITMAP by ICONINFO
+		// Create BITMAP by ICONINFO
 		gdi32dll.GetObject(w32.HANDLE(iInfo.HbmColor), int32(unsafe.Sizeof(bmp)), uintptr(unsafe.Pointer(&bmp)))
-
-		w32.NewUser32DLL()
-		hBmpHandle, _ := user32dll.CopyImage(w32.HANDLE(iInfo.HbmColor), w32.IMAGE_BITMAP, 0, 0, 0)
-		defer gdi32dll.DeleteObject(w32.HGDIOBJ(hBmpHandle))
 	}
 
 	// Save Bitmap to a file.

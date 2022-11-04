@@ -1350,12 +1350,12 @@ const (
 
 // DrawIconEx flags
 const (
-	DI_COMPAT      = 0x0004
+	DI_COMPAT      = 0x0004 // This flag is ignored.
 	DI_DEFAULTSIZE = 0x0008
 	DI_IMAGE       = 0x0002
 	DI_MASK        = 0x0001
 	DI_NOMIRROR    = 0x0010
-	DI_NORMAL      = DI_IMAGE | DI_MASK
+	DI_NORMAL      = DI_IMAGE | DI_MASK // Combination of DI_IMAGE and DI_MASK.
 )
 
 // WM_NCHITTEST constants

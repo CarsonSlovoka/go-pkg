@@ -19,6 +19,7 @@ const (
 	PNGetDC                       ProcName = "GetDC"
 	PNReleaseDC                   ProcName = "ReleaseDC"
 	PNDrawIcon                    ProcName = "DrawIcon"
+	PNDrawIconEx                  ProcName = "DrawIconEx"
 	PNGetIconInfo                 ProcName = "GetIconInfo"
 	PNPostMessage                 ProcName = "PostMessageW"
 	PNSendMessage                 ProcName = "SendMessageW"
@@ -49,6 +50,7 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 			PNGetDC,
 			PNReleaseDC,
 			PNDrawIcon,
+			PNDrawIconEx,
 			PNGetIconInfo,
 			PNPostMessage,
 			PNSendMessage,
@@ -227,6 +229,30 @@ func (dll *User32DLL) DrawIcon(hdc HDC, x, y int, hIcon HICON) (bool, syscall.Er
 	return hwnd != 0, errno
 }
 
+// DrawIconEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-drawiconex
+// If the function succeeds, the return value is nonzero.
+func (dll *User32DLL) DrawIconEx(hdc HDC,
+	xLeft int32, yTop int32, // 作圖位置
+	hIcon HICON, // 來源圖像
+	cxWidth int32, cyWidth int32, // 目標大小. 當flag設定為DI_DEFAULTSIZE, 會使用SM_CXICON, SM_CYICON來代替. 如果DI_DEFAULTSIZE沒有設定且此數值為0，那麼會用原始圖像大小來取代
+	istepIfAniCur uint32,
+	hbrFlickerFreeDraw HBRUSH,
+	diFlags uint32, // DI_COMPAT, DI_DEFAULTSIZE, DI_IMAGE, ...
+) (bool, syscall.Errno) {
+	proc := dll.mustProc(PNDrawIconEx)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+		uintptr(xLeft),
+		uintptr(yTop),
+		uintptr(hIcon),
+		uintptr(cxWidth),
+		uintptr(cyWidth),
+		uintptr(istepIfAniCur),
+		uintptr(hbrFlickerFreeDraw),
+		uintptr(diFlags))
+	return r1 != 0, errno
+}
+
 // GetIconInfo https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-geticoninfo
 // Returns TRUE if successful or FALSE otherwise.
 func (dll *User32DLL) GetIconInfo(hIcon HICON, pIconInfo *ICONINFO) bool {
@@ -303,9 +329,13 @@ func (dll *User32DLL) CreateIconFromResourceEx(
 	return HICON(r1)
 }
 
-// CopyImage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-copyimage
+// CopyImage Creates a new image (icon, cursor, or bitmap)
+// 通常我們會使用它，接著後面會用GetObject(hwnd, size, out)來取得資料
+// https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-copyimage
 // If the function fails, the return value is NULL.
-func (dll *User32DLL) CopyImage(h HANDLE, imgType uint32, cx, cy int32, flags uint32) (HANDLE, syscall.Errno) {
+func (dll *User32DLL) CopyImage(h HANDLE, imgType uint32, cx, cy int32,
+	flags uint32, // This parameter can be one or more of the following values. {LR_DEFAULTCOLOR, LR_DEFAULTSIZE, ...}
+) (HANDLE, syscall.Errno) {
 	proc := dll.mustProc(PNCopyImage)
 	r1, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(h),
