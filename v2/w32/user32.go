@@ -272,6 +272,7 @@ const (
 	GWLP_USERDATA   = -21
 )
 
+// https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowpos#parameters
 // Predefined window handles
 const (
 	HWND_BROADCAST = HWND(0xFFFF)

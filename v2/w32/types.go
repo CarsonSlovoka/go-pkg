@@ -41,6 +41,8 @@ type (
 	ULONGLONG uint64
 	ULONG_PTR *uint32
 
+	WCHAR uint16
+	PWSTR *WCHAR
 	PVOID uintptr
 )
 

@@ -37,7 +37,7 @@ func ExampleUser32DLL_GetWindowText() {
 	// Output:
 }
 
-// 自動關閉MessageBox對話框
+// Automatically close the message box
 func TestMessageBox(t *testing.T) {
 	user32dll := w32.NewUser32DLL(
 		w32.PNMessageBox,
@@ -393,4 +393,28 @@ func ExampleUser32DLL_SendMessage() {
 	hIcon, _, _ := user32dll.SendMessage(0, w32.WM_GETICON, w32.ICON_SMALL, 0)
 	log.Println(hIcon)
 	// Output:
+}
+
+// 這個範例會做以下三件事情:
+// 1. 關閉螢幕 (之後等待兩秒
+// 2. 打開螢幕 (在等待兩秒)
+// 3. 電池已進入耗電模式 // 這個也會把螢幕關起來
+func ExampleUser32DLL_PostMessage_SC_MONITORPOWER() {
+	user32dll := w32.NewUser32DLL(w32.PNPostMessage)
+
+	// -1: ^uintptr(0)
+	// -2: ^uintptr(1)
+	// -3: ^uintptr(2)
+	// ...
+
+	log.Println("screenOff")
+	_, _ = user32dll.PostMessage(w32.HWND_BROADCAST, w32.WM_SYSCOMMAND, w32.SC_MONITORPOWER, 2)
+	time.Sleep(2 * time.Second)
+
+	log.Println("screenOn")
+	_, _ = user32dll.PostMessage(w32.HWND_BROADCAST, w32.WM_SYSCOMMAND, w32.SC_MONITORPOWER, ^uintptr(0)) // -1
+	time.Sleep(2 * time.Second)
+
+	log.Println("screenLowPower")
+	_, _ = user32dll.PostMessage(w32.HWND_BROADCAST, w32.WM_SYSCOMMAND, w32.SC_MONITORPOWER, 1)
 }
