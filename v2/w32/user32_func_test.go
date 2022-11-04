@@ -1,9 +1,11 @@
 package w32_test
 
 import (
+	"encoding/binary"
 	"fmt"
 	"github.com/CarsonSlovoka/go-pkg/v2/w32"
 	"log"
+	"os"
 	"syscall"
 	"testing"
 	"time"
@@ -198,11 +200,13 @@ func ExampleUser32DLL_GetIconInfo() {
 		w32.PNLoadIcon,
 		w32.PNGetIconInfo,
 		w32.PNCopyImage,
+		w32.PNGetDC,
 	)
 
 	gdi32dll := w32.NewGdi32DLL(
 		w32.PNGetObject,
 		w32.PNDeleteObject,
+		w32.PNGetDIBits,
 	)
 
 	hIconQuestion, errno := user32dll.LoadIcon(0, w32.MakeIntResource(w32.IDI_QUESTION))
@@ -214,7 +218,7 @@ func ExampleUser32DLL_GetIconInfo() {
 	if !user32dll.GetIconInfo(hIconQuestion, &iInfo) {
 		return
 	}
-	// 當獲取成功之後，如果不用時，要把所有HBITMAP的對象釋放掉
+	// Remember to release when you are not using the HBITMAP.
 	defer func() {
 		if !gdi32dll.DeleteObject(w32.HGDIOBJ(iInfo.HbmColor)) {
 			fmt.Println("error DeleteObject HbmColor")
@@ -226,10 +230,10 @@ func ExampleUser32DLL_GetIconInfo() {
 	log.Printf("%+v\n", iInfo)
 	fmt.Println("ok")
 
-	// 以下為copyImage的測試，沿用上面取得到的icon
+	// Test copyImage with using the above iInfo.
+	bmp := w32.Bitmap{}
 	{
 		// 以ICONINFO的資料建立一個空的BITMAP
-		bmp := w32.Bitmap{}
 		if gdi32dll.GetObject(w32.HANDLE(iInfo.HbmColor), int32(unsafe.Sizeof(bmp)), uintptr(unsafe.Pointer(&bmp))) == 0 {
 			return
 		}
@@ -244,8 +248,89 @@ func ExampleUser32DLL_GetIconInfo() {
 		fmt.Println("copyImage OK")
 		log.Println(hBmp)
 
-		if !gdi32dll.DeleteObject(w32.HGDIOBJ(hBmp)) {
-			fmt.Println("error")
+		defer func() {
+			if !gdi32dll.DeleteObject(w32.HGDIOBJ(hBmp)) {
+				fmt.Println("error")
+			}
+		}()
+	}
+
+	// Save HICON TO BITMAP
+	var (
+		bitmapFileHeader w32.BitmapFileHeader // https://en.wikipedia.org/wiki/BMP_file_format#Bitmap_file_header
+		bitmapInfoHeader w32.BitmapInfoHeader // https://en.wikipedia.org/wiki/BMP_file_format#DIB_header_(bitmap_information_header)
+	)
+	{
+		bitmapInfoHeader = w32.BitmapInfoHeader{
+			Size:  uint32(unsafe.Sizeof(bitmapInfoHeader)), // 40
+			Width: bmp.Width, Height: bmp.Height,
+			Planes:      1,
+			BitCount:    32,
+			Compression: w32.BI_RGB,
+		}
+		bmpSize := ((bmp.Width*int32(bitmapInfoHeader.BitCount) + 31) / 32) * 4 /* uint32 */ * bmp.Height
+
+		sizeofDIB := 14 + uint32(unsafe.Sizeof(bitmapInfoHeader)) + uint32(bmpSize)
+		bitmapFileHeader = w32.BitmapFileHeader{
+			Type:       0x4D42,    // BM. // B: 42, M: 4D  //  All of the integer values are stored in little-endian format
+			Size:       sizeofDIB, // HEADER + INFO + DATA
+			OffsetBits: 14 + uint32(unsafe.Sizeof(bitmapInfoHeader)),
+		}
+
+		hdc := user32dll.GetDC(0)
+
+		kernel32dll := w32.NewKernel32DLL(
+			w32.PNGlobalAlloc,
+			w32.PNGlobalLock,
+			w32.PNGlobalUnlock,
+			w32.PNGlobalFree,
+		)
+
+		var lpBitmap w32.LPVOID
+		hDIB, _ := kernel32dll.GlobalAlloc(w32.GHND, w32.SIZE_T(bmpSize))
+		lpBitmap, _ = kernel32dll.GlobalLock(hDIB)
+		defer func() {
+			kernel32dll.GlobalUnlock(hDIB)
+			kernel32dll.GlobalFree(hDIB)
+		}()
+		gdi32dll.GetDIBits(
+			hdc, iInfo.HbmColor,
+			0,
+			w32.UINT(bmp.Height),
+			lpBitmap, // [out]
+			&w32.BitmapInfo{Header: bitmapInfoHeader},
+			w32.DIB_RGB_COLORS,
+		)
+		outputBmpPath := "testdata/info.bmp"
+		// Write: FileHeader, DIPHeader, bitmapData
+		{
+			f, err := os.Create(outputBmpPath)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			defer func() {
+				if err = os.Remove(outputBmpPath); err != nil {
+					log.Printf("could not remove the test data: %s\n", outputBmpPath)
+				}
+			}()
+
+			// FileHeader
+			_ = binary.Write(f, binary.LittleEndian, bitmapFileHeader)
+
+			// DIP Header
+			_ = binary.Write(f, binary.LittleEndian, bitmapInfoHeader)
+
+			// bitmapData
+			bmpDatas := make([]byte, sizeofDIB)
+			var offset uint32 = 0
+			for offset = 0; offset < sizeofDIB; offset += 1 {
+				curByteAddr := unsafe.Pointer(uintptr(lpBitmap) + uintptr(offset))
+				bmpDatas[offset] = *(*byte)(curByteAddr)
+			}
+			_ = binary.Write(f, binary.LittleEndian, bmpDatas)
+
+			_ = f.Close()
 		}
 	}
 	// Output:
