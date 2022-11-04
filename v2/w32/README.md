@@ -29,32 +29,32 @@ func main() {
 BOOLEAN | byte
 BYTE | byte
 UCHAR | byte
-|
+| |
 USHORT | uint16
 WORD | uint16
 WORD | uint16
 WCHAR  xxx[128] | [128]uint16
 LPWSTR | *uint16
 LPCWSTR | *uint16
-|
+| |
 **BOOL** | int32 你會看到文檔在該回傳值為此類型時，常常只有提到0表示錯誤，但不會說TRUE代表什麼，因為非0的數值不見得一定都是1，有可能是其他的數值。
 DWORD | uint32
 LPDWORD   | *uint32
 DWORD_PTR | *uint32
-|
+| |
 DWORD64 | uint64
 LARGE_INTEGER | int64
-|
-SIZE_T | uintptr
+| |
 ULONGLONG | uint64
-|
+| |
 CHAR | int8
 LPCSTR | *uint8
-|
+| |
 LONG | int32
-|
+| |
 LPVOID | uintptr
 HANDLE | uintptr
+SIZE_T | uintptr
 
 ## 使用go來調用windows api的專案
 
