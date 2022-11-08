@@ -74,8 +74,19 @@ const (
 
 // SYSTEM_INFO https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/ns-sysinfoapi-system_info
 type SYSTEM_INFO struct {
-	ProcessorArchitecture     uint16 // PROCESSOR_ARCHITECTURE_AMD64, PROCESSOR_ARCHITECTURE_ARM64, PROCESSOR_ARCHITECTURE_IA64, ...
-	Reserved                  uint16
+	/*
+	  union {
+	    DWORD dwOemId <- 我們不使用它
+	    struct {
+	      WORD wProcessorArchitecture // 直接寫下面兩個細項
+	      WORD wReserved;
+	    }
+	  }
+	*/
+	// OemId uint32
+	ProcessorArchitecture uint16 // PROCESSOR_ARCHITECTURE_AMD64, PROCESSOR_ARCHITECTURE_ARM64, PROCESSOR_ARCHITECTURE_IA64, ...
+	Reserved              uint16
+
 	PageSize                  uint32
 	MinimumApplicationAddress LPCVOID
 	MaximumApplicationAddress LPCVOID
@@ -86,3 +97,40 @@ type SYSTEM_INFO struct {
 	ProcessorLevel            uint16
 	ProcessorRevision         uint16
 }
+
+// https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-findfirstchangenotificationa
+// https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-readdirectorychangesw#parameters
+const (
+	FILE_NOTIFY_CHANGE_FILE_NAME  uint32 = 0x00000001
+	FILE_NOTIFY_CHANGE_DIR_NAME          = 0x00000002
+	FILE_NOTIFY_CHANGE_ATTRIBUTES        = 0x00000004
+	FILE_NOTIFY_CHANGE_SIZE              = 0x00000008
+	FILE_NOTIFY_CHANGE_LAST_WRITE        = 0x00000010
+	FILE_NOTIFY_CHANGE_CREATION          = 0x00000040 // Any change to the creation time of files in the watched directory or subtree causes a change notification wait operation to return.
+	FILE_NOTIFY_CHANGE_SECURITY          = 0x00000100
+)
+
+// https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-file_notify_information
+const (
+	FILE_ACTION_ADDED            uint32 = 0x00000001
+	FILE_ACTION_REMOVED                 = 0x00000002
+	FILE_ACTION_MODIFIED                = 0x00000003
+	FILE_ACTION_RENAMED_OLD_NAME        = 0x00000004
+	FILE_ACTION_RENAMED_NEW_NAME        = 0x00000005
+)
+
+// FILE_NOTIFY_INFORMATION
+// https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-file_notify_information
+type FILE_NOTIFY_INFORMATION struct {
+	NextEntryOffset uint32 // 指的是下一筆資料位於整體buffer所在位置的何處 (都是從buffer的頭開始算起)
+	Action          uint32
+	FileNameLength  uint32
+	FileName1       uint16 // 指的是檔案名稱的第一個字, 完整的名稱取法: 為FileName1的下標值開始算起，取FileNameLength長度個 (如果您調用的函數為寬字串函數，那麼給的長度依舊是以byte算起，所以實際上的檔案長度要取其/2) [FileName1.idx:FileName1.idx+FileNameLength/2]
+}
+
+// https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-charprevexa
+const (
+	CP_ACP   uint32 = 0 // default ANSI code page.
+	CP_OEMCP        = 1 // Use system default OEM code page.
+	CP_MACCP        = 2 // Use the system default Macintosh code page.
+)

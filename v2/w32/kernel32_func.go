@@ -36,6 +36,8 @@ const (
 	PNGlobalLock          ProcName = "GlobalLock"
 	PNGlobalUnlock        ProcName = "GlobalUnlock"
 	PNGlobalFree          ProcName = "GlobalFree"
+
+	PNReadDirectoryChanges ProcName = "ReadDirectoryChangesW"
 )
 
 type Kernel32DLL struct {
@@ -75,6 +77,7 @@ func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 			PNGlobalLock,
 			PNGlobalUnlock,
 			PNGlobalFree,
+			PNReadDirectoryChanges,
 		}
 	}
 	dll := newDll(DNKernel32, procList)
@@ -401,4 +404,29 @@ func (dll *Kernel32DLL) GlobalFree(hMem HGLOBAL) HGLOBAL {
 		uintptr(hMem),
 	)
 	return HGLOBAL(r1)
+}
+
+// ReadDirectoryChanges https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-readdirectorychangesw?redirectedfrom=MSDN
+// TODO: Unknown type(s): LPOVERLAPPED_COMPLETION_ROUTINE
+// If the function succeeds, the return value is nonzero.
+// If the function fails, the return value is zero.
+func (dll *Kernel32DLL) ReadDirectoryChanges(hDirectory HANDLE,
+	lpBuffer uintptr, nBufferLength uint32,
+	bWatchSubtree bool,
+	dwNotifyFilter uint32,
+	lpBytesReturned *uint32, // [out]
+	lpOverlapped *OVERLAPPED, lpCompletionRoutine uintptr,
+) (bool, syscall.Errno) {
+	proc := dll.mustProc(PNReadDirectoryChanges)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hDirectory),
+		lpBuffer,
+		uintptr(nBufferLength),
+		UintptrFromBool(bWatchSubtree),
+		uintptr(dwNotifyFilter),
+		uintptr(unsafe.Pointer(lpBytesReturned)), // [out]
+		uintptr(unsafe.Pointer(lpOverlapped)),
+		lpCompletionRoutine,
+	)
+	return r1 != 0, errno
 }

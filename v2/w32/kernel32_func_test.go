@@ -1,6 +1,7 @@
 package w32_test
 
 import (
+	"encoding/binary"
 	"fmt"
 	"github.com/CarsonSlovoka/go-pkg/v2/w32"
 	"log"
@@ -8,6 +9,8 @@ import (
 	"path/filepath"
 	"syscall"
 	"testing"
+	"time"
+	"unsafe"
 )
 
 func TestCreateMutex(t *testing.T) {
@@ -101,7 +104,9 @@ func ExampleKernel32DLL_CreateFile() {
 	if ok, _ := kernel32dll.CloseHandle(hFile); !ok {
 		return
 	}
-	defer os.Remove(testFilePath)
+	defer func() {
+		_ = os.Remove(testFilePath)
+	}()
 	hFile, errno = kernel32dll.CreateFile(testFilePath,
 		w32.GENERIC_READ|w32.GENERIC_WRITE,
 		0,
@@ -455,4 +460,138 @@ func ExampleKernel32DLL_FindResource_icon() {
 		log.Fatalf("%s", errno)
 	}
 	// Output:
+}
+
+func ExampleKernel32DLL_ReadDirectoryChanges() {
+	kernel32dll := w32.NewKernel32DLL()
+
+	testDirPath := "./testdata/test_ReadDirectoryChanges/"
+	// Make sure the testDir exists. It's ok when it exists already.
+	if err := os.MkdirAll(testDirPath, 0x666); err != nil {
+		return
+	}
+	defer func() {
+		_ = os.RemoveAll(testDirPath)
+	}()
+
+	spyNotify := make(chan string)
+	SpyDir := func(dirPath string, notifyChan chan<- string) {
+		// 這邊的CreateFile不是指創建檔案，而是以該文件創建一個HANDLE
+		hDir, errno := kernel32dll.CreateFile(dirPath,
+			w32.FILE_LIST_DIRECTORY, // 開啟資料夾 |w32.GENERIC_READ|w32.GENERIC_WRITE
+			w32.FILE_SHARE_READ|w32.FILE_SHARE_WRITE|w32.FILE_SHARE_DELETE,
+			0,
+			w32.OPEN_EXISTING,
+			w32.FILE_FLAG_BACKUP_SEMANTICS|w32.FILE_FLAG_OVERLAPPED,
+			0,
+		)
+		if errno != w32.NO_ERROR {
+			fmt.Printf("%s", errno)
+			return
+		}
+		defer func() {
+			if ok, err := kernel32dll.CloseHandle(hDir); !ok {
+				fmt.Printf("%s", err)
+			}
+		}()
+
+		var maxBufferSize uint32 = 96 // 如果只是單純紀錄檔案異動，只是描述檔名與FILE_NOTIFY_INFORMATION的表頭，以兩組計算，如果檔名不要太長多在100以內已經足夠，除非一次刪除大量檔案，那麼也會記錄非常多筆，才需考慮用大一點的buffer
+		buffer := make([]uint8, maxBufferSize)
+
+		memset := func(a []uint8, v uint8) {
+			for i := range a {
+				a[i] = v
+			}
+		}
+
+		getName := func(offset, fileNameLength uint32) string {
+			size := fileNameLength / 2 // 我們用的是W，寬字串版本的函數，所以用uint16紀錄，而它的length都是用byte計算，所以要除2才是uint16的長度
+			filename := make([]uint16, size)
+			var i uint32 = 0
+			for i = 0; i < size; i++ {
+				filename[i] = binary.LittleEndian.Uint16([]byte{buffer[offset+2*i], buffer[offset+2*i+1]}) // // buffer是一個[]uint8的項目，我們每次取兩個放入
+			}
+			return syscall.UTF16ToString(filename)
+		}
+
+		var record w32.FILE_NOTIFY_INFORMATION
+		for {
+			var dwBytes uint32 = 0
+			memset(buffer, 0) // 清空buffer, 再利用
+
+			// 這個函數必須要不斷調用，才能做到持續監測的效果
+			if ok, err := kernel32dll.ReadDirectoryChanges(hDir,
+				uintptr(unsafe.Pointer(&buffer[0])),
+				maxBufferSize,
+				true, // 是否連子目錄也要監測
+				w32.FILE_NOTIFY_CHANGE_LAST_WRITE|w32.FILE_NOTIFY_CHANGE_CREATION|w32.FILE_NOTIFY_CHANGE_FILE_NAME,
+				&dwBytes,
+				nil,
+				0,
+			); !ok {
+				fmt.Printf("%s\n", err)
+				return
+			}
+
+			if dwBytes == 0 { // 如果讀取成功，它會跟你說這一筆資料用到了多少個bytes
+				fmt.Printf("Buffer overflow! size:%d, max-size:%d\n", dwBytes, maxBufferSize)
+				return
+			}
+
+			record = *(*w32.FILE_NOTIFY_INFORMATION)(unsafe.Pointer(&buffer[0]))
+			// 一項異動可能包含許多行為，例如修改檔名，那就會觸發{FILE_ACTION_RENAMED_OLD_NAME, FILE_ACTION_RENAMED_NEW_NAM}
+			// 分別表示檔案重新命名前與之後的狀態
+			// 而每一個行為的紀錄都是用FILE_NOTIFY_INFORMATION結構來保存
+			var offsetFilename uint32 = 12 // 前12碼為FILE_NOTIFY_INFORMATION的{NextEntryOffset, Action, FileNameLength}都是uint32=>4*3=12 也就是從這個下標值開始才是紀錄filename的位置
+			for {
+				switch record.Action {
+				case w32.FILE_ACTION_ADDED:
+					fmt.Println("FILE_ACTION_ADDED")
+				case w32.FILE_ACTION_REMOVED:
+					fmt.Println("FILE_ACTION_REMOVED")
+					fmt.Println(getName(offsetFilename, record.FileNameLength))
+					spyNotify <- "bye"
+					return
+				case w32.FILE_ACTION_MODIFIED:
+					fmt.Println("FILE_ACTION_MODIFIED")
+				case w32.FILE_ACTION_RENAMED_OLD_NAME:
+					fmt.Println("FILE_ACTION_RENAMED_OLD_NAME")
+				case w32.FILE_ACTION_RENAMED_NEW_NAME:
+					fmt.Println("FILE_ACTION_RENAMED_NEW_NAME")
+				default:
+					break
+				}
+
+				ss := getName(offsetFilename, record.FileNameLength)
+				fmt.Println(ss)
+
+				if record.NextEntryOffset == 0 {
+					break
+				}
+				offsetFilename = record.NextEntryOffset + 12
+				record = *(*w32.FILE_NOTIFY_INFORMATION)(unsafe.Pointer(uintptr(unsafe.Pointer(&buffer[0])) + uintptr(record.NextEntryOffset)))
+			}
+		}
+	}
+
+	go SpyDir(testDirPath, spyNotify)
+	time.Sleep(1 * time.Second) // 等待spy初始化完成
+
+	f, _ := os.Create(filepath.Join(testDirPath, "README.txt"))
+	_ = f.Close()
+
+	_ = os.Rename(filepath.Join(testDirPath, "README.txt"), filepath.Join(testDirPath, "README.md"))
+	_ = os.Remove(filepath.Join(testDirPath, "README.md"))
+	fmt.Println(<-spyNotify)
+
+	// Output:
+	// FILE_ACTION_ADDED
+	// README.txt
+	// FILE_ACTION_RENAMED_OLD_NAME
+	// README.txt
+	// FILE_ACTION_RENAMED_NEW_NAME
+	// README.md
+	// FILE_ACTION_REMOVED
+	// README.md
+	// bye
 }

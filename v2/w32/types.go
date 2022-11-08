@@ -31,6 +31,7 @@ type (
 )
 
 type (
+	CHAR    byte
 	DWORD   uint32
 	LPDWORD *uint32
 	UINT    uint32
@@ -45,6 +46,7 @@ type (
 	ULONGLONG uint64
 	ULONG_PTR *uint32
 
+	WORD  uint16
 	WCHAR uint16
 	PWSTR *WCHAR
 	PVOID uintptr
@@ -57,6 +59,7 @@ type (
 	LRESULT uintptr
 	WPARAM  uintptr
 	LPARAM  uintptr
+	LPSTR   *CHAR
 )
 
 type Handle interface {
