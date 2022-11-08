@@ -27,6 +27,7 @@ type (
 	HMONITOR  HANDLE
 	HRAWINPUT HANDLE
 	HWND      HANDLE
+	HLOCAL    HANDLE
 )
 
 type (
@@ -34,8 +35,11 @@ type (
 	LPDWORD *uint32
 	UINT    uint32
 	// INT int32
-	UINT8     uint8
-	UINT_PTR  uintptr
+	UINT8    uint8
+	UINT_PTR uintptr
+
+	LONG int32
+
 	ULONG     uint32
 	ULONG64   uint64
 	ULONGLONG uint64
@@ -44,6 +48,8 @@ type (
 	WCHAR uint16
 	PWSTR *WCHAR
 	PVOID uintptr
+
+	SCODE LONG
 )
 
 type (

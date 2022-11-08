@@ -9,10 +9,16 @@ import (
 )
 
 const (
-	PNCreateMutex         ProcName = "CreateMutexW"
-	PNCloseHandle         ProcName = "CloseHandle"
-	PNGetNativeSystemInfo ProcName = "GetNativeSystemInfo"
-	PNGetModuleHandle     ProcName = "GetModuleHandleW"
+	PNCreateMutex ProcName = "CreateMutexW"
+	PNCloseHandle ProcName = "CloseHandle"
+
+	PNGetNativeSystemInfo  ProcName = "GetNativeSystemInfo"
+	PNGetModuleHandle      ProcName = "GetModuleHandleW"
+	PNGetThreadDescription ProcName = "GetThreadDescription"
+	PNGetCurrentThread     ProcName = "GetCurrentThread"
+
+	PNSetThreadDescription ProcName = "SetThreadDescription"
+
 	PNFreeLibrary         ProcName = "FreeLibrary"
 	PNGetLastError        ProcName = "GetLastError"
 	PNCreateFile          ProcName = "CreateFileW"
@@ -44,8 +50,14 @@ func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 		procList = []ProcName{
 			PNCreateMutex,
 			PNCloseHandle,
+
 			PNGetNativeSystemInfo,
 			PNGetModuleHandle,
+			PNGetThreadDescription,
+			PNGetCurrentThread,
+
+			PNSetThreadDescription,
+
 			PNFreeLibrary,
 			PNGetLastError,
 			PNCreateFile,
@@ -122,6 +134,36 @@ func (dll *Kernel32DLL) GetModuleHandle(moduleName string) HMODULE {
 	proc := dll.mustProc(PNGetModuleHandle)
 	hModule, _, _ := syscall.SyscallN(proc.Addr(), UintptrFromStr(moduleName))
 	return HMODULE(hModule)
+}
+
+// GetThreadDescription https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getthreaddescription
+// Returns hResult>=0 if successful
+// SUCCEEDED(hResult)
+func (dll *Kernel32DLL) GetThreadDescription(hThread HANDLE, threadDesc *uint16) HRESULT {
+	proc := dll.mustProc(PNGetThreadDescription)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hThread),
+		uintptr(unsafe.Pointer(threadDesc)),
+	)
+	return HRESULT(r1)
+}
+
+// GetCurrentThread https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getcurrentthread
+// The return value is a pseudo handle for the current thread.
+func (dll *Kernel32DLL) GetCurrentThread() HANDLE {
+	proc := dll.mustProc(PNGetCurrentThread)
+	r1, _, _ := syscall.SyscallN(proc.Addr())
+	return HANDLE(r1)
+}
+
+// SetThreadDescription https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreaddescription
+func (dll *Kernel32DLL) SetThreadDescription(hThread HANDLE, desc string) HRESULT {
+	proc := dll.mustProc(PNSetThreadDescription)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hThread),
+		UintptrFromStr(desc),
+	)
+	return HRESULT(r1)
 }
 
 // FreeLibrary https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-freelibrary

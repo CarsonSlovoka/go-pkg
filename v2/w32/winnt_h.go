@@ -543,3 +543,13 @@ const (
 	FILE_WRITE_DATA           = 2
 	FILE_WRITE_EA             = 16
 )
+
+// SUCCEEDED https://learn.microsoft.com/en-us/windows/win32/api/winerror/nf-winerror-succeeded
+func SUCCEEDED[T HRESULT | SCODE | int32](hr T) bool {
+	return hr >= 0
+}
+
+// FAILED  https://learn.microsoft.com/en-us/windows/win32/api/winerror/nf-winerror-failed
+func FAILED[T HRESULT | SCODE | int32](hr T) bool {
+	return hr < 0
+}

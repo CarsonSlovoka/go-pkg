@@ -134,7 +134,8 @@ func ExampleKernel32DLL_CopyFile() {
 	)
 
 	targetPath, _ := filepath.Abs("testdata/temp.txt") // 避免反斜線問題
-	hFile, _ := kernel32dll.CreateFile(targetPath,     // name of file
+	hFile, _ := kernel32dll.CreateFile(
+		targetPath,                         // name of file
 		w32.GENERIC_READ|w32.GENERIC_WRITE, // access mode
 		0,                                  // share mode
 		0,                                  // default security
@@ -212,6 +213,24 @@ func ExampleKernel32DLL_GetModuleHandle() {
 			log.Println(hModule2)
 		}
 	}
+	// Output:
+}
+
+func ExampleKernel32DLL_GetThreadDescription() {
+	kernel32dll := w32.NewKernel32DLL()
+
+	targetHWND := kernel32dll.GetCurrentThread()
+	if hresult := kernel32dll.SetThreadDescription(targetHWND, "hello world"); w32.FAILED(hresult) {
+		fmt.Println("failed")
+		return
+	}
+
+	desc := make([]uint16, 256)
+	hResult := kernel32dll.GetThreadDescription(targetHWND, &desc[0])
+	if w32.SUCCEEDED(hResult) {
+		log.Println(syscall.UTF16ToString(desc))
+	}
+
 	// Output:
 }
 
