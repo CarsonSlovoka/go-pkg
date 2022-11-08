@@ -1,10 +1,12 @@
 package exec
 
 import (
-	"fmt"
+	"log"
 )
 
 func ExampleGetLocalLangLoc() {
 	lang, loc := GetLocalLangLoc("en", "US")
-	fmt.Println(lang, loc)
+	log.Println(lang, loc)
+
+	// Output:
 }

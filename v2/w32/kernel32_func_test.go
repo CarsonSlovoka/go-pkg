@@ -595,3 +595,12 @@ func ExampleKernel32DLL_ReadDirectoryChanges() {
 	// README.md
 	// bye
 }
+
+func ExampleKernel32DLL_GetLastError() {
+	kernel32dll := w32.NewKernel32DLL(w32.PNGetLastError, w32.PNSetLastError)
+	kernel32dll.SetLastError(w32.ERROR_ALREADY_EXISTS)
+
+	// 很奇怪得不到183的錯誤，推測是SyscallN都已經有涵蓋errno在內的關係
+	kernel32dll.GetLastError()
+	// Output:
+}

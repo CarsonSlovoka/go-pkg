@@ -21,6 +21,7 @@ const (
 
 	PNFreeLibrary         ProcName = "FreeLibrary"
 	PNGetLastError        ProcName = "GetLastError"
+	PNSetLastError        ProcName = "SetLastError"
 	PNCreateFile          ProcName = "CreateFileW"
 	PNWriteFile           ProcName = "WriteFile"
 	PNCopyFile            ProcName = "CopyFileW"
@@ -62,6 +63,7 @@ func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 
 			PNFreeLibrary,
 			PNGetLastError,
+			PNSetLastError,
 			PNCreateFile,
 			PNWriteFile,
 			PNCopyFile,
@@ -180,6 +182,12 @@ func (dll *Kernel32DLL) GetLastError() uint32 {
 	proc := dll.mustProc(PNGetLastError)
 	ret, _, _ := syscall.SyscallN(proc.Addr())
 	return uint32(ret)
+}
+
+// SetLastError https://learn.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-setlasterror
+func (dll *Kernel32DLL) SetLastError(dwErrCode uint32) {
+	proc := dll.mustProc(PNSetLastError)
+	_, _, _ = syscall.SyscallN(proc.Addr(), uintptr(dwErrCode))
 }
 
 // CreateFile https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew
