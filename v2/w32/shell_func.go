@@ -17,7 +17,7 @@ type ShellDLL struct {
 // NewShellDLL You can import the interested process only instead of the whole process.
 // We will load the entire process list if you do not give any parameters.
 // We encourage you to fill in only the items you are using, as importing the all item will cause unnecessary waste.
-func NewShellDLL(procList []ProcName) *ShellDLL {
+func NewShellDLL(procList ...ProcName) *ShellDLL {
 	if len(procList) == 0 {
 		procList = []ProcName{
 			PNExtractIcon,

@@ -9,9 +9,7 @@ import (
 
 // 使用ExtractIcon取得該應用程式的HICON
 func ExampleShellDLL_ExtractIcon() {
-	shell32dll := w32.NewShellDLL([]w32.ProcName{
-		w32.PNExtractIcon,
-	})
+	shell32dll := w32.NewShellDLL(w32.PNExtractIcon)
 
 	exePath := filepath.Join(os.Getenv("windir"), "System32/fontview.exe")
 	// exePath := "powershell.exe" // 系統路徑可以找到的執行檔也可以(不需要再標明路徑位置)，副檔名不可以省略
@@ -59,9 +57,9 @@ func ExampleShellDLL_ExtractIcon() {
 
 // 使用ExtractIcon來計算該檔案擁有的圖標數量
 func ExampleShellDLL_ExtractIcon_count() {
-	shell32dll := w32.NewShellDLL([]w32.ProcName{
+	shell32dll := w32.NewShellDLL(
 		w32.PNExtractIcon,
-	})
+	)
 
 	const exeFileName = "powershell.exe"
 

@@ -462,6 +462,7 @@ func ExampleKernel32DLL_FindResource_icon() {
 	// Output:
 }
 
+// For show primary code see here https://stackoverflow.com/a/74369299/9935654
 func ExampleKernel32DLL_ReadDirectoryChanges() {
 	kernel32dll := w32.NewKernel32DLL()
 
@@ -534,7 +535,7 @@ func ExampleKernel32DLL_ReadDirectoryChanges() {
 			}
 
 			if dwBytes == 0 { // 如果讀取成功，它會跟你說這一筆資料用到了多少個bytes
-				fmt.Printf("Buffer overflow! size:%d, max-size:%d\n", dwBytes, maxBufferSize)
+				fmt.Printf("Buffer overflow! max-size:%d\n", maxBufferSize)
 				return
 			}
 
@@ -562,8 +563,7 @@ func ExampleKernel32DLL_ReadDirectoryChanges() {
 					break
 				}
 
-				ss := getName(offsetFilename, record.FileNameLength)
-				fmt.Println(ss)
+				fmt.Println(getName(offsetFilename, record.FileNameLength))
 
 				if record.NextEntryOffset == 0 {
 					break
