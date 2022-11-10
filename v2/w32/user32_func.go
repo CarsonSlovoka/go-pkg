@@ -9,29 +9,34 @@ import (
 )
 
 const (
-	PNFindWindow                  ProcName = "FindWindowW"
-	PNFindWindowEx                ProcName = "FindWindowExW"
-	PNGetForegroundWindow         ProcName = "GetForegroundWindow"
-	PNGetClassName                ProcName = "GetClassNameW"
-	PNGetWindowText               ProcName = "GetWindowTextW"
-	PNMessageBox                  ProcName = "MessageBoxW"
-	PNGetSystemMetrics            ProcName = "GetSystemMetrics"
-	PNLoadIcon                    ProcName = "LoadIconW"
-	PNGetDC                       ProcName = "GetDC"
-	PNReleaseDC                   ProcName = "ReleaseDC"
-	PNDrawIcon                    ProcName = "DrawIcon"
-	PNDrawIconEx                  ProcName = "DrawIconEx"
-	PNGetIconInfo                 ProcName = "GetIconInfo"
+	PNFindWindow   ProcName = "FindWindowW"
+	PNFindWindowEx ProcName = "FindWindowExW"
+
+	PNGetActiveWindow     ProcName = "GetActiveWindow"
+	PNGetClassName        ProcName = "GetClassNameW"
+	PNGetClientRect       ProcName = "GetClientRect"
+	PNGetDC               ProcName = "GetDC"
+	PNGetForegroundWindow ProcName = "GetForegroundWindow"
+	PNGetIconInfo         ProcName = "GetIconInfo"
+	PNGetSystemMetrics    ProcName = "GetSystemMetrics"
+	PNGetWindowText       ProcName = "GetWindowTextW"
+
+	PNMessageBox ProcName = "MessageBoxW"
+
+	PNReleaseDC ProcName = "ReleaseDC"
+
+	PNDrawIcon   ProcName = "DrawIcon"
+	PNDrawIconEx ProcName = "DrawIconEx"
+
 	PNPostMessage                 ProcName = "PostMessageW"
 	PNSendMessage                 ProcName = "SendMessageW"
 	PNLookupIconIdFromDirectoryEx ProcName = "LookupIconIdFromDirectoryEx"
-	PNCreateIconFromResourceEx    ProcName = "CreateIconFromResourceEx"
 	PNCopyImage                   ProcName = "CopyImage"
 
+	PNLoadIcon  ProcName = "LoadIconW"
 	PNLoadImage ProcName = "LoadImageW"
 
-	PNGetClientRect   ProcName = "GetClientRect"
-	PNGetActiveWindow ProcName = "GetActiveWindow"
+	PNCreateIconFromResourceEx ProcName = "CreateIconFromResourceEx"
 )
 
 type User32DLL struct {
@@ -46,27 +51,32 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 		procList = []ProcName{
 			PNFindWindow,
 			PNFindWindowEx,
-			PNGetForegroundWindow,
+
+			PNGetActiveWindow,
 			PNGetClassName,
-			PNGetWindowText,
-			PNMessageBox,
-			PNGetSystemMetrics,
-			PNLoadIcon,
+			PNGetClientRect,
 			PNGetDC,
+			PNGetForegroundWindow,
+			PNGetIconInfo,
+			PNGetSystemMetrics,
+			PNGetWindowText,
+
+			PNMessageBox,
+
 			PNReleaseDC,
+
 			PNDrawIcon,
 			PNDrawIconEx,
-			PNGetIconInfo,
+
 			PNPostMessage,
 			PNSendMessage,
 			PNLookupIconIdFromDirectoryEx,
-			PNCreateIconFromResourceEx,
 			PNCopyImage,
 
+			PNLoadIcon,
 			PNLoadImage,
 
-			PNGetClientRect,
-			PNGetActiveWindow,
+			PNCreateIconFromResourceEx,
 		}
 	}
 	dll := newDll(DNUser32, procList)
@@ -99,14 +109,12 @@ func (dll *User32DLL) FindWindowEx(hWndParent, hWndChildAfter uintptr, className
 	return HWND(r1)
 }
 
-// GetForegroundWindow User32.dll 此函數可以獲得當前窗口的HWND
-// https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getforegroundwindow
-// The return value is a handle to the foreground window.
-// The foreground window can be NULL in certain circumstances, such as when a window is losing activation.
-func (dll *User32DLL) GetForegroundWindow() HWND {
-	proc := dll.mustProc(PNGetForegroundWindow)
-	hwnd, _, _ := proc.Call()
-	return HWND(hwnd)
+// GetActiveWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getclientrect
+// The return value is the handle to the active window attached to the calling thread's message queue. Otherwise, the return value is NULL.
+func (dll *User32DLL) GetActiveWindow() HWND {
+	proc := dll.mustProc(PNGetActiveWindow)
+	r1, _, _ := syscall.SyscallN(proc.Addr())
+	return HWND(r1)
 }
 
 // GetClassName If the function succeeds, the return value is the number of characters copied to the buffer
@@ -150,6 +158,55 @@ func (dll *User32DLL) GetClassName(hwnd HWND) (name string, err error) {
 	return // 由於我們的回傳值皆以具名，故當省略回傳項目時，會直接以具名變數取代
 }
 
+// GetClientRect https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getclientrect
+func (dll *User32DLL) GetClientRect(hwnd HWND, lpRect *RECT) (bool, syscall.Errno) {
+	proc := dll.mustProc(PNGetClientRect)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hwnd),
+		uintptr(unsafe.Pointer(lpRect)),
+	)
+	return r1 != 0, errno
+}
+
+// GetDC LoadIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getdc
+func (dll *User32DLL) GetDC(hwnd HWND) HDC {
+	proc := dll.mustProc(PNGetDC)
+	hdc, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hwnd),
+	)
+	return HDC(hdc)
+}
+
+// GetForegroundWindow User32.dll 此函數可以獲得當前窗口的HWND
+// https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getforegroundwindow
+// The return value is a handle to the foreground window.
+// The foreground window can be NULL in certain circumstances, such as when a window is losing activation.
+func (dll *User32DLL) GetForegroundWindow() HWND {
+	proc := dll.mustProc(PNGetForegroundWindow)
+	hwnd, _, _ := proc.Call()
+	return HWND(hwnd)
+}
+
+// GetIconInfo https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-geticoninfo
+// Returns TRUE if successful or FALSE otherwise.
+func (dll *User32DLL) GetIconInfo(hIcon HICON, pIconInfo *ICONINFO) bool {
+	proc := dll.mustProc(PNGetIconInfo)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hIcon),
+		uintptr(unsafe.Pointer(pIconInfo)),
+	)
+	return r1 != 0
+}
+
+// GetSystemMetrics 依據所傳入的參數回傳您所要查詢的數值資料
+// https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getsystemmetrics#parameters
+// If the function fails, the return value is 0
+func (dll *User32DLL) GetSystemMetrics(targetIdx int32) int32 {
+	proc := dll.mustProc(PNGetSystemMetrics)
+	r0, _, _ := syscall.SyscallN(proc.Addr(), uintptr(targetIdx))
+	return int32(r0)
+}
+
 // GetWindowText
 // https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowtextw
 func (dll *User32DLL) GetWindowText(hwnd HWND) (string, error) {
@@ -181,36 +238,6 @@ func (dll *User32DLL) MessageBox(hwnd HWND, text, caption string, btnFlag uint32
 		uintptr(btnFlag),
 	)
 	return clickBtnValue, errno
-}
-
-// GetSystemMetrics 依據所傳入的參數回傳您所要查詢的數值資料
-// https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getsystemmetrics#parameters
-// If the function fails, the return value is 0
-func (dll *User32DLL) GetSystemMetrics(targetIdx int32) int32 {
-	proc := dll.mustProc(PNGetSystemMetrics)
-	r0, _, _ := syscall.SyscallN(proc.Addr(), uintptr(targetIdx))
-	return int32(r0)
-}
-
-// LoadIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadiconw
-// If the function fails, the return value is NULL.
-func (dll *User32DLL) LoadIcon(hInstance HINSTANCE, lpIconName *uint16) (hIcon HICON, err syscall.Errno) {
-	proc := dll.mustProc(PNLoadIcon)
-	hwnd, _, errno := syscall.SyscallN(proc.Addr(),
-		uintptr(hInstance),
-		uintptr(unsafe.Pointer(lpIconName)),
-	)
-
-	return HICON(hwnd), errno
-}
-
-// GetDC LoadIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getdc
-func (dll *User32DLL) GetDC(hwnd HWND) HDC {
-	proc := dll.mustProc(PNGetDC)
-	hdc, _, _ := syscall.SyscallN(proc.Addr(),
-		uintptr(hwnd),
-	)
-	return HDC(hdc)
 }
 
 // ReleaseDC https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-releasedc
@@ -262,17 +289,6 @@ func (dll *User32DLL) DrawIconEx(hdc HDC,
 	return r1 != 0, errno
 }
 
-// GetIconInfo https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-geticoninfo
-// Returns TRUE if successful or FALSE otherwise.
-func (dll *User32DLL) GetIconInfo(hIcon HICON, pIconInfo *ICONINFO) bool {
-	proc := dll.mustProc(PNGetIconInfo)
-	r1, _, _ := syscall.SyscallN(proc.Addr(),
-		uintptr(hIcon),
-		uintptr(unsafe.Pointer(pIconInfo)),
-	)
-	return r1 != 0
-}
-
 // PostMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-postmessagew
 // If the function succeeds, the return value is nonzero.
 func (dll *User32DLL) PostMessage(hwnd HWND, wmMsgID uint32, wParam, lParam uintptr) (bool, syscall.Errno) {
@@ -307,6 +323,60 @@ func (dll *User32DLL) LookupIconIdFromDirectoryEx(presBits uintptr,
 	return int(r1)
 }
 
+// CopyImage Creates a new image (icon, cursor, or bitmap)
+// 通常我們會使用它，接著後面會用GetObject(hwnd, size, out)來取得資料
+// https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-copyimage
+// If the function fails, the return value is NULL.
+func (dll *User32DLL) CopyImage(h HANDLE, imgType uint32, cx, cy int32,
+	flags uint32, // This parameter can be one or more of the following values. {LR_DEFAULTCOLOR, LR_DEFAULTSIZE, ...}
+) (HANDLE, syscall.Errno) {
+	proc := dll.mustProc(PNCopyImage)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(h),
+		uintptr(imgType),
+		uintptr(cx),
+		uintptr(cy),
+		uintptr(flags),
+	)
+	return HANDLE(r1), errno
+}
+
+// LoadIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadiconw
+// If the function fails, the return value is NULL.
+func (dll *User32DLL) LoadIcon(hInstance HINSTANCE, lpIconName *uint16) (hIcon HICON, err syscall.Errno) {
+	proc := dll.mustProc(PNLoadIcon)
+	hwnd, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hInstance),
+		uintptr(unsafe.Pointer(lpIconName)),
+	)
+
+	return HICON(hwnd), errno
+}
+
+// LoadImage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadimagew
+// If the function succeeds, the return value is the handle of the newly loaded image.
+// If the function fails, the return value is NULL
+func (dll *User32DLL) LoadImage(hInst HINSTANCE, name string, aType uint32, cx int32, cy int32, fuLoad uint32) (HANDLE, syscall.Errno) {
+	proc := dll.mustProc(PNLoadImage)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hInst),
+		UintptrFromStr(name),
+		uintptr(aType),
+		uintptr(cx),
+		uintptr(cy),
+		uintptr(fuLoad),
+	)
+	return HANDLE(r1), errno
+}
+
+func (dll *User32DLL) MustLoadImage(hInst HINSTANCE, name string, aType uint32, cx int32, cy int32, fuLoad uint32) HANDLE {
+	handle, errno := dll.LoadImage(hInst, name, aType, cx, cy, fuLoad)
+	if handle == 0 {
+		panic(fmt.Sprintf("%s", errno))
+	}
+	return handle
+}
+
 // CreateIconFromResourceEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-createiconfromresourceex
 // flags:
 // - LR_DEFAULTCOLOR: Uses the default color format.
@@ -336,64 +406,4 @@ func (dll *User32DLL) CreateIconFromResourceEx(
 		uintptr(flags),
 	)
 	return HICON(r1)
-}
-
-// CopyImage Creates a new image (icon, cursor, or bitmap)
-// 通常我們會使用它，接著後面會用GetObject(hwnd, size, out)來取得資料
-// https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-copyimage
-// If the function fails, the return value is NULL.
-func (dll *User32DLL) CopyImage(h HANDLE, imgType uint32, cx, cy int32,
-	flags uint32, // This parameter can be one or more of the following values. {LR_DEFAULTCOLOR, LR_DEFAULTSIZE, ...}
-) (HANDLE, syscall.Errno) {
-	proc := dll.mustProc(PNCopyImage)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
-		uintptr(h),
-		uintptr(imgType),
-		uintptr(cx),
-		uintptr(cy),
-		uintptr(flags),
-	)
-	return HANDLE(r1), errno
-}
-
-// GetClientRect https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getclientrect
-func (dll *User32DLL) GetClientRect(hwnd HWND, lpRect *RECT) (bool, syscall.Errno) {
-	proc := dll.mustProc(PNGetClientRect)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
-		uintptr(hwnd),
-		uintptr(unsafe.Pointer(lpRect)),
-	)
-	return r1 != 0, errno
-}
-
-// GetActiveWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getclientrect
-// The return value is the handle to the active window attached to the calling thread's message queue. Otherwise, the return value is NULL.
-func (dll *User32DLL) GetActiveWindow() HWND {
-	proc := dll.mustProc(PNGetActiveWindow)
-	r1, _, _ := syscall.SyscallN(proc.Addr())
-	return HWND(r1)
-}
-
-// LoadImage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadimagew
-// If the function succeeds, the return value is the handle of the newly loaded image.
-// If the function fails, the return value is NULL
-func (dll *User32DLL) LoadImage(hInst HINSTANCE, name string, aType uint32, cx int32, cy int32, fuLoad uint32) (HANDLE, syscall.Errno) {
-	proc := dll.mustProc(PNLoadImage)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
-		uintptr(hInst),
-		UintptrFromStr(name),
-		uintptr(aType),
-		uintptr(cx),
-		uintptr(cy),
-		uintptr(fuLoad),
-	)
-	return HANDLE(r1), errno
-}
-
-func (dll *User32DLL) MustLoadImage(hInst HINSTANCE, name string, aType uint32, cx int32, cy int32, fuLoad uint32) HANDLE {
-	handle, errno := dll.LoadImage(hInst, name, aType, cx, cy, fuLoad)
-	if handle == 0 {
-		panic(fmt.Sprintf("%s", errno))
-	}
-	return handle
 }
