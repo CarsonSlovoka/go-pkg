@@ -4,10 +4,12 @@ package w32
 
 import (
 	"syscall"
+	"unsafe"
 )
 
 const (
-	PNExtractIcon ProcName = "ExtractIconW"
+	PNExtractIcon     ProcName = "ExtractIconW"
+	PNShellNotifyIcon ProcName = "Shell_NotifyIconW"
 )
 
 type ShellDLL struct {
@@ -21,6 +23,7 @@ func NewShellDLL(procList ...ProcName) *ShellDLL {
 	if len(procList) == 0 {
 		procList = []ProcName{
 			PNExtractIcon,
+			PNShellNotifyIcon,
 		}
 	}
 	dll := newDll(DNShell32, procList)
@@ -36,7 +39,7 @@ func NewShellDLL(procList ...ProcName) *ShellDLL {
 // - 對於其他不等於-1的負數，表示要取得的圖標資源下標值，例如-3表示取得第三個圖標句柄
 func (dll *ShellDLL) ExtractIcon(hInst uintptr, // 透過哪一個對象來呼叫此dll函數，一般用本身應用程式自身0就可以了
 	exeFileName string, // {相對路徑, 絕對路徑, 只有運用程式名稱(要系統路徑能找到)}，這三類都可以
-	nIconIndex int,
+	nIconIndex int, // 雖然我們用的是int，但它不影響轉成uintptr的結果: https://go.dev/play/p/kv17S1IfWGB
 ) HICON {
 	proc := dll.mustProc(PNExtractIcon)
 	hIcon, _, _ := syscall.SyscallN(proc.Addr(),
@@ -45,4 +48,15 @@ func (dll *ShellDLL) ExtractIcon(hInst uintptr, // 透過哪一個對象來呼�
 		uintptr(nIconIndex),
 	)
 	return HICON(hIcon)
+}
+
+// ShellNotifyIcon https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shell_notifyiconw
+// Returns TRUE if successful, or FALSE otherwise.
+func (dll *ShellDLL) ShellNotifyIcon(dwMessage uint32, nid PNOTIFYICONDATA) bool {
+	proc := dll.mustProc(PNShellNotifyIcon)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(dwMessage),
+		uintptr(unsafe.Pointer(nid)),
+	)
+	return r1 != 0
 }

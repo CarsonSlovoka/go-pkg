@@ -3,6 +3,7 @@
 package w32
 
 import (
+	"fmt"
 	"syscall"
 	"unsafe"
 )
@@ -26,7 +27,11 @@ const (
 	PNLookupIconIdFromDirectoryEx ProcName = "LookupIconIdFromDirectoryEx"
 	PNCreateIconFromResourceEx    ProcName = "CreateIconFromResourceEx"
 	PNCopyImage                   ProcName = "CopyImage"
-	PNGetClientRect               ProcName = "GetClientRect"
+
+	PNLoadImage ProcName = "LoadImageW"
+
+	PNGetClientRect   ProcName = "GetClientRect"
+	PNGetActiveWindow ProcName = "GetActiveWindow"
 )
 
 type User32DLL struct {
@@ -57,7 +62,11 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 			PNLookupIconIdFromDirectoryEx,
 			PNCreateIconFromResourceEx,
 			PNCopyImage,
+
+			PNLoadImage,
+
 			PNGetClientRect,
+			PNGetActiveWindow,
 		}
 	}
 	dll := newDll(DNUser32, procList)
@@ -355,4 +364,36 @@ func (dll *User32DLL) GetClientRect(hwnd HWND, lpRect *RECT) (bool, syscall.Errn
 		uintptr(unsafe.Pointer(lpRect)),
 	)
 	return r1 != 0, errno
+}
+
+// GetActiveWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getclientrect
+// The return value is the handle to the active window attached to the calling thread's message queue. Otherwise, the return value is NULL.
+func (dll *User32DLL) GetActiveWindow() HWND {
+	proc := dll.mustProc(PNGetActiveWindow)
+	r1, _, _ := syscall.SyscallN(proc.Addr())
+	return HWND(r1)
+}
+
+// LoadImage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadimagew
+// If the function succeeds, the return value is the handle of the newly loaded image.
+// If the function fails, the return value is NULL
+func (dll *User32DLL) LoadImage(hInst HINSTANCE, name string, aType uint32, cx int32, cy int32, fuLoad uint32) (HANDLE, syscall.Errno) {
+	proc := dll.mustProc(PNLoadImage)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hInst),
+		UintptrFromStr(name),
+		uintptr(aType),
+		uintptr(cx),
+		uintptr(cy),
+		uintptr(fuLoad),
+	)
+	return HANDLE(r1), errno
+}
+
+func (dll *User32DLL) MustLoadImage(hInst HINSTANCE, name string, aType uint32, cx int32, cy int32, fuLoad uint32) HANDLE {
+	handle, errno := dll.LoadImage(hInst, name, aType, cx, cy, fuLoad)
+	if handle == 0 {
+		panic(fmt.Sprintf("%s", errno))
+	}
+	return handle
 }

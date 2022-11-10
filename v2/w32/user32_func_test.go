@@ -195,7 +195,6 @@ func ExampleUser32DLL_DrawIconEx() {
 			defer user32dll.ReleaseDC(hwndNotepad, hdcScreen)
 		}
 	}
-
 	_, _ = user32dll.DrawIconEx(hdcScreen, 10, 20, hIcon, 0, 0, 0, 0, w32.DI_NORMAL)
 
 	var xLeft int32 = 40
@@ -417,4 +416,40 @@ func ExampleUser32DLL_PostMessage_SC_MONITORPOWER() {
 
 	log.Println("screenLowPower")
 	_, _ = user32dll.PostMessage(w32.HWND_BROADCAST, w32.WM_SYSCOMMAND, w32.SC_MONITORPOWER, 1)
+}
+
+func ExampleUser32DLL_LoadImage() {
+	user32dll := w32.NewUser32DLL(w32.PNLoadImage)
+	hicon, errno := user32dll.LoadImage( // returns a HANDLE so we have to cast to HICON
+		0,                         // hInstance must be NULL when loading from a file
+		"testdata/img/golang.ico", // the icon file name
+		w32.IMAGE_ICON,            // specifies that the file is an icon
+		0,                         // width of the image (we'll specify default later on)
+		0,                         // height of the image
+
+		w32.LR_LOADFROMFILE| // we want to load a file (as opposed to a resource)
+			w32.LR_DEFAULTSIZE| // default metrics uses the SM_CXICON or SM_CXCURSOR, SM_CYICON or SM_CYCURSOR
+			w32.LR_SHARED, // let the system release the handle when it's no longer used
+	)
+	if hicon == 0 {
+		fmt.Printf("%s", errno)
+	}
+
+	hicon, errno = user32dll.LoadImage( // returns a HANDLE so we have to cast to HICON
+		0,                         // hInstance must be NULL when loading from a file
+		"testdata/img/golang.ico", // the icon file name
+		w32.IMAGE_ICON,            // specifies that the file is an icon
+
+		5,  // 如果尺寸超過原始圖片大小，會無效
+		10, // 如果尺寸超過原始圖片大小，會無效
+
+		w32.LR_LOADFROMFILE| // we want to load a file (as opposed to a resource)
+			w32.LR_SHARED, // let the system release the handle when it's no longer used
+	)
+
+	if hicon == 0 {
+		fmt.Printf("%s", errno)
+	}
+
+	// Output:
 }
