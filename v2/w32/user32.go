@@ -1552,7 +1552,7 @@ type CHANGEFILTERSTRUCT struct {
 
 // WNDCLASS https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-wndclassa
 type WNDCLASS struct {
-	Style         uint32
+	Style         uint32  // https://learn.microsoft.com/en-us/windows/win32/winmsg/window-class-styles // CS_SAVEBITS | CS_DROPSHADOW, ...
 	LpfnWndProc   uintptr // WNDPROC
 	CbClsExtra    int32
 	CbWndExtra    int32

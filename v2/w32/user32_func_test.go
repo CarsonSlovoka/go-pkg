@@ -538,15 +538,15 @@ func ExampleUser32DLL_CreateWindowEx() {
 		const className = "myClassName"
 		pUTF16ClassName, _ := syscall.UTF16PtrFromString(className)
 		wc := w32.WNDCLASS{
-			Style:         0,
-			LpfnWndProc:   wndProcFuncPtr, // 每次有消息，就會送通知到此函數
-			CbClsExtra:    0,
-			CbWndExtra:    0,
-			HInstance:     hInstance,
-			HIcon:         user32dll.MustLoadIcon(0, w32.MakeIntResource(w32.IDI_WINLOGO)),
-			HCursor:       user32dll.MustLoadCursor(0, w32.MakeIntResource(w32.IDC_ARROW)),
-			HbrBackground: 0,
-			LpszMenuName:  nil,
+			// Style:       0, // 可以不給，或者w32.CS_NOCLOSE進用右上角的關閉按鈕)
+			LpfnWndProc: wndProcFuncPtr, // 每次有消息，就會送通知到此函數
+			// CbClsExtra:    0,
+			// CbWndExtra:    0,
+			HInstance: hInstance,
+			HIcon:     user32dll.MustLoadIcon(0, w32.MakeIntResource(w32.IDI_QUESTION /* w32.IDI_WINLOGO */)), // 可以不給, 用預設0 會是: IDI_WINLOGO
+			HCursor:   user32dll.MustLoadCursor(0, w32.MakeIntResource(w32.IDC_CROSS /* w32.IDC_ARROW */)),    // 可以不給, 用預設0 會是: IDC_ARROW
+			// HbrBackground: 0,
+			// LpszMenuName:  nil,
 			LpszClassName: pUTF16ClassName,
 		}
 
@@ -568,9 +568,10 @@ func ExampleUser32DLL_CreateWindowEx() {
 		}()
 
 		fmt.Println("CreateWindowEx")
+		const windowName = "myWindowName" // 視窗左上角的標題名稱
 		if hwnd, errno = user32dll.CreateWindowEx(0,
 			className,
-			"myWindowName", // 視窗左上角的標題名稱
+			windowName,
 			w32.WS_OVERLAPPEDWINDOW,
 
 			// Size and position
@@ -584,6 +585,12 @@ func ExampleUser32DLL_CreateWindowEx() {
 			fmt.Printf("%s", errno)
 			return
 		} else {
+			// test FindWindow
+			{
+				hwnd2 := user32dll.FindWindow("myClassName", windowName)
+				log.Println(hwnd == hwnd2) // true
+			}
+
 			channel <- hwnd
 		}
 
@@ -631,6 +638,8 @@ func ExampleUser32DLL_CreateWindowEx() {
 
 	fmt.Println("DestroyWindow")
 	// user32dll.DestroyWindow(hwnd) // 注意！ DestroyWindow不要在外面呼叫，需要在callback之中運行, 不然可能會得到錯誤: Access is denied.
+
+	// time.Sleep(time.Second * 5) // 可以暫停一段時間，之後再終止，當您設定CS_NOCLOSE，需要自己去關閉視窗
 	_, _, _ = user32dll.SendMessage(hwnd, w32.WM_DESTROY, 0, 0) // 如果您想要在視窗上進行操作，可以把這列註解，運行的時候再去手動關閉視窗即可結束
 
 	<-ch // wait window close
