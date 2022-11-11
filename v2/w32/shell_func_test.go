@@ -131,9 +131,19 @@ func ExampleNOTIFYICONDATA_SetTimeout() {
 	n.SetTimeout(3500) // 3.5 sec
 }
 
+// https://www.programcreek.com/python/?code=IronLanguages%2Fironpython2%2Fironpython2-master%2FSrc%2FStdLib%2FLib%2Fsite-packages%2Fwin32%2FDemos%2Fwin32gui_taskbar.py
+//
+// 如果因為不正常結束而有殘留的ShellNotifyIcon存在，可以用以下方式刪掉
+// 1. HKEY_CURRENT_USER\SOFTWARE\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\TrayNotify
+// 2. (備份整個TrayNotify資料夾，以防萬一)
+// 3. 刪除IconStreams, PastIconsStream兩個機碼數值
+// 4. 開啟工作管理員(taskmgr.exe)，刪除所有explorer.exe的項目
+// 5. 重新執行explorer.exe
+// 做完之後無效的圖示應該就會被清除
 func ExampleShellDLL_ShellNotifyIcon() {
 	user32dll := w32.NewUser32DLL()
 	shell32dll := w32.NewShellDLL()
+	kernel32dll := w32.NewKernel32DLL(w32.PNGetModuleHandle)
 
 	// prepare test data
 	var myHICON w32.HICON
@@ -155,39 +165,168 @@ func ExampleShellDLL_ShellNotifyIcon() {
 		))
 	}
 
-	guid := *(*w32.GUID)(unsafe.Pointer(&([]byte("abcdef1234567890"))[0]))
-	hwndTarget := user32dll.GetForegroundWindow()
+	// variable used for createWindow
+	chanWin := make(chan w32.HWND)
+	const (
+		wndClassName  = "classShellNotifyIcon"
+		wndWindowName = "windowShellNotifyIcon"
+	)
+	hInstance := w32.HINSTANCE(kernel32dll.GetModuleHandle(""))
+	const WMNotifyIconMsg = w32.WM_APP + 123 // 定義notifyIcon會觸發的訊息ID
+	// Create a window https://github.com/CarsonSlovoka/go-pkg/blob/efe1c50fa40229c299232fe3b236135b1046ef35/v2/w32/user32_func_test.go#L457-L659
+	go func(chan<- w32.HWND) {
+		// 定義訊息處理函數
+		wndProcFuncPtr := syscall.NewCallback(w32.WNDPROC(func(hwnd w32.HWND, uMsg w32.UINT, wParam w32.WPARAM, lParam w32.LPARAM) w32.LRESULT {
+			switch uMsg {
+			case w32.WM_DESTROY: // 這個訊息要寫，不能倚靠DefWindowProc，否則會關閉不掉
+				log.Println("WM_DESTROY")
+				user32dll.PostQuitMessage(0)
+				return 0
+			case w32.WM_CONTEXTMENU:
+				log.Println("WM_CONTEXTMENU")
+			case w32.WM_RBUTTONDOWN:
+				log.Println("WM_RBUTTONDOWN")
+			case w32.WM_LBUTTONDBLCLK:
+				user32dll.ShowWindow(hwnd, w32.SW_MAXIMIZE)
+				log.Println("WM_LBUTTONDBLCLK")
+			case WMNotifyIconMsg:
+				switch lParam {
+				case w32.WM_LBUTTONUP:
+					fmt.Println("WMNotifyIconMsg->WM_LBUTTONUP")
+				case w32.WM_LBUTTONDBLCLK:
+					log.Println("WMNotifyIconMsg->WM_LBUTTONDBLCLK")
+					user32dll.ShowWindow(hwnd, w32.SW_MAXIMIZE)
+				case w32.WM_RBUTTONDBLCLK:
+					if ok, errno := user32dll.DestroyWindow(hwnd); !ok {
+						log.Printf("%s", errno)
+						return 0
+					}
+				case w32.WM_RBUTTONUP:
+					log.Println("WMNotifyIconMsg->WM_RBUTTONUP")
+					/*
+						menu := user32dll.CreatePopupMenu()
+						user32dll.AppendMenu(menu, w32.MF_STRING, 1023, "Display Dialog")
+						user32dll.AppendMenu(menu, w32.MF_STRING, 1024, "Say Hello")
+						user32dll.AppendMenu(menu, w32.MF_STRING, 1025, "Exit program")
+						pos := user32dll.GetCursorPos()
+						user32dll.SetForegroundWindow(hwnd)
+						user32dll.TrackPopupMenu(menu, w32.TPM_LEFTALIGN, pos[0], pos[1], 0, hwnd, 0)
+						user32dll.PostMessage(hwnd, win32con.WM_NULL, 0, 0)
+					*/
+				}
+				return 1 // 讓消息循環繼續處理其他訊息(>0即可)
+			}
+			return user32dll.DefWindowProc(hwnd, uMsg, wParam, lParam)
+		}))
+
+		// 類別名稱註冊
+		pUTF16ClassName, _ := syscall.UTF16PtrFromString(wndClassName)
+		if atom, errno := user32dll.RegisterClass(&w32.WNDCLASS{
+			Style:         w32.CS_HREDRAW | w32.CS_HREDRAW,
+			HbrBackground: w32.COLOR_WINDOW,
+			LpfnWndProc:   wndProcFuncPtr,
+			HInstance:     hInstance,
+			HIcon:         myHICON,
+			LpszClassName: pUTF16ClassName,
+		}); atom == 0 {
+			fmt.Printf("%s", errno)
+			chanWin <- 0
+			return
+		}
+
+		// 創建視窗
+		hwnd, errno := user32dll.CreateWindowEx(0,
+			wndClassName,
+			wndWindowName,
+			w32.WS_OVERLAPPEDWINDOW,
+
+			// Size and position
+			w32.CW_USEDEFAULT, w32.CW_USEDEFAULT, w32.CW_USEDEFAULT, w32.CW_USEDEFAULT,
+
+			0, // Parent window
+			0, // Menu
+			hInstance,
+			0, // Additional application data
+		)
+
+		if hwnd == 0 {
+			fmt.Printf("%s\n", errno)
+			if ok, errno2 := user32dll.UnregisterClass(wndClassName, hInstance); !ok {
+				fmt.Printf("Error UnregisterClass: %s", errno2)
+			}
+			chanWin <- hwnd
+			return
+		}
+
+		// 確保程式結束之後能解除註冊名稱
+		defer func() {
+			if ok, errno2 := user32dll.UnregisterClass(wndClassName, hInstance); !ok {
+				log.Printf("Error UnregisterClass: %s", errno2)
+			} else {
+				log.Println("OK UnregisterClass")
+			}
+
+			// 通知外部程式用
+			close(chanWin)
+		}()
+
+		chanWin <- hwnd
+
+		// 消息循環
+		var msg w32.MSG
+		for {
+			if status, _ := user32dll.GetMessage(&msg, 0, 0, 0); status <= 0 {
+				break
+			}
+			user32dll.TranslateMessage(&msg)
+			user32dll.DispatchMessage(&msg)
+		}
+	}(chanWin)
+
+	// 不能隨便找hwnd過來，除非這些hwnd會處理您的自訂訊息WMNotifyIconMsg，因此我們需要自己創建視窗
+	// hwndTarget := user32dll.GetForegroundWindow()
 	// hwndTarget := user32dll.FindWindow("powershell", "")
 	// hwndTarget := user32dll.GetActiveWindow()
+	hwndTarget := <-chanWin
 	if hwndTarget == 0 {
 		return
 	}
 
 	var notifyIconData w32.NOTIFYICONDATA
-	// log.Println(uint32(unsafe.Sizeof(notifyIconData))) 976這種算法有問題，要手動計算
-	// 建立常規屬性
-	notifyIconData = w32.NOTIFYICONDATA{
-		CbSize:   968,
-		HWnd:     hwndTarget,
-		UFlags:   w32.NIF_GUID, // NIF_GUID有設定就可以讓GuidItem生效
-		GuidItem: guid,
-	}
-	notifyIconData.SetVersion(w32.NOTIFYICON_VERSION_4)
-	notifyIconDataCopy := notifyIconData // 這個只是用來驗證，刪除的資訊與其他資訊無關，它依照GuidItem的內容去刪
-
-	// 確保沒有殘留的資料, 如果程式有不正常結束，那麼殘留的對象會影響，使的NIM_ADD會一直沒辦法被刪除
-	if shell32dll.ShellNotifyIcon(w32.NIM_DELETE, &notifyIconDataCopy) {
-		log.Println("clear previous data.")
-	}
-
-	defer func() {
-		// 刪除認的是NIF_GUID，所以只要NOTIFYICONDATA中的GuidItem相同，就會被刪掉
-		if !shell32dll.ShellNotifyIcon(w32.NIM_DELETE, &notifyIconDataCopy) {
-			log.Fatalf("NIM_DELETE ERROR")
+	guid := *(*w32.GUID)(unsafe.Pointer(&([]byte("abcdef12345678zr"))[0]))
+	{
+		notifyIconData = w32.NOTIFYICONDATA{
+			CbSize:   968,
+			HWnd:     hwndTarget,   // 注意！不是用您創建的window的HWND，是要用當前app的hwnd
+			UFlags:   w32.NIF_GUID, // NIF_GUID有設定就可以讓GuidItem生效
+			GuidItem: guid,
 		}
-	}()
+		notifyIconData.SetVersion(w32.NOTIFYICON_VERSION_4)
+		notifyIconDataCopy := notifyIconData // 這個只是用來驗證，刪除的資訊與其他資訊無關，它依照GuidItem的內容去刪
+
+		// 確保沒有殘留的資料, 如果程式有不正常結束，那麼殘留的對象會影響，使的NIM_ADD會一直沒辦法被刪除
+		if shell32dll.ShellNotifyIcon(w32.NIM_DELETE, &notifyIconDataCopy) {
+			log.Println("clear previous data.")
+		}
+
+		defer func() {
+			// 刪除認的是NIF_GUID，所以只要NOTIFYICONDATA中的GuidItem相同，就會被刪掉
+			if !shell32dll.ShellNotifyIcon(w32.NIM_DELETE, &notifyIconDataCopy) {
+				log.Fatalf("NIM_DELETE ERROR")
+			}
+		}()
+	}
+
+	// 掛勾訊息處理
+	notifyIconData.UFlags |= w32.NIF_MESSAGE // msg有設定UCallbackMessage就會生效 // The uCallbackMessage member is valid.
+	notifyIconData.UCallbackMessage = uint32(WMNotifyIconMsg)
 
 	if !shell32dll.ShellNotifyIcon(w32.NIM_ADD, &notifyIconData) {
+		// 關閉所建立的背景視窗
+		_, _, _ = user32dll.SendMessage(hwndTarget, w32.WM_CLOSE, 0, 0)
+
+		// 等待背景視窗確實被關閉
+		<-chanWin
 		log.Fatalf("NIM_ADD ERROR")
 		return
 	}
@@ -195,14 +334,12 @@ func ExampleShellDLL_ShellNotifyIcon() {
 	// UFlags 以下標示依需求決定
 	var (
 		enableInfo        bool
-		enableMessage     bool
 		enableTooltip     bool
 		enableIcon        bool
 		enableBalloonIcon bool
 	)
 
 	flag.BoolVar(&enableInfo, "eInfo", true, "")
-	flag.BoolVar(&enableMessage, "eMsg", true, "")
 	flag.BoolVar(&enableTooltip, "eTooltip", true, "")
 	flag.BoolVar(&enableIcon, "eIcon", true, "")
 	flag.BoolVar(&enableBalloonIcon, "eBalloonIcon", true, "")
@@ -224,12 +361,6 @@ func ExampleShellDLL_ShellNotifyIcon() {
 		}
 	}
 
-	MYCallBackMsgID := w32.WM_APP + 1
-	if enableMessage {
-		notifyIconData.UFlags |= w32.NIF_MESSAGE // msg有設定UCallbackMessage就會生效 // The uCallbackMessage member is valid.
-		notifyIconData.UCallbackMessage = uint32(MYCallBackMsgID)
-	}
-
 	if enableTooltip {
 		notifyIconData.UFlags |= w32.NIF_TIP // tip有設定, SzTip就會生效 The szTip member is valid.
 		utf16Title, _ := syscall.UTF16FromString("SzTip")
@@ -242,7 +373,19 @@ func ExampleShellDLL_ShellNotifyIcon() {
 	}
 
 	if !shell32dll.ShellNotifyIcon(w32.NIM_MODIFY, &notifyIconData) {
+		_, _, _ = user32dll.SendMessage(hwndTarget, w32.WM_DESTROY, 0, 0)
+		<-chanWin
 		log.Fatalf("NIM_MODIFY ERROR")
 	}
+
+	// 傳送自定義的訊息到notifyIcon上
+	_, _, _ = user32dll.SendMessage(hwndTarget, WMNotifyIconMsg, 0, w32.WM_LBUTTONUP)
+
+	// 🕹️ 如果您要手動嘗試，請把以下的SendMessage.WM_CLOSE註解掉，手動雙擊右鍵(兩下)即可結束
+	// 自動發送關閉訊息, 作為github.action的測試，我們不做其他UI控件的處理，僅確認ShellNotifyIcon有被創建成功即可
+	_, _, _ = user32dll.SendMessage(hwndTarget, w32.WM_CLOSE, 0, 0) // 不要用WM_DESTROY 不然UnregisterClass會因為視窗還存在而跑出錯誤Class still has open windows.
+
+	<-chanWin
 	// Output:
+	// WMNotifyIconMsg->WM_LBUTTONUP
 }

@@ -538,7 +538,7 @@ func ExampleUser32DLL_CreateWindowEx() {
 		const className = "myClassName"
 		pUTF16ClassName, _ := syscall.UTF16PtrFromString(className)
 		wc := w32.WNDCLASS{
-			// Style:       0, // 可以不給，或者w32.CS_NOCLOSE進用右上角的關閉按鈕)
+			// Style:       0, // 可以不給，或者w32.CS_NOCLOSE禁用右上角的關閉按鈕) // CS_指的是class的style
 			LpfnWndProc: wndProcFuncPtr, // 每次有消息，就會送通知到此函數
 			// CbClsExtra:    0,
 			// CbWndExtra:    0,
@@ -572,7 +572,7 @@ func ExampleUser32DLL_CreateWindowEx() {
 		if hwnd, errno = user32dll.CreateWindowEx(0,
 			className,
 			windowName,
-			w32.WS_OVERLAPPEDWINDOW,
+			w32.WS_OVERLAPPEDWINDOW, // 這項包含了: WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX // 如果不想要最小和最大化按鈕要在這邊調整，而關閉按鈕則是需要透過class註冊的時候就設定要還是不要
 
 			// Size and position
 			w32.CW_USEDEFAULT, w32.CW_USEDEFAULT, w32.CW_USEDEFAULT, w32.CW_USEDEFAULT,
@@ -583,6 +583,7 @@ func ExampleUser32DLL_CreateWindowEx() {
 			uintptr(unsafe.Pointer(&AppData{"Demo-CreateWindowEx", 6})), // Additional application data // 可以不給(設定為0). 如果有給，這個資料會在WM_CREATE的時候傳入給lParam
 		); hwnd == 0 {
 			fmt.Printf("%s", errno)
+			channel <- 0
 			return
 		} else {
 			// test FindWindow

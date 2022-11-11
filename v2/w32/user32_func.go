@@ -480,7 +480,7 @@ func (dll *User32DLL) MustLoadCursor(hInstance HINSTANCE, lpCursorName *uint16) 
 	if r1 == 0 {
 		panic(fmt.Sprintf("%s", errno))
 	}
-	return HCURSOR(r1)
+	return r1
 }
 
 // LoadIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadiconw

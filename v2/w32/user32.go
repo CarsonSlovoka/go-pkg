@@ -612,7 +612,7 @@ const (
 
 // Window style constants
 const (
-	WS_OVERLAPPED       = 0x00000000
+	WS_OVERLAPPED       = 0x00000000 // 窗口邊框, 標題欄位
 	WS_POPUP            = 0x80000000
 	WS_CHILD            = 0x40000000
 	WS_MINIMIZE         = 0x20000000
@@ -626,7 +626,7 @@ const (
 	WS_DLGFRAME         = 0x00400000
 	WS_VSCROLL          = 0x00200000
 	WS_HSCROLL          = 0x00100000
-	WS_SYSMENU          = 0x00080000
+	WS_SYSMENU          = 0x00080000 // 有系統選單, 需要包含WS_CAPTION
 	WS_THICKFRAME       = 0x00040000
 	WS_GROUP            = 0x00020000
 	WS_TABSTOP          = 0x00010000
@@ -1081,7 +1081,7 @@ const (
 	CS_CLASSDC         = 0x00000040
 	CS_PARENTDC        = 0x00000080
 	CS_NOKEYCVT        = 0x00000100
-	CS_NOCLOSE         = 0x00000200
+	CS_NOCLOSE         = 0x00000200 // 禁用右上角的關閉按鈕
 	CS_SAVEBITS        = 0x00000800
 	CS_BYTEALIGNCLIENT = 0x00001000
 	CS_BYTEALIGNWINDOW = 0x00002000
