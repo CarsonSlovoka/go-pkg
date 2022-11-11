@@ -125,6 +125,12 @@ func TestGetGuid(t *testing.T) {
 	}
 }
 
+// SetTimeout uTimeout is valid only in Windows 2000 and Windows XP.
+func ExampleNOTIFYICONDATA_SetTimeout() {
+	var n w32.NOTIFYICONDATA
+	n.SetTimeout(3500) // 3.5 sec
+}
+
 func ExampleShellDLL_ShellNotifyIcon() {
 	user32dll := w32.NewUser32DLL()
 	shell32dll := w32.NewShellDLL()

@@ -9,6 +9,22 @@ import (
 )
 
 const (
+	PNCloseWindow ProcName = "CloseWindow"
+
+	PNCopyImage ProcName = "CopyImage"
+
+	PNCreateIconFromResourceEx ProcName = "CreateIconFromResourceEx"
+	PNCreateWindowEx           ProcName = "CreateWindowExW"
+
+	PNDestroyWindow ProcName = "DestroyWindow"
+
+	PNDefWindowProc ProcName = "DefWindowProcW"
+
+	PNDispatchMessage ProcName = "DispatchMessageW"
+
+	PNDrawIcon   ProcName = "DrawIcon"
+	PNDrawIconEx ProcName = "DrawIconEx"
+
 	PNFindWindow   ProcName = "FindWindowW"
 	PNFindWindowEx ProcName = "FindWindowExW"
 
@@ -23,43 +39,30 @@ const (
 	PNGetWindowLongPtr    ProcName = "GetWindowLongPtrW"
 	PNGetWindowText       ProcName = "GetWindowTextW"
 
-	PNSetWindowLongPtr ProcName = "SetWindowLongPtrW"
-
-	PNMessageBox ProcName = "MessageBoxW"
-
-	PNReleaseDC ProcName = "ReleaseDC"
-
-	PNDispatchMessage ProcName = "DispatchMessageW"
-	PNDrawIcon        ProcName = "DrawIcon"
-	PNDrawIconEx      ProcName = "DrawIconEx"
-
-	PNPostMessage     ProcName = "PostMessageW"
-	PNPostQuitMessage ProcName = "PostQuitMessage"
-
-	PNSendMessage                 ProcName = "SendMessageW"
-	PNLookupIconIdFromDirectoryEx ProcName = "LookupIconIdFromDirectoryEx"
-	PNCopyImage                   ProcName = "CopyImage"
-
 	PNLoadCursor ProcName = "LoadCursorW"
 	PNLoadIcon   ProcName = "LoadIconW"
 	PNLoadImage  ProcName = "LoadImageW"
 
+	PNLookupIconIdFromDirectoryEx ProcName = "LookupIconIdFromDirectoryEx"
+
+	PNMessageBox ProcName = "MessageBoxW"
+
+	PNPostMessage     ProcName = "PostMessageW"
+	PNPostQuitMessage ProcName = "PostQuitMessage"
+
 	PNRegisterClass ProcName = "RegisterClassW"
+
+	PNReleaseDC ProcName = "ReleaseDC"
+
+	PNSetWindowLongPtr ProcName = "SetWindowLongPtrW"
+
+	PNSendMessage ProcName = "SendMessageW"
+
+	PNShowWindow ProcName = "ShowWindow"
 
 	PNTranslateMessage ProcName = "TranslateMessage"
 
 	PNUnregisterClass ProcName = "UnregisterClassW"
-
-	PNShowWindow ProcName = "ShowWindow"
-
-	PNCloseWindow ProcName = "CloseWindow"
-
-	PNDestroyWindow ProcName = "DestroyWindow"
-
-	PNDefWindowProc ProcName = "DefWindowProcW"
-
-	PNCreateIconFromResourceEx ProcName = "CreateIconFromResourceEx"
-	PNCreateWindowEx           ProcName = "CreateWindowExW"
 )
 
 type User32DLL struct {
@@ -72,6 +75,22 @@ type User32DLL struct {
 func NewUser32DLL(procList ...ProcName) *User32DLL {
 	if len(procList) == 0 {
 		procList = []ProcName{
+			PNCloseWindow,
+
+			PNCopyImage,
+
+			PNCreateIconFromResourceEx,
+			PNCreateWindowEx,
+
+			PNDestroyWindow,
+
+			PNDefWindowProc,
+
+			PNDispatchMessage,
+
+			PNDrawIcon,
+			PNDrawIconEx,
+
 			PNFindWindow,
 			PNFindWindowEx,
 
@@ -86,47 +105,194 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 			PNGetWindowLongPtr,
 			PNGetWindowText,
 
-			PNSetWindowLongPtr,
-
-			PNMessageBox,
-
-			PNReleaseDC,
-
-			PNDispatchMessage,
-			PNDrawIcon,
-			PNDrawIconEx,
-
-			PNPostMessage,
-			PNPostQuitMessage,
-
-			PNSendMessage,
-			PNLookupIconIdFromDirectoryEx,
-			PNCopyImage,
-
 			PNLoadCursor,
 			PNLoadIcon,
 			PNLoadImage,
 
+			PNLookupIconIdFromDirectoryEx,
+
+			PNMessageBox,
+
+			PNPostMessage,
+			PNPostQuitMessage,
+
 			PNRegisterClass,
+
+			PNReleaseDC,
+
+			PNSetWindowLongPtr,
+
+			PNSendMessage,
+
+			PNShowWindow,
 
 			PNTranslateMessage,
 
 			PNUnregisterClass,
-
-			PNShowWindow,
-
-			PNCloseWindow,
-
-			PNDestroyWindow,
-
-			PNDefWindowProc,
-
-			PNCreateIconFromResourceEx,
-			PNCreateWindowEx,
 		}
 	}
 	dll := newDll(DNUser32, procList)
 	return &User32DLL{dll}
+}
+
+// CloseWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-closewindow
+// Minimizes (but does not destroy) the specified window.
+// If the function fails, the return value is zero.
+func (dll *User32DLL) CloseWindow(hWnd HWND) (bool, syscall.Errno) {
+	proc := dll.mustProc(PNCloseWindow)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+	)
+	return r1 != 0, errno
+}
+
+// CopyImage Creates a new image (icon, cursor, or bitmap)
+// 通常我們會使用它，接著後面會用GetObject(hwnd, size, out)來取得資料
+// https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-copyimage
+// If the function fails, the return value is NULL.
+func (dll *User32DLL) CopyImage(h HANDLE, imgType uint32, cx, cy int32,
+	flags uint32, // This parameter can be one or more of the following values. {LR_DEFAULTCOLOR, LR_DEFAULTSIZE, ...}
+) (HANDLE, syscall.Errno) {
+	proc := dll.mustProc(PNCopyImage)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(h),
+		uintptr(imgType),
+		uintptr(cx),
+		uintptr(cy),
+		uintptr(flags),
+	)
+	return HANDLE(r1), errno
+}
+
+// CreateIconFromResourceEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-createiconfromresourceex
+// flags:
+// - LR_DEFAULTCOLOR: Uses the default color format.
+// - LR_DEFAULTSIZE
+// - LR_MONOCHROME: 單色
+// - LR_SHARED
+//
+// return:
+// If the function succeeds, the return value is a handle to the icon or cursor.
+// If the function fails, the return value is NULL.
+func (dll *User32DLL) CreateIconFromResourceEx(
+	presBits uintptr,
+	dwResSize uint32,
+	fIcon bool,
+	dwVer uint32, // must be greater than or equal to 0x00020000 and less than or equal to 0x00030000. This parameter is generally set to 0x00030000.
+	cxDesired int,
+	cyDesired int,
+	flags uint, // combination of the following values:
+) HICON {
+	proc := dll.mustProc(PNCreateIconFromResourceEx)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		presBits,
+		uintptr(dwResSize),
+		UintptrFromBool(fIcon),
+		uintptr(dwVer),
+		uintptr(cxDesired), uintptr(cyDesired),
+		uintptr(flags),
+	)
+	return HICON(r1)
+}
+
+// CreateWindowEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-createwindowexw
+// If the function succeeds, the return value is a handle to the new window.
+// If the function fails, the return value is NULL.
+func (dll *User32DLL) CreateWindowEx(
+	dwExStyle DWORD,
+	lpClassName string, lpWindowName string,
+	dwStyle DWORD,
+	x int32, y int32, nWidth int32, nHeight int32,
+	hWndParent HWND,
+	hMenu HMENU,
+	hInstance HINSTANCE, // A handle to the instance of the module to be associated with the window.
+	lpParam uintptr,
+) (HWND, syscall.Errno) {
+	proc := dll.mustProc(PNCreateWindowEx)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(dwExStyle),
+		UintptrFromStr(lpClassName),
+		UintptrFromStr(lpWindowName),
+		uintptr(dwStyle),
+		uintptr(x),
+		uintptr(y),
+		uintptr(nWidth),
+		uintptr(nHeight),
+		uintptr(hWndParent),
+		uintptr(hMenu),
+		uintptr(hInstance),
+		uintptr(lpParam),
+	)
+	return HWND(r1), errno
+}
+
+// DestroyWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-destroywindow
+// If the function fails, the return value is zero.
+func (dll *User32DLL) DestroyWindow(hWnd HWND) (bool, syscall.Errno) {
+	proc := dll.mustProc(PNDestroyWindow)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+	)
+	return r1 != 0, errno
+}
+
+// DefWindowProc https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-defwindowprocw
+func (dll *User32DLL) DefWindowProc(hWnd HWND, msg UINT, wParam WPARAM, lParam LPARAM) LRESULT {
+	proc := dll.mustProc(PNDefWindowProc)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+		uintptr(msg),
+		uintptr(wParam),
+		uintptr(lParam),
+	)
+	return LRESULT(r1)
+}
+
+// DispatchMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-dispatchmessagew
+func (dll *User32DLL) DispatchMessage(lpMsg /*const*/ *MSG) LRESULT {
+	proc := dll.mustProc(PNDispatchMessage)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(unsafe.Pointer(lpMsg)),
+	)
+	return LRESULT(r1)
+}
+
+// DrawIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-drawicon
+// If the function succeeds, the return value is nonzero.
+func (dll *User32DLL) DrawIcon(hdc HDC, x, y int, hIcon HICON) (bool, syscall.Errno) {
+	proc := dll.mustProc(PNDrawIcon)
+	hwnd, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+		uintptr(x),
+		uintptr(y),
+		uintptr(hIcon),
+	)
+
+	return hwnd != 0, errno
+}
+
+// DrawIconEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-drawiconex
+// If the function succeeds, the return value is nonzero.
+func (dll *User32DLL) DrawIconEx(hdc HDC,
+	xLeft int32, yTop int32, // 作圖位置
+	hIcon HICON, // 來源圖像
+	cxWidth int32, cyWidth int32, // 目標大小. 當flag設定為DI_DEFAULTSIZE, 會使用SM_CXICON, SM_CYICON來代替. 如果DI_DEFAULTSIZE沒有設定且此數值為0，那麼會用原始圖像大小來取代
+	istepIfAniCur uint32,
+	hbrFlickerFreeDraw HBRUSH,
+	diFlags uint32, // DI_COMPAT, DI_DEFAULTSIZE, DI_IMAGE, ...
+) (bool, syscall.Errno) {
+	proc := dll.mustProc(PNDrawIconEx)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+		uintptr(xLeft),
+		uintptr(yTop),
+		uintptr(hIcon),
+		uintptr(cxWidth),
+		uintptr(cyWidth),
+		uintptr(istepIfAniCur),
+		uintptr(hbrFlickerFreeDraw),
+		uintptr(diFlags))
+	return r1 != 0, errno
 }
 
 // FindWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-findwindoww
@@ -299,149 +465,6 @@ func (dll *User32DLL) GetWindowText(hwnd HWND) (string, error) {
 	return syscall.UTF16ToString(textName), nil
 }
 
-// SetWindowLongPtr https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowlongptrw
-// If the function fails, the return value is zero.
-func (dll *User32DLL) SetWindowLongPtr(hWnd HWND, nIndex int32, dwNewLong uintptr) (uintptr, syscall.Errno) {
-	proc := dll.mustProc(PNSetWindowLongPtr)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
-		uintptr(hWnd),
-		uintptr(nIndex),
-		dwNewLong,
-	)
-	return r1, errno
-}
-
-// MessageBox https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-messageboxw
-// If the function fails, the return value is zero.
-func (dll *User32DLL) MessageBox(hwnd HWND, text, caption string, btnFlag uint32) (clickBtnValue uintptr, errno syscall.Errno) {
-	proc := dll.mustProc(PNMessageBox)
-	clickBtnValue, _, errno = syscall.SyscallN(proc.Addr(),
-		uintptr(hwnd),
-		UintptrFromStr(text),
-		UintptrFromStr(caption),
-		uintptr(btnFlag),
-	)
-	return clickBtnValue, errno
-}
-
-// ReleaseDC https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-releasedc
-// If the DC was released, the return value is 1 or 0 otherwise.
-func (dll *User32DLL) ReleaseDC(hwnd HWND, hdc HDC) int32 {
-	proc := dll.mustProc(PNReleaseDC)
-	r1, _, _ := syscall.SyscallN(proc.Addr(),
-		uintptr(hwnd),
-		uintptr(hdc),
-	)
-	return int32(r1)
-}
-
-// DispatchMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-dispatchmessagew
-func (dll *User32DLL) DispatchMessage(lpMsg /*const*/ *MSG) LRESULT {
-	proc := dll.mustProc(PNDispatchMessage)
-	r1, _, _ := syscall.SyscallN(proc.Addr(),
-		uintptr(unsafe.Pointer(lpMsg)),
-	)
-	return LRESULT(r1)
-}
-
-// DrawIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-drawicon
-// If the function succeeds, the return value is nonzero.
-func (dll *User32DLL) DrawIcon(hdc HDC, x, y int, hIcon HICON) (bool, syscall.Errno) {
-	proc := dll.mustProc(PNDrawIcon)
-	hwnd, _, errno := syscall.SyscallN(proc.Addr(),
-		uintptr(hdc),
-		uintptr(x),
-		uintptr(y),
-		uintptr(hIcon),
-	)
-
-	return hwnd != 0, errno
-}
-
-// DrawIconEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-drawiconex
-// If the function succeeds, the return value is nonzero.
-func (dll *User32DLL) DrawIconEx(hdc HDC,
-	xLeft int32, yTop int32, // 作圖位置
-	hIcon HICON, // 來源圖像
-	cxWidth int32, cyWidth int32, // 目標大小. 當flag設定為DI_DEFAULTSIZE, 會使用SM_CXICON, SM_CYICON來代替. 如果DI_DEFAULTSIZE沒有設定且此數值為0，那麼會用原始圖像大小來取代
-	istepIfAniCur uint32,
-	hbrFlickerFreeDraw HBRUSH,
-	diFlags uint32, // DI_COMPAT, DI_DEFAULTSIZE, DI_IMAGE, ...
-) (bool, syscall.Errno) {
-	proc := dll.mustProc(PNDrawIconEx)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
-		uintptr(hdc),
-		uintptr(xLeft),
-		uintptr(yTop),
-		uintptr(hIcon),
-		uintptr(cxWidth),
-		uintptr(cyWidth),
-		uintptr(istepIfAniCur),
-		uintptr(hbrFlickerFreeDraw),
-		uintptr(diFlags))
-	return r1 != 0, errno
-}
-
-// PostMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-postmessagew
-// If the function succeeds, the return value is nonzero.
-func (dll *User32DLL) PostMessage(hwnd HWND, wmMsgID uint32, wParam, lParam uintptr) (bool, syscall.Errno) {
-	proc := dll.mustProc(PNPostMessage)
-	r1, _, errno := syscall.SyscallN(proc.Addr(), uintptr(hwnd), uintptr(wmMsgID), wParam, lParam)
-	return r1 != 0, errno
-}
-
-// PostQuitMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-postquitmessage
-func (dll *User32DLL) PostQuitMessage(nExitCode int32) {
-	proc := dll.mustProc(PNPostQuitMessage)
-	_, _, _ = syscall.SyscallN(proc.Addr(),
-		uintptr(nExitCode),
-	)
-}
-
-// SendMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendmessage
-// 注意，他會等待回應，會造成程式當掉的錯覺 https://social.msdn.microsoft.com/Forums/en-US/6900f74f-6ece-47da-88fc-f9c8bcd40206/sendmessage-api-slow?forum=wpf
-func (dll *User32DLL) SendMessage(hwnd HWND, wmMsgID uint32, wParam, lParam uintptr) (r1, r2 uintptr, err error) {
-	proc := dll.mustProc(PNSendMessage)
-	return syscall.SyscallN(proc.Addr(), uintptr(hwnd), uintptr(wmMsgID), wParam, lParam)
-}
-
-// LookupIconIdFromDirectoryEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-lookupiconidfromdirectoryex
-// If the function succeeds, the return value is an integer resource identifier for the icon or cursor that best fits the current display device.
-// If the function fails, the return value is zero.
-func (dll *User32DLL) LookupIconIdFromDirectoryEx(presBits uintptr,
-	fIcon bool, // Indicates whether an icon or a cursor is sought. If this parameter is TRUE, the function is searching for an icon; if the parameter is FALSE, the function is searching for a cursor.
-	cxDesired, // The desired width, in pixels, of the icon. If this parameter is zero, the function uses the SM_CXICON or SM_CXCURSOR system metric value.
-	cyDesired int, // 0, SM_CYICON, SM_CYCURSOR
-	flags uint, // LR_DEFAULTCOLOR or LR_MONOCHROME
-) int {
-	proc := dll.mustProc(PNLookupIconIdFromDirectoryEx)
-	r1, _, _ := syscall.SyscallN(proc.Addr(),
-		presBits,
-		UintptrFromBool(fIcon),
-		uintptr(cxDesired), uintptr(cyDesired),
-		uintptr(flags),
-	)
-	return int(r1)
-}
-
-// CopyImage Creates a new image (icon, cursor, or bitmap)
-// 通常我們會使用它，接著後面會用GetObject(hwnd, size, out)來取得資料
-// https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-copyimage
-// If the function fails, the return value is NULL.
-func (dll *User32DLL) CopyImage(h HANDLE, imgType uint32, cx, cy int32,
-	flags uint32, // This parameter can be one or more of the following values. {LR_DEFAULTCOLOR, LR_DEFAULTSIZE, ...}
-) (HANDLE, syscall.Errno) {
-	proc := dll.mustProc(PNCopyImage)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
-		uintptr(h),
-		uintptr(imgType),
-		uintptr(cx),
-		uintptr(cy),
-		uintptr(flags),
-	)
-	return HANDLE(r1), errno
-}
-
 // LoadCursor https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadcursorw
 func (dll *User32DLL) LoadCursor(hInstance HINSTANCE, lpCursorName *uint16) (HCURSOR, syscall.Errno) {
 	proc := dll.mustProc(PNLoadCursor)
@@ -503,6 +526,54 @@ func (dll *User32DLL) MustLoadImage(hInst HINSTANCE, name string, aType uint32, 
 	return handle
 }
 
+// LookupIconIdFromDirectoryEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-lookupiconidfromdirectoryex
+// If the function succeeds, the return value is an integer resource identifier for the icon or cursor that best fits the current display device.
+// If the function fails, the return value is zero.
+func (dll *User32DLL) LookupIconIdFromDirectoryEx(presBits uintptr,
+	fIcon bool, // Indicates whether an icon or a cursor is sought. If this parameter is TRUE, the function is searching for an icon; if the parameter is FALSE, the function is searching for a cursor.
+	cxDesired, // The desired width, in pixels, of the icon. If this parameter is zero, the function uses the SM_CXICON or SM_CXCURSOR system metric value.
+	cyDesired int, // 0, SM_CYICON, SM_CYCURSOR
+	flags uint, // LR_DEFAULTCOLOR or LR_MONOCHROME
+) int {
+	proc := dll.mustProc(PNLookupIconIdFromDirectoryEx)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		presBits,
+		UintptrFromBool(fIcon),
+		uintptr(cxDesired), uintptr(cyDesired),
+		uintptr(flags),
+	)
+	return int(r1)
+}
+
+// MessageBox https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-messageboxw
+// If the function fails, the return value is zero.
+func (dll *User32DLL) MessageBox(hwnd HWND, text, caption string, btnFlag uint32) (clickBtnValue uintptr, errno syscall.Errno) {
+	proc := dll.mustProc(PNMessageBox)
+	clickBtnValue, _, errno = syscall.SyscallN(proc.Addr(),
+		uintptr(hwnd),
+		UintptrFromStr(text),
+		UintptrFromStr(caption),
+		uintptr(btnFlag),
+	)
+	return clickBtnValue, errno
+}
+
+// PostMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-postmessagew
+// If the function succeeds, the return value is nonzero.
+func (dll *User32DLL) PostMessage(hwnd HWND, wmMsgID uint32, wParam, lParam uintptr) (bool, syscall.Errno) {
+	proc := dll.mustProc(PNPostMessage)
+	r1, _, errno := syscall.SyscallN(proc.Addr(), uintptr(hwnd), uintptr(wmMsgID), wParam, lParam)
+	return r1 != 0, errno
+}
+
+// PostQuitMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-postquitmessage
+func (dll *User32DLL) PostQuitMessage(nExitCode int32) {
+	proc := dll.mustProc(PNPostQuitMessage)
+	_, _, _ = syscall.SyscallN(proc.Addr(),
+		uintptr(nExitCode),
+	)
+}
+
 // RegisterClass https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerclassw
 // If the function fails, the return value is zero.
 func (dll *User32DLL) RegisterClass(lpWndClass /* const */ *WNDCLASS) (ATOM, syscall.Errno) {
@@ -511,6 +582,46 @@ func (dll *User32DLL) RegisterClass(lpWndClass /* const */ *WNDCLASS) (ATOM, sys
 		uintptr(unsafe.Pointer(lpWndClass)),
 	)
 	return ATOM(r1), errno
+}
+
+// ReleaseDC https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-releasedc
+// If the DC was released, the return value is 1 or 0 otherwise.
+func (dll *User32DLL) ReleaseDC(hwnd HWND, hdc HDC) int32 {
+	proc := dll.mustProc(PNReleaseDC)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hwnd),
+		uintptr(hdc),
+	)
+	return int32(r1)
+}
+
+// SetWindowLongPtr https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowlongptrw
+// If the function fails, the return value is zero.
+func (dll *User32DLL) SetWindowLongPtr(hWnd HWND, nIndex int32, dwNewLong uintptr) (uintptr, syscall.Errno) {
+	proc := dll.mustProc(PNSetWindowLongPtr)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+		uintptr(nIndex),
+		dwNewLong,
+	)
+	return r1, errno
+}
+
+// SendMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendmessage
+// 注意，他會等待回應，會造成程式當掉的錯覺 https://social.msdn.microsoft.com/Forums/en-US/6900f74f-6ece-47da-88fc-f9c8bcd40206/sendmessage-api-slow?forum=wpf
+func (dll *User32DLL) SendMessage(hwnd HWND, wmMsgID uint32, wParam, lParam uintptr) (r1, r2 uintptr, err error) {
+	proc := dll.mustProc(PNSendMessage)
+	return syscall.SyscallN(proc.Addr(), uintptr(hwnd), uintptr(wmMsgID), wParam, lParam)
+}
+
+// ShowWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showwindow
+func (dll *User32DLL) ShowWindow(hWnd HWND, nCmdShow int32) bool {
+	proc := dll.mustProc(PNShowWindow)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+		uintptr(nCmdShow),
+	)
+	return r1 != 0
 }
 
 // TranslateMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-translatemessage
@@ -532,109 +643,4 @@ func (dll *User32DLL) UnregisterClass(lpClassName string, hInstance HINSTANCE) (
 		uintptr(hInstance),
 	)
 	return r1 != 0, errno
-}
-
-// ShowWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showwindow
-func (dll *User32DLL) ShowWindow(hWnd HWND, nCmdShow int32) bool {
-	proc := dll.mustProc(PNShowWindow)
-	r1, _, _ := syscall.SyscallN(proc.Addr(),
-		uintptr(hWnd),
-		uintptr(nCmdShow),
-	)
-	return r1 != 0
-}
-
-// CloseWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-closewindow
-// Minimizes (but does not destroy) the specified window.
-// If the function fails, the return value is zero.
-func (dll *User32DLL) CloseWindow(hWnd HWND) (bool, syscall.Errno) {
-	proc := dll.mustProc(PNCloseWindow)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
-		uintptr(hWnd),
-	)
-	return r1 != 0, errno
-}
-
-// DestroyWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-destroywindow
-// If the function fails, the return value is zero.
-func (dll *User32DLL) DestroyWindow(hWnd HWND) (bool, syscall.Errno) {
-	proc := dll.mustProc(PNDestroyWindow)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
-		uintptr(hWnd),
-	)
-	return r1 != 0, errno
-}
-
-// DefWindowProc https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-defwindowprocw
-func (dll *User32DLL) DefWindowProc(hWnd HWND, msg UINT, wParam WPARAM, lParam LPARAM) LRESULT {
-	proc := dll.mustProc(PNDefWindowProc)
-	r1, _, _ := syscall.SyscallN(proc.Addr(),
-		uintptr(hWnd),
-		uintptr(msg),
-		uintptr(wParam),
-		uintptr(lParam),
-	)
-	return LRESULT(r1)
-}
-
-// CreateIconFromResourceEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-createiconfromresourceex
-// flags:
-// - LR_DEFAULTCOLOR: Uses the default color format.
-// - LR_DEFAULTSIZE
-// - LR_MONOCHROME: 單色
-// - LR_SHARED
-//
-// return:
-// If the function succeeds, the return value is a handle to the icon or cursor.
-// If the function fails, the return value is NULL.
-func (dll *User32DLL) CreateIconFromResourceEx(
-	presBits uintptr,
-	dwResSize uint32,
-	fIcon bool,
-	dwVer uint32, // must be greater than or equal to 0x00020000 and less than or equal to 0x00030000. This parameter is generally set to 0x00030000.
-	cxDesired int,
-	cyDesired int,
-	flags uint, // combination of the following values:
-) HICON {
-	proc := dll.mustProc(PNCreateIconFromResourceEx)
-	r1, _, _ := syscall.SyscallN(proc.Addr(),
-		presBits,
-		uintptr(dwResSize),
-		UintptrFromBool(fIcon),
-		uintptr(dwVer),
-		uintptr(cxDesired), uintptr(cyDesired),
-		uintptr(flags),
-	)
-	return HICON(r1)
-}
-
-// CreateWindowEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-createwindowexw
-// If the function succeeds, the return value is a handle to the new window.
-// If the function fails, the return value is NULL.
-func (dll *User32DLL) CreateWindowEx(
-	dwExStyle DWORD,
-	lpClassName string, lpWindowName string,
-	dwStyle DWORD,
-	x int32, y int32, nWidth int32, nHeight int32,
-	hWndParent HWND,
-	hMenu HMENU,
-	hInstance HINSTANCE, // A handle to the instance of the module to be associated with the window.
-	lpParam uintptr,
-) (HWND, syscall.Errno) {
-	proc := dll.mustProc(PNCreateWindowEx)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
-		uintptr(dwExStyle),
-		UintptrFromStr(lpClassName),
-		UintptrFromStr(lpWindowName),
-		uintptr(dwStyle),
-		uintptr(x),
-		uintptr(y),
-		uintptr(nWidth),
-		uintptr(nHeight),
-		uintptr(hWndParent),
-		uintptr(hMenu),
-		uintptr(hInstance),
-		uintptr(lpParam),
-	)
-	return HWND(r1), errno
 }

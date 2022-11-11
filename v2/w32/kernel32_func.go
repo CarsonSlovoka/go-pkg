@@ -9,36 +9,46 @@ import (
 )
 
 const (
-	PNCreateMutex ProcName = "CreateMutexW"
+	PNBeginUpdateResource ProcName = "BeginUpdateResourceW"
+
 	PNCloseHandle ProcName = "CloseHandle"
 
-	PNGetNativeSystemInfo  ProcName = "GetNativeSystemInfo"
-	PNGetModuleHandle      ProcName = "GetModuleHandleW"
-	PNGetThreadDescription ProcName = "GetThreadDescription"
+	PNCopyFile ProcName = "CopyFileW"
+
+	PNCreateFile  ProcName = "CreateFileW"
+	PNCreateMutex ProcName = "CreateMutexW"
+
+	PNEndUpdateResource ProcName = "EndUpdateResourceW"
+
+	PNFindResource ProcName = "FindResourceW"
+
+	PNFreeLibrary ProcName = "FreeLibrary"
+
 	PNGetCurrentThread     ProcName = "GetCurrentThread"
+	PNGetLastError         ProcName = "GetLastError"
+	PNGetModuleHandle      ProcName = "GetModuleHandleW"
+	PNGetNativeSystemInfo  ProcName = "GetNativeSystemInfo"
+	PNGetThreadDescription ProcName = "GetThreadDescription"
 
-	PNSetThreadDescription ProcName = "SetThreadDescription"
+	PNGlobalAlloc  ProcName = "GlobalAlloc"
+	PNGlobalFree   ProcName = "GlobalFree"
+	PNGlobalLock   ProcName = "GlobalLock"
+	PNGlobalUnlock ProcName = "GlobalUnlock"
 
-	PNFreeLibrary         ProcName = "FreeLibrary"
-	PNGetLastError        ProcName = "GetLastError"
-	PNSetLastError        ProcName = "SetLastError"
-	PNCreateFile          ProcName = "CreateFileW"
-	PNWriteFile           ProcName = "WriteFile"
-	PNCopyFile            ProcName = "CopyFileW"
-	PNFindResource        ProcName = "FindResourceW"
-	PNLoadLibrary         ProcName = "LoadLibraryW"
-	PNSizeofResource      ProcName = "SizeofResource"
-	PNBeginUpdateResource ProcName = "BeginUpdateResourceW"
-	PNUpdateResource      ProcName = "UpdateResourceW"
-	PNEndUpdateResource   ProcName = "EndUpdateResourceW"
-	PNLoadResource        ProcName = "LoadResource"
-	PNLockResource        ProcName = "LockResource"
-	PNGlobalAlloc         ProcName = "GlobalAlloc"
-	PNGlobalLock          ProcName = "GlobalLock"
-	PNGlobalUnlock        ProcName = "GlobalUnlock"
-	PNGlobalFree          ProcName = "GlobalFree"
+	PNLoadLibrary  ProcName = "LoadLibraryW"
+	PNLoadResource ProcName = "LoadResource"
+	PNLockResource ProcName = "LockResource"
 
 	PNReadDirectoryChanges ProcName = "ReadDirectoryChangesW"
+
+	PNSetLastError         ProcName = "SetLastError"
+	PNSetThreadDescription ProcName = "SetThreadDescription"
+
+	PNSizeofResource ProcName = "SizeofResource"
+
+	PNUpdateResource ProcName = "UpdateResourceW"
+
+	PNWriteFile ProcName = "WriteFile"
 )
 
 type Kernel32DLL struct {
@@ -51,39 +61,66 @@ type Kernel32DLL struct {
 func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 	if len(procList) == 0 {
 		procList = []ProcName{
-			PNCreateMutex,
+			PNBeginUpdateResource,
+
 			PNCloseHandle,
 
-			PNGetNativeSystemInfo,
-			PNGetModuleHandle,
-			PNGetThreadDescription,
-			PNGetCurrentThread,
+			PNCopyFile,
 
-			PNSetThreadDescription,
+			PNCreateFile,
+			PNCreateMutex,
+
+			PNEndUpdateResource,
+
+			PNFindResource,
 
 			PNFreeLibrary,
+
+			PNGetCurrentThread,
 			PNGetLastError,
-			PNSetLastError,
-			PNCreateFile,
-			PNWriteFile,
-			PNCopyFile,
-			PNFindResource,
-			PNLoadLibrary,
-			PNSizeofResource,
-			PNBeginUpdateResource,
-			PNUpdateResource,
-			PNEndUpdateResource,
-			PNLoadResource,
-			PNLockResource,
+			PNGetModuleHandle,
+			PNGetNativeSystemInfo,
+			PNGetThreadDescription,
+
 			PNGlobalAlloc,
+			PNGlobalFree,
 			PNGlobalLock,
 			PNGlobalUnlock,
-			PNGlobalFree,
+
+			PNLoadLibrary,
+			PNLoadResource,
+			PNLockResource,
+
 			PNReadDirectoryChanges,
+
+			PNSetLastError,
+			PNSetThreadDescription,
+
+			PNSizeofResource,
+
+			PNUpdateResource,
+
+			PNWriteFile,
 		}
 	}
 	dll := newDll(DNKernel32, procList)
 	return &Kernel32DLL{dll}
+}
+
+// BeginUpdateResource https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-beginupdateresourceW
+// Returns handle if successful or FALSE otherwise.
+func (dll *Kernel32DLL) BeginUpdateResource(filePath string, bDeleteExistingResources bool) HANDLE {
+	proc := dll.mustProc(PNBeginUpdateResource)
+
+	utf16ptrFilepath, err := syscall.UTF16PtrFromString(filePath) // *uint16, err
+	if err != nil {
+		panic(err)
+	}
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(unsafe.Pointer(utf16ptrFilepath)),
+		UintptrFromBool(bDeleteExistingResources),
+	)
+	return HANDLE(r1)
 }
 
 // CloseHandle Closes an open object handle.
@@ -94,6 +131,43 @@ func (dll *Kernel32DLL) CloseHandle(handle HANDLE) (bool, syscall.Errno) {
 	// r1, _, err := proc.Call(handle) // 其為syscall.SyscallN的封裝(多了檢查的動作)，如果已經確定，可以直接用syscall.SyscallN會更有效率
 	r1, _, errno := syscall.SyscallN(proc.Addr(), uintptr(handle))
 	return r1 != 0, errno
+}
+
+// CopyFile https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-copyfilew
+// - bFailIfExists: TRUE在已經存在時，會引發錯誤；FALSE如果引經存在則會覆蓋
+// If this parameter is TRUE and the new file specified by lpNewFileName already exists, the function fails.
+// If this parameter is FALSE and the new file already exists, the function overwrites the existing file and succeeds.
+//
+// Returns TRUE if successful or FALSE otherwise.
+func (dll *Kernel32DLL) CopyFile(existingFileName string, newFileName string, bFailIfExists bool) bool {
+	proc := dll.mustProc(PNCopyFile)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		UintptrFromStr(existingFileName),
+		UintptrFromStr(newFileName),
+		UintptrFromBool(bFailIfExists),
+	)
+	return r1 != 0
+}
+
+// CreateFile https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew
+// 不能單靠errno來判斷到底有沒有創建成功，errno應該視為取得更多的創建資訊。
+// 如果創建失敗，那麼r1所回傳的數值一定是: INVALID_HANDLE_VALUE (-1)
+// 注意！ 不用的時候記得呼叫CloseHandle來關閉
+func (dll *Kernel32DLL) CreateFile(lpFileName string, dwDesiredAccess, dwShareMode uint32,
+	lpSecurityAttributes uintptr,
+	dwCreationDisposition, dwFlagsAndAttributes uint32,
+	hTemplateFile uintptr,
+) (HANDLE, syscall.Errno) {
+	proc := dll.mustProc(PNCreateFile)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		UintptrFromStr(lpFileName),
+		uintptr(dwDesiredAccess),
+		uintptr(dwShareMode),
+		lpSecurityAttributes,
+		uintptr(dwCreationDisposition),
+		uintptr(dwFlagsAndAttributes),
+		hTemplateFile)
+	return HANDLE(r1), errno
 }
 
 // CreateMutex You can use it to restrict to a single instance of executable
@@ -120,130 +194,16 @@ func (dll *Kernel32DLL) CreateMutex(lpMutexAttributes *SECURITY_ATTRIBUTES, bIni
 	return HANDLE(r1), errno
 }
 
-// GetNativeSystemInfo
-// https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getnativesysteminfo
-func (dll *Kernel32DLL) GetNativeSystemInfo() *SYSTEM_INFO {
-	info := new(SYSTEM_INFO)
-	proc := dll.mustProc(PNGetNativeSystemInfo)
-	// _, _, _ = syscall.SyscallN(proc.Addr(), uintptr(unsafe.Pointer(&info))) // 適用回傳 (info SYSTEM_INFO)
-	_, _, _ = syscall.SyscallN(proc.Addr(), uintptr(unsafe.Pointer(info)))
-	return info
-}
-
-// GetModuleHandle https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-getmodulehandlew
-// If the function fails, the return value is NULL.
-// do not pass a handle returned by GetModuleHandle to the FreeLibrary function.
-// Doing so can cause a DLL module to be unmapped prematurely.
-// 如果您要取得自己，傳入空字串即可。UintptrFromStr("")會回傳傳0
-func (dll *Kernel32DLL) GetModuleHandle(moduleName string) HMODULE {
-	proc := dll.mustProc(PNGetModuleHandle)
-	hModule, _, _ := syscall.SyscallN(proc.Addr(), UintptrFromStr(moduleName))
-	return HMODULE(hModule)
-}
-
-// GetThreadDescription https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getthreaddescription
-// Returns hResult>=0 if successful
-// SUCCEEDED(hResult)
-func (dll *Kernel32DLL) GetThreadDescription(hThread HANDLE, threadDesc *uint16) HRESULT {
-	proc := dll.mustProc(PNGetThreadDescription)
+// EndUpdateResource https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-endupdateresourcew
+// fDiscard: FALSE會真的更新, TRUE僅是測試用，不會更新. Indicates whether to write the resource updates to the file. If this parameter is TRUE, no changes are made. If it is FALSE, the changes are made: the resource updates will take effect.
+// Returns TRUE if function succeeds; FALSE otherwise.
+func (dll *Kernel32DLL) EndUpdateResource(hUpdate HANDLE, fDiscard bool) bool {
+	proc := dll.mustProc(PNEndUpdateResource)
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
-		uintptr(hThread),
-		uintptr(unsafe.Pointer(threadDesc)),
+		uintptr(hUpdate),
+		UintptrFromBool(fDiscard),
 	)
-	return HRESULT(r1)
-}
-
-// GetCurrentThread https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getcurrentthread
-// The return value is a pseudo handle for the current thread.
-func (dll *Kernel32DLL) GetCurrentThread() HANDLE {
-	proc := dll.mustProc(PNGetCurrentThread)
-	r1, _, _ := syscall.SyscallN(proc.Addr())
-	return HANDLE(r1)
-}
-
-// SetThreadDescription https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreaddescription
-func (dll *Kernel32DLL) SetThreadDescription(hThread HANDLE, desc string) HRESULT {
-	proc := dll.mustProc(PNSetThreadDescription)
-	r1, _, _ := syscall.SyscallN(proc.Addr(),
-		uintptr(hThread),
-		UintptrFromStr(desc),
-	)
-	return HRESULT(r1)
-}
-
-// FreeLibrary https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-freelibrary
-func (dll *Kernel32DLL) FreeLibrary(hLibModule HMODULE) bool {
-	proc := dll.mustProc(PNFreeLibrary)
-	r1, _, _ := syscall.SyscallN(proc.Addr(), uintptr(hLibModule))
-	return r1 != 0
-}
-
-func (dll *Kernel32DLL) GetLastError() uint32 {
-	proc := dll.mustProc(PNGetLastError)
-	ret, _, _ := syscall.SyscallN(proc.Addr())
-	return uint32(ret)
-}
-
-// SetLastError https://learn.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-setlasterror
-func (dll *Kernel32DLL) SetLastError(dwErrCode uint32) {
-	proc := dll.mustProc(PNSetLastError)
-	_, _, _ = syscall.SyscallN(proc.Addr(), uintptr(dwErrCode))
-}
-
-// CreateFile https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew
-// 不能單靠errno來判斷到底有沒有創建成功，errno應該視為取得更多的創建資訊。
-// 如果創建失敗，那麼r1所回傳的數值一定是: INVALID_HANDLE_VALUE (-1)
-// 注意！ 不用的時候記得呼叫CloseHandle來關閉
-func (dll *Kernel32DLL) CreateFile(lpFileName string, dwDesiredAccess, dwShareMode uint32,
-	lpSecurityAttributes uintptr,
-	dwCreationDisposition, dwFlagsAndAttributes uint32,
-	hTemplateFile uintptr,
-) (HANDLE, syscall.Errno) {
-	proc := dll.mustProc(PNCreateFile)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
-		UintptrFromStr(lpFileName),
-		uintptr(dwDesiredAccess),
-		uintptr(dwShareMode),
-		lpSecurityAttributes,
-		uintptr(dwCreationDisposition),
-		uintptr(dwFlagsAndAttributes),
-		hTemplateFile)
-	return HANDLE(r1), errno
-}
-
-// WriteFile https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-writefile
-// If the function succeeds, the return value is nonzero (TRUE).
-func (dll *Kernel32DLL) WriteFile(hFile HANDLE,
-	lpBuffer uintptr,
-	nNumberOfBytesToWrite uint32,
-	lpNumberOfBytesWritten *uint32, // out
-	lpOverlapped *OVERLAPPED,
-) (bool, syscall.Errno) {
-	proc := dll.mustProc(PNWriteFile)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
-		uintptr(hFile),
-		lpBuffer,
-		uintptr(nNumberOfBytesToWrite),
-		uintptr(unsafe.Pointer(lpNumberOfBytesWritten)),
-		uintptr(unsafe.Pointer(lpOverlapped)),
-	)
-	return r1 != 0, errno
-}
-
-// CopyFile https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-copyfilew
-// - bFailIfExists: TRUE在已經存在時，會引發錯誤；FALSE如果引經存在則會覆蓋
-// If this parameter is TRUE and the new file specified by lpNewFileName already exists, the function fails.
-// If this parameter is FALSE and the new file already exists, the function overwrites the existing file and succeeds.
-//
-// Returns TRUE if successful or FALSE otherwise.
-func (dll *Kernel32DLL) CopyFile(existingFileName string, newFileName string, bFailIfExists bool) bool {
-	proc := dll.mustProc(PNCopyFile)
-	r1, _, _ := syscall.SyscallN(proc.Addr(),
-		UintptrFromStr(existingFileName),
-		UintptrFromStr(newFileName),
-		UintptrFromBool(bFailIfExists),
-	)
-	return r1 != 0
+	return r1 == 1
 }
 
 // FindResource https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-findresourcew
@@ -273,6 +233,102 @@ func (dll *Kernel32DLL) FindResource(hModule HMODULE, lpName, lpType *uint16) (H
 	return HRSRC(ret), errno
 }
 
+// FreeLibrary https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-freelibrary
+func (dll *Kernel32DLL) FreeLibrary(hLibModule HMODULE) bool {
+	proc := dll.mustProc(PNFreeLibrary)
+	r1, _, _ := syscall.SyscallN(proc.Addr(), uintptr(hLibModule))
+	return r1 != 0
+}
+
+// GetCurrentThread https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getcurrentthread
+// The return value is a pseudo handle for the current thread.
+func (dll *Kernel32DLL) GetCurrentThread() HANDLE {
+	proc := dll.mustProc(PNGetCurrentThread)
+	r1, _, _ := syscall.SyscallN(proc.Addr())
+	return HANDLE(r1)
+}
+
+func (dll *Kernel32DLL) GetLastError() uint32 {
+	proc := dll.mustProc(PNGetLastError)
+	ret, _, _ := syscall.SyscallN(proc.Addr())
+	return uint32(ret)
+}
+
+// GetModuleHandle https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-getmodulehandlew
+// If the function fails, the return value is NULL.
+// do not pass a handle returned by GetModuleHandle to the FreeLibrary function.
+// Doing so can cause a DLL module to be unmapped prematurely.
+// 如果您要取得自己，傳入空字串即可。UintptrFromStr("")會回傳傳0
+func (dll *Kernel32DLL) GetModuleHandle(moduleName string) HMODULE {
+	proc := dll.mustProc(PNGetModuleHandle)
+	hModule, _, _ := syscall.SyscallN(proc.Addr(), UintptrFromStr(moduleName))
+	return HMODULE(hModule)
+}
+
+// GetNativeSystemInfo
+// https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getnativesysteminfo
+func (dll *Kernel32DLL) GetNativeSystemInfo() *SYSTEM_INFO {
+	info := new(SYSTEM_INFO)
+	proc := dll.mustProc(PNGetNativeSystemInfo)
+	// _, _, _ = syscall.SyscallN(proc.Addr(), uintptr(unsafe.Pointer(&info))) // 適用回傳 (info SYSTEM_INFO)
+	_, _, _ = syscall.SyscallN(proc.Addr(), uintptr(unsafe.Pointer(info)))
+	return info
+}
+
+// GetThreadDescription https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getthreaddescription
+// Returns hResult>=0 if successful
+// SUCCEEDED(hResult)
+func (dll *Kernel32DLL) GetThreadDescription(hThread HANDLE, threadDesc *uint16) HRESULT {
+	proc := dll.mustProc(PNGetThreadDescription)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hThread),
+		uintptr(unsafe.Pointer(threadDesc)),
+	)
+	return HRESULT(r1)
+}
+
+// GlobalAlloc https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-globalalloc
+// If the function fails, the return value is NULL.
+func (dll *Kernel32DLL) GlobalAlloc(uFlags UINT, dwBytes SIZE_T) (HGLOBAL, syscall.Errno) {
+	proc := dll.mustProc(PNGlobalAlloc)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(uFlags),
+		uintptr(dwBytes),
+	)
+	return HGLOBAL(r1), errno
+}
+
+// GlobalFree https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-globalfree
+// If the function **succeeds**, the return value is NULL.
+// If the function fails, the return value is equal to a handle to the global memory object.
+func (dll *Kernel32DLL) GlobalFree(hMem HGLOBAL) HGLOBAL {
+	proc := dll.mustProc(PNGlobalFree)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hMem),
+	)
+	return HGLOBAL(r1)
+}
+
+// GlobalLock https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-globallock
+// If the function fails, the return value is NULL.
+func (dll *Kernel32DLL) GlobalLock(hMem HGLOBAL) (LPVOID, syscall.Errno) {
+	proc := dll.mustProc(PNGlobalLock)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hMem),
+	)
+	return LPVOID(r1), errno
+}
+
+// GlobalUnlock https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-globalunlock
+// If the function fails, the return value is zero
+func (dll *Kernel32DLL) GlobalUnlock(hMem HGLOBAL) bool {
+	proc := dll.mustProc(PNGlobalUnlock)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hMem),
+	)
+	return r1 != 0
+}
+
 // LoadLibrary https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryw
 // If the function fails, the return value is NULL
 func (dll *Kernel32DLL) LoadLibrary(lpLibFileName string) HMODULE {
@@ -281,6 +337,67 @@ func (dll *Kernel32DLL) LoadLibrary(lpLibFileName string) HMODULE {
 		UintptrFromStr(lpLibFileName),
 	)
 	return HMODULE(r1)
+}
+
+// LoadResource https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadresource
+// If the function fails, the return value is NULL (0)
+func (dll *Kernel32DLL) LoadResource(hModule HMODULE, hResInfo HRSRC) (HGLOBAL, syscall.Errno) {
+	proc := dll.mustProc(PNLoadResource)
+	ret, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hModule),
+		uintptr(hResInfo),
+	)
+	return HGLOBAL(ret), errno
+}
+
+// LockResource https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-lockresource
+func (dll *Kernel32DLL) LockResource(hResData HGLOBAL) uintptr {
+	proc := dll.mustProc(PNLockResource)
+	ret, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hResData),
+	)
+	return ret
+}
+
+// ReadDirectoryChanges https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-readdirectorychangesw?redirectedfrom=MSDN
+// TODO: Unknown type(s): LPOVERLAPPED_COMPLETION_ROUTINE
+// If the function succeeds, the return value is nonzero.
+// If the function fails, the return value is zero.
+func (dll *Kernel32DLL) ReadDirectoryChanges(hDirectory HANDLE,
+	lpBuffer uintptr, nBufferLength uint32,
+	bWatchSubtree bool,
+	dwNotifyFilter uint32,
+	lpBytesReturned *uint32, // [out]
+	lpOverlapped *OVERLAPPED, lpCompletionRoutine uintptr,
+) (bool, syscall.Errno) {
+	proc := dll.mustProc(PNReadDirectoryChanges)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hDirectory),
+		lpBuffer,
+		uintptr(nBufferLength),
+		UintptrFromBool(bWatchSubtree),
+		uintptr(dwNotifyFilter),
+		uintptr(unsafe.Pointer(lpBytesReturned)), // [out]
+		uintptr(unsafe.Pointer(lpOverlapped)),
+		lpCompletionRoutine,
+	)
+	return r1 != 0, errno
+}
+
+// SetLastError https://learn.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-setlasterror
+func (dll *Kernel32DLL) SetLastError(dwErrCode uint32) {
+	proc := dll.mustProc(PNSetLastError)
+	_, _, _ = syscall.SyscallN(proc.Addr(), uintptr(dwErrCode))
+}
+
+// SetThreadDescription https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreaddescription
+func (dll *Kernel32DLL) SetThreadDescription(hThread HANDLE, desc string) HRESULT {
+	proc := dll.mustProc(PNSetThreadDescription)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hThread),
+		UintptrFromStr(desc),
+	)
+	return HRESULT(r1)
 }
 
 // SizeofResource https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-sizeofresource
@@ -300,22 +417,6 @@ func (dll *Kernel32DLL) MustSizeofResource(hModule HMODULE, hResInfo HRSRC) uint
 		panic(fmt.Sprintf("%s", errno))
 	}
 	return r1
-}
-
-// BeginUpdateResource https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-beginupdateresourceW
-// Returns handle if successful or FALSE otherwise.
-func (dll *Kernel32DLL) BeginUpdateResource(filePath string, bDeleteExistingResources bool) HANDLE {
-	proc := dll.mustProc(PNBeginUpdateResource)
-
-	utf16ptrFilepath, err := syscall.UTF16PtrFromString(filePath) // *uint16, err
-	if err != nil {
-		panic(err)
-	}
-	r1, _, _ := syscall.SyscallN(proc.Addr(),
-		uintptr(unsafe.Pointer(utf16ptrFilepath)),
-		UintptrFromBool(bDeleteExistingResources),
-	)
-	return HANDLE(r1)
 }
 
 // UpdateResource https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-updateresourcew
@@ -340,101 +441,21 @@ func (dll *Kernel32DLL) UpdateResource(handle HANDLE,
 	return r1 == 1
 }
 
-// EndUpdateResource https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-endupdateresourcew
-// fDiscard: FALSE會真的更新, TRUE僅是測試用，不會更新. Indicates whether to write the resource updates to the file. If this parameter is TRUE, no changes are made. If it is FALSE, the changes are made: the resource updates will take effect.
-// Returns TRUE if function succeeds; FALSE otherwise.
-func (dll *Kernel32DLL) EndUpdateResource(hUpdate HANDLE, fDiscard bool) bool {
-	proc := dll.mustProc(PNEndUpdateResource)
-	r1, _, _ := syscall.SyscallN(proc.Addr(),
-		uintptr(hUpdate),
-		UintptrFromBool(fDiscard),
-	)
-	return r1 == 1
-}
-
-// LoadResource https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadresource
-// If the function fails, the return value is NULL (0)
-func (dll *Kernel32DLL) LoadResource(hModule HMODULE, hResInfo HRSRC) (HGLOBAL, syscall.Errno) {
-	proc := dll.mustProc(PNLoadResource)
-	ret, _, errno := syscall.SyscallN(proc.Addr(),
-		uintptr(hModule),
-		uintptr(hResInfo),
-	)
-	return HGLOBAL(ret), errno
-}
-
-// LockResource https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-lockresource
-func (dll *Kernel32DLL) LockResource(hResData HGLOBAL) uintptr {
-	proc := dll.mustProc(PNLockResource)
-	ret, _, _ := syscall.SyscallN(proc.Addr(),
-		uintptr(hResData),
-	)
-	return ret
-}
-
-// GlobalAlloc https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-globalalloc
-// If the function fails, the return value is NULL.
-func (dll *Kernel32DLL) GlobalAlloc(uFlags UINT, dwBytes SIZE_T) (HGLOBAL, syscall.Errno) {
-	proc := dll.mustProc(PNGlobalAlloc)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
-		uintptr(uFlags),
-		uintptr(dwBytes),
-	)
-	return HGLOBAL(r1), errno
-}
-
-// GlobalLock https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-globallock
-// If the function fails, the return value is NULL.
-func (dll *Kernel32DLL) GlobalLock(hMem HGLOBAL) (LPVOID, syscall.Errno) {
-	proc := dll.mustProc(PNGlobalLock)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
-		uintptr(hMem),
-	)
-	return LPVOID(r1), errno
-}
-
-// GlobalUnlock https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-globalunlock
-// If the function fails, the return value is zero
-func (dll *Kernel32DLL) GlobalUnlock(hMem HGLOBAL) bool {
-	proc := dll.mustProc(PNGlobalUnlock)
-	r1, _, _ := syscall.SyscallN(proc.Addr(),
-		uintptr(hMem),
-	)
-	return r1 != 0
-}
-
-// GlobalFree https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-globalfree
-// If the function **succeeds**, the return value is NULL.
-// If the function fails, the return value is equal to a handle to the global memory object.
-func (dll *Kernel32DLL) GlobalFree(hMem HGLOBAL) HGLOBAL {
-	proc := dll.mustProc(PNGlobalFree)
-	r1, _, _ := syscall.SyscallN(proc.Addr(),
-		uintptr(hMem),
-	)
-	return HGLOBAL(r1)
-}
-
-// ReadDirectoryChanges https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-readdirectorychangesw?redirectedfrom=MSDN
-// TODO: Unknown type(s): LPOVERLAPPED_COMPLETION_ROUTINE
-// If the function succeeds, the return value is nonzero.
-// If the function fails, the return value is zero.
-func (dll *Kernel32DLL) ReadDirectoryChanges(hDirectory HANDLE,
-	lpBuffer uintptr, nBufferLength uint32,
-	bWatchSubtree bool,
-	dwNotifyFilter uint32,
-	lpBytesReturned *uint32, // [out]
-	lpOverlapped *OVERLAPPED, lpCompletionRoutine uintptr,
+// WriteFile https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-writefile
+// If the function succeeds, the return value is nonzero (TRUE).
+func (dll *Kernel32DLL) WriteFile(hFile HANDLE,
+	lpBuffer uintptr,
+	nNumberOfBytesToWrite uint32,
+	lpNumberOfBytesWritten *uint32, // out
+	lpOverlapped *OVERLAPPED,
 ) (bool, syscall.Errno) {
-	proc := dll.mustProc(PNReadDirectoryChanges)
+	proc := dll.mustProc(PNWriteFile)
 	r1, _, errno := syscall.SyscallN(proc.Addr(),
-		uintptr(hDirectory),
+		uintptr(hFile),
 		lpBuffer,
-		uintptr(nBufferLength),
-		UintptrFromBool(bWatchSubtree),
-		uintptr(dwNotifyFilter),
-		uintptr(unsafe.Pointer(lpBytesReturned)), // [out]
+		uintptr(nNumberOfBytesToWrite),
+		uintptr(unsafe.Pointer(lpNumberOfBytesWritten)),
 		uintptr(unsafe.Pointer(lpOverlapped)),
-		lpCompletionRoutine,
 	)
 	return r1 != 0, errno
 }
