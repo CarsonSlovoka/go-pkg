@@ -60,8 +60,11 @@ type (
 	WPARAM  uintptr
 	LPARAM  uintptr
 	LPSTR   *CHAR
+	LPCSTR  *byte
+	LPCWSTR *uint16
 )
 
+/* 這些的定義還是有特別的意思在，如果都把它們混為一談，不太恰當
 type Handle interface {
 	~uintptr // uintptr | HWND | HANDLE //不需要這樣寫，使用~，其表示只要「原型」是如此就算
 }
@@ -69,3 +72,4 @@ type Handle interface {
 type Hwnd interface {
 	~uintptr
 }
+*/

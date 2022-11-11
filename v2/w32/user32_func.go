@@ -18,25 +18,48 @@ const (
 	PNGetDC               ProcName = "GetDC"
 	PNGetForegroundWindow ProcName = "GetForegroundWindow"
 	PNGetIconInfo         ProcName = "GetIconInfo"
+	PNGetMessage          ProcName = "GetMessageW"
 	PNGetSystemMetrics    ProcName = "GetSystemMetrics"
+	PNGetWindowLongPtr    ProcName = "GetWindowLongPtrW"
 	PNGetWindowText       ProcName = "GetWindowTextW"
+
+	PNSetWindowLongPtr ProcName = "SetWindowLongPtrW"
 
 	PNMessageBox ProcName = "MessageBoxW"
 
 	PNReleaseDC ProcName = "ReleaseDC"
 
-	PNDrawIcon   ProcName = "DrawIcon"
-	PNDrawIconEx ProcName = "DrawIconEx"
+	PNDispatchMessage ProcName = "DispatchMessageW"
+	PNDrawIcon        ProcName = "DrawIcon"
+	PNDrawIconEx      ProcName = "DrawIconEx"
 
-	PNPostMessage                 ProcName = "PostMessageW"
+	PNPostMessage     ProcName = "PostMessageW"
+	PNPostQuitMessage ProcName = "PostQuitMessage"
+
 	PNSendMessage                 ProcName = "SendMessageW"
 	PNLookupIconIdFromDirectoryEx ProcName = "LookupIconIdFromDirectoryEx"
 	PNCopyImage                   ProcName = "CopyImage"
 
-	PNLoadIcon  ProcName = "LoadIconW"
-	PNLoadImage ProcName = "LoadImageW"
+	PNLoadCursor ProcName = "LoadCursorW"
+	PNLoadIcon   ProcName = "LoadIconW"
+	PNLoadImage  ProcName = "LoadImageW"
+
+	PNRegisterClass ProcName = "RegisterClassW"
+
+	PNTranslateMessage ProcName = "TranslateMessage"
+
+	PNUnregisterClass ProcName = "UnregisterClassW"
+
+	PNShowWindow ProcName = "ShowWindow"
+
+	PNCloseWindow ProcName = "CloseWindow"
+
+	PNDestroyWindow ProcName = "DestroyWindow"
+
+	PNDefWindowProc ProcName = "DefWindowProcW"
 
 	PNCreateIconFromResourceEx ProcName = "CreateIconFromResourceEx"
+	PNCreateWindowEx           ProcName = "CreateWindowExW"
 )
 
 type User32DLL struct {
@@ -58,25 +81,48 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 			PNGetDC,
 			PNGetForegroundWindow,
 			PNGetIconInfo,
+			PNGetMessage,
 			PNGetSystemMetrics,
+			PNGetWindowLongPtr,
 			PNGetWindowText,
+
+			PNSetWindowLongPtr,
 
 			PNMessageBox,
 
 			PNReleaseDC,
 
+			PNDispatchMessage,
 			PNDrawIcon,
 			PNDrawIconEx,
 
 			PNPostMessage,
+			PNPostQuitMessage,
+
 			PNSendMessage,
 			PNLookupIconIdFromDirectoryEx,
 			PNCopyImage,
 
+			PNLoadCursor,
 			PNLoadIcon,
 			PNLoadImage,
 
+			PNRegisterClass,
+
+			PNTranslateMessage,
+
+			PNUnregisterClass,
+
+			PNShowWindow,
+
+			PNCloseWindow,
+
+			PNDestroyWindow,
+
+			PNDefWindowProc,
+
 			PNCreateIconFromResourceEx,
+			PNCreateWindowEx,
 		}
 	}
 	dll := newDll(DNUser32, procList)
@@ -198,6 +244,21 @@ func (dll *User32DLL) GetIconInfo(hIcon HICON, pIconInfo *ICONINFO) bool {
 	return r1 != 0
 }
 
+// GetMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getmessagew
+// If the function retrieves a message other than WM_QUIT, the return value is nonzero.
+// If the function retrieves the WM_QUIT message, the return value is zero
+// If there is an error, the return value is -1, To get extended error information, call GetLastError.
+func (dll *User32DLL) GetMessage(lpMsg *MSG, hWnd HWND, wMsgFilterMin uint32, wMsgFilterMax uint32) (int32, syscall.Errno) {
+	proc := dll.mustProc(PNGetMessage)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(unsafe.Pointer(lpMsg)),
+		uintptr(hWnd),
+		uintptr(wMsgFilterMin),
+		uintptr(wMsgFilterMax),
+	)
+	return int32(r1), errno
+}
+
 // GetSystemMetrics 依據所傳入的參數回傳您所要查詢的數值資料
 // https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getsystemmetrics#parameters
 // If the function fails, the return value is 0
@@ -205,6 +266,17 @@ func (dll *User32DLL) GetSystemMetrics(targetIdx int32) int32 {
 	proc := dll.mustProc(PNGetSystemMetrics)
 	r0, _, _ := syscall.SyscallN(proc.Addr(), uintptr(targetIdx))
 	return int32(r0)
+}
+
+// GetWindowLongPtr https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowlongptrw
+// If the function fails, the return value is zero.
+func (dll *User32DLL) GetWindowLongPtr(hWnd HWND, nIndex int32) (uintptr, syscall.Errno) {
+	proc := dll.mustProc(PNGetWindowLongPtr)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+		uintptr(nIndex),
+	)
+	return r1, errno
 }
 
 // GetWindowText
@@ -225,6 +297,18 @@ func (dll *User32DLL) GetWindowText(hwnd HWND) (string, error) {
 		return "", errno
 	}
 	return syscall.UTF16ToString(textName), nil
+}
+
+// SetWindowLongPtr https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowlongptrw
+// If the function fails, the return value is zero.
+func (dll *User32DLL) SetWindowLongPtr(hWnd HWND, nIndex int32, dwNewLong uintptr) (uintptr, syscall.Errno) {
+	proc := dll.mustProc(PNSetWindowLongPtr)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+		uintptr(nIndex),
+		dwNewLong,
+	)
+	return r1, errno
 }
 
 // MessageBox https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-messageboxw
@@ -249,6 +333,15 @@ func (dll *User32DLL) ReleaseDC(hwnd HWND, hdc HDC) int32 {
 		uintptr(hdc),
 	)
 	return int32(r1)
+}
+
+// DispatchMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-dispatchmessagew
+func (dll *User32DLL) DispatchMessage(lpMsg /*const*/ *MSG) LRESULT {
+	proc := dll.mustProc(PNDispatchMessage)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(unsafe.Pointer(lpMsg)),
+	)
+	return LRESULT(r1)
 }
 
 // DrawIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-drawicon
@@ -297,6 +390,14 @@ func (dll *User32DLL) PostMessage(hwnd HWND, wmMsgID uint32, wParam, lParam uint
 	return r1 != 0, errno
 }
 
+// PostQuitMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-postquitmessage
+func (dll *User32DLL) PostQuitMessage(nExitCode int32) {
+	proc := dll.mustProc(PNPostQuitMessage)
+	_, _, _ = syscall.SyscallN(proc.Addr(),
+		uintptr(nExitCode),
+	)
+}
+
 // SendMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendmessage
 // 注意，他會等待回應，會造成程式當掉的錯覺 https://social.msdn.microsoft.com/Forums/en-US/6900f74f-6ece-47da-88fc-f9c8bcd40206/sendmessage-api-slow?forum=wpf
 func (dll *User32DLL) SendMessage(hwnd HWND, wmMsgID uint32, wParam, lParam uintptr) (r1, r2 uintptr, err error) {
@@ -341,16 +442,41 @@ func (dll *User32DLL) CopyImage(h HANDLE, imgType uint32, cx, cy int32,
 	return HANDLE(r1), errno
 }
 
+// LoadCursor https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadcursorw
+func (dll *User32DLL) LoadCursor(hInstance HINSTANCE, lpCursorName *uint16) (HCURSOR, syscall.Errno) {
+	proc := dll.mustProc(PNLoadCursor)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hInstance),
+		uintptr(unsafe.Pointer(lpCursorName)),
+		0)
+	return HCURSOR(r1), errno
+}
+
+func (dll *User32DLL) MustLoadCursor(hInstance HINSTANCE, lpCursorName *uint16) HCURSOR {
+	r1, errno := dll.LoadCursor(hInstance, lpCursorName)
+	if r1 == 0 {
+		panic(fmt.Sprintf("%s", errno))
+	}
+	return HCURSOR(r1)
+}
+
 // LoadIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadiconw
 // If the function fails, the return value is NULL.
-func (dll *User32DLL) LoadIcon(hInstance HINSTANCE, lpIconName *uint16) (hIcon HICON, err syscall.Errno) {
+func (dll *User32DLL) LoadIcon(hInstance HINSTANCE, lpIconName *uint16) (HICON, syscall.Errno) {
 	proc := dll.mustProc(PNLoadIcon)
 	hwnd, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hInstance),
 		uintptr(unsafe.Pointer(lpIconName)),
 	)
-
 	return HICON(hwnd), errno
+}
+
+func (dll *User32DLL) MustLoadIcon(hInstance HINSTANCE, lpIconName *uint16) HICON {
+	r1, errno := dll.LoadIcon(hInstance, lpIconName)
+	if r1 == 0 {
+		panic(fmt.Sprintf("%s", errno))
+	}
+	return r1
 }
 
 // LoadImage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadimagew
@@ -375,6 +501,80 @@ func (dll *User32DLL) MustLoadImage(hInst HINSTANCE, name string, aType uint32, 
 		panic(fmt.Sprintf("%s", errno))
 	}
 	return handle
+}
+
+// RegisterClass https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerclassw
+// If the function fails, the return value is zero.
+func (dll *User32DLL) RegisterClass(lpWndClass /* const */ *WNDCLASS) (ATOM, syscall.Errno) {
+	proc := dll.mustProc(PNRegisterClass)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(unsafe.Pointer(lpWndClass)),
+	)
+	return ATOM(r1), errno
+}
+
+// TranslateMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-translatemessage
+// If the message is not translated, the return value is zero.
+func (dll *User32DLL) TranslateMessage(lpMsg /*const*/ *MSG) bool {
+	proc := dll.mustProc(PNTranslateMessage)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(unsafe.Pointer(lpMsg)),
+	)
+	return r1 != 0
+}
+
+// UnregisterClass https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-unregisterclassw
+// If the function succeeds, the return value is nonzero.
+func (dll *User32DLL) UnregisterClass(lpClassName string, hInstance HINSTANCE) (bool, syscall.Errno) {
+	proc := dll.mustProc(PNUnregisterClass)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		UintptrFromStr(lpClassName),
+		uintptr(hInstance),
+	)
+	return r1 != 0, errno
+}
+
+// ShowWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showwindow
+func (dll *User32DLL) ShowWindow(hWnd HWND, nCmdShow int32) bool {
+	proc := dll.mustProc(PNShowWindow)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+		uintptr(nCmdShow),
+	)
+	return r1 != 0
+}
+
+// CloseWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-closewindow
+// Minimizes (but does not destroy) the specified window.
+// If the function fails, the return value is zero.
+func (dll *User32DLL) CloseWindow(hWnd HWND) (bool, syscall.Errno) {
+	proc := dll.mustProc(PNCloseWindow)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+	)
+	return r1 != 0, errno
+}
+
+// DestroyWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-destroywindow
+// If the function fails, the return value is zero.
+func (dll *User32DLL) DestroyWindow(hWnd HWND) (bool, syscall.Errno) {
+	proc := dll.mustProc(PNDestroyWindow)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+	)
+	return r1 != 0, errno
+}
+
+// DefWindowProc https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-defwindowprocw
+func (dll *User32DLL) DefWindowProc(hWnd HWND, msg UINT, wParam WPARAM, lParam LPARAM) LRESULT {
+	proc := dll.mustProc(PNDefWindowProc)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+		uintptr(msg),
+		uintptr(wParam),
+		uintptr(lParam),
+	)
+	return LRESULT(r1)
 }
 
 // CreateIconFromResourceEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-createiconfromresourceex
@@ -406,4 +606,35 @@ func (dll *User32DLL) CreateIconFromResourceEx(
 		uintptr(flags),
 	)
 	return HICON(r1)
+}
+
+// CreateWindowEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-createwindowexw
+// If the function succeeds, the return value is a handle to the new window.
+// If the function fails, the return value is NULL.
+func (dll *User32DLL) CreateWindowEx(
+	dwExStyle DWORD,
+	lpClassName string, lpWindowName string,
+	dwStyle DWORD,
+	x int32, y int32, nWidth int32, nHeight int32,
+	hWndParent HWND,
+	hMenu HMENU,
+	hInstance HINSTANCE, // A handle to the instance of the module to be associated with the window.
+	lpParam uintptr,
+) (HWND, syscall.Errno) {
+	proc := dll.mustProc(PNCreateWindowEx)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(dwExStyle),
+		UintptrFromStr(lpClassName),
+		UintptrFromStr(lpWindowName),
+		uintptr(dwStyle),
+		uintptr(x),
+		uintptr(y),
+		uintptr(nWidth),
+		uintptr(nHeight),
+		uintptr(hWndParent),
+		uintptr(hMenu),
+		uintptr(hInstance),
+		uintptr(lpParam),
+	)
+	return HWND(r1), errno
 }

@@ -635,9 +635,9 @@ const (
 	WS_TILED            = 0x00000000
 	WS_ICONIC           = 0x20000000
 	WS_SIZEBOX          = 0x00040000
-	WS_OVERLAPPEDWINDOW = 0x00000000 | 0x00C00000 | 0x00080000 | 0x00040000 | 0x00020000 | 0x00010000
-	WS_POPUPWINDOW      = 0x80000000 | 0x00800000 | 0x00080000
-	WS_CHILDWINDOW      = 0x40000000
+	WS_OVERLAPPEDWINDOW = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX
+	WS_POPUPWINDOW      = WS_POPUP | WS_BORDER | WS_SYSMENU
+	WS_CHILDWINDOW      = WS_CHILD
 )
 
 // Extended window style constants
@@ -661,8 +661,8 @@ const (
 	WS_EX_CONTROLPARENT    = 0x00010000
 	WS_EX_STATICEDGE       = 0x00020000
 	WS_EX_APPWINDOW        = 0x00040000
-	WS_EX_OVERLAPPEDWINDOW = 0x00000100 | 0x00000200
-	WS_EX_PALETTEWINDOW    = 0x00000100 | 0x00000080 | 0x00000008
+	WS_EX_OVERLAPPEDWINDOW = WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE
+	WS_EX_PALETTEWINDOW    = WS_EX_WINDOWEDGE | WS_EX_TOOLWINDOW | WS_EX_TOPMOST
 	WS_EX_LAYERED          = 0x00080000
 	WS_EX_NOINHERITLAYOUT  = 0x00100000
 	WS_EX_LAYOUTRTL        = 0x00400000
@@ -776,7 +776,7 @@ const (
 	WM_MOVING                 = 534
 	WM_NCACTIVATE             = 134
 	WM_NCCALCSIZE             = 131
-	WM_NCCREATE               = 129
+	WM_NCCREATE               = 129 // The WM_NCCREATE message is sent prior to the WM_CREATE message when a window is first created.
 	WM_NCDESTROY              = 130
 	WM_NCHITTEST              = 132
 	WM_NCLBUTTONDBLCLK        = 163
@@ -1530,23 +1530,38 @@ type NMHDR struct {
 	Code     uint32
 }
 
+// CREATESTRUCT https://learn.microsoft.com/en/windows/win32/api/winuser/ns-winuser-createstructw
 type CREATESTRUCT struct {
-	CreateParams    uintptr
-	Instance        HINSTANCE
-	Menu            HMENU
-	Parent          HWND
-	Cy              int32
-	Cx              int32
-	Y               int32
-	X               int32
-	Style           int32
-	Name, ClassName uintptr
-	ExStyle         uint32
+	LpCreateParams          LPVOID
+	HInstance               HINSTANCE
+	HMenu                   HMENU
+	HParent                 HWND
+	Cy                      int32
+	Cx                      int32
+	Y                       int32
+	X                       int32
+	Style                   int32
+	LpszName, LpszClassName uintptr
+	DxExStyle               uint32
 }
 
 type CHANGEFILTERSTRUCT struct {
 	size      uint32
 	extStatus uint32
+}
+
+// WNDCLASS https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-wndclassa
+type WNDCLASS struct {
+	Style         uint32
+	LpfnWndProc   uintptr // WNDPROC
+	CbClsExtra    int32
+	CbWndExtra    int32
+	HInstance     HINSTANCE
+	HIcon         HICON
+	HCursor       HCURSOR
+	HbrBackground HBRUSH
+	LpszMenuName  *uint16 // LPCWSTR
+	LpszClassName *uint16 // LPCWSTR
 }
 
 type WNDCLASSEX struct {

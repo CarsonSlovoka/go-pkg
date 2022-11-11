@@ -453,3 +453,198 @@ func ExampleUser32DLL_LoadImage() {
 
 	// Output:
 }
+
+// https://learn.microsoft.com/en-us/windows/win32/learnwin32/creating-a-window
+// https://learn.microsoft.com/en-us/windows/win32/winmsg/using-messages-and-message-queues#creating-a-message-loop
+func ExampleUser32DLL_CreateWindowEx() {
+	user32dll := w32.NewUser32DLL()
+	kernel32dll := w32.NewKernel32DLL()
+
+	hInstance := w32.HINSTANCE(kernel32dll.GetModuleHandle(""))
+	// hwndParent := user32dll.FindWindow("Notepad", "") // 可以把窗口附加到其他的應用程式之下
+	hwndParent := w32.HWND(0)
+
+	// 創建測試用結構，非必要
+
+	// 此結構主要用來測試SetWindowLongPtr, GetWindowLongPtr所設計，可以自由設計
+	type Response struct {
+		// Msg    string // 不建議對SetWindowLongPtr的資料用string，最好固定大小，不能可能會遇到memory的錯誤
+		Msg    [256]byte
+		MsgLen uint16
+		Status uint32
+	}
+
+	// 用來測試CREATESTRUCT
+	type AppData struct {
+		title string // 這個沒有像GetWindowLongPtr遇到memory溢位的錯誤，不過如果要透過unsafe去轉換，最好都限定長度，不然轉換雖然可以過，但是在調用時，長度可能會抓的很大而導致出錯。
+		id    uint32
+	}
+
+	// 通知外層主程式用
+	ch := make(chan w32.HWND)
+
+	// 新建一個執行緒來專門處理視窗{建立、消息循環}
+	go func(channel chan<- w32.HWND) {
+		// define ProcFunc // https://learn.microsoft.com/en-us/windows/win32/learnwin32/writing-the-window-procedure
+		wndProcFuncPtr := syscall.NewCallback(w32.WNDPROC(func(hwnd w32.HWND, uMsg w32.UINT, wParam w32.WPARAM, lParam w32.LPARAM) w32.LRESULT {
+			// log.Printf("uMsg:%d\n", uMsg)
+			switch uMsg {
+			case w32.WM_GETMINMAXINFO: // 首次使用CreateWindowEx會先觸發此msg // https://learn.microsoft.com/en-us/windows/win32/winmsg/wm-getminmaxinfo
+				// wParam not used
+				log.Println("WM_GETMINMAXINFO")
+				minmaxInfo := *(*w32.MINMAXINFO)(unsafe.Pointer(lParam))
+				log.Printf("%#v", minmaxInfo)
+			case w32.WM_NCCREATE: // 首次建立視窗會觸發此MSG
+				log.Println("WM_NCCREATE")
+				// https://learn.microsoft.com/en-us/windows/win32/winmsg/wm-nccreate
+				fmt.Println("WM_NCCREATE")
+				// 對於WM_NCCREATE的回傳值: 「true會繼續創建; False(0)將會導致CreateWindowEx得到的hwnd為0」。可以倚靠DefWindowProc來自動幫我們計算回傳值
+			case w32.WM_CREATE: // 觸發完WM_NCCREATE會再跑WM_CREATE
+				log.Println("WM_CREATE")
+				pCreate := *((*w32.CREATESTRUCT)(unsafe.Pointer(lParam))) // 注意您呼叫的函數如果是用W就對應CREATESTRUCTW 用A則對應CREATESTRUCTA
+				apData := *((*AppData)(unsafe.Pointer(pCreate.LpCreateParams)))
+				fmt.Println(apData.title)
+				fmt.Println(apData.id)
+				msg := "Msg from WM_CREATE"
+				response := &Response{Status: 200, MsgLen: uint16(uintptr(len(msg)))}
+				copy(response.Msg[:], msg)
+				// 不建議用SetWindowLongPtr，有時候放進去的內容會不如預期，推測可能與go回收機制有關
+				_, _ = user32dll.SetWindowLongPtr(hwnd, w32.GWLP_USERDATA, uintptr(unsafe.Pointer(response)))
+			case w32.WM_CLOSE: // Pressed Close Button (X) / Alt+F4 / "Close" in context menu // 在這之後它會調用WM_DESTROY
+				log.Println("WM_CLOSE")
+				// https://learn.microsoft.com/en-us/windows/win32/winmsg/wm-close
+				if ok, errno := user32dll.DestroyWindow(hwnd); !ok {
+					fmt.Printf("[DestroyWindow] %s\n", errno)
+				}
+			case w32.WM_DESTROY:
+				log.Println("WM_DESTROY")
+				user32dll.PostQuitMessage(0)
+				return 0 // 要有返回不能再靠DefWindowProc，不然GetMessage不會結束
+			case w32.WM_NCDESTROY: // WM_QUIT會觸發此MSG
+				log.Println("WM_NCDESTROY")
+				return 0
+			case w32.WM_SHOWWINDOW:
+				log.Println("WM_SHOWWINDOW")
+			case w32.WM_MOVE:
+			case w32.WM_ACTIVATE:
+				log.Println("WM_NCDESTROY")
+				// https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-activate
+			case w32.WM_SIZE:
+				// https://learn.microsoft.com/en-us/windows/win32/winmsg/wm-size
+			}
+			return user32dll.DefWindowProc(hwnd, uMsg, wParam, lParam) // default window proc
+		}))
+
+		const className = "myClassName"
+		pUTF16ClassName, _ := syscall.UTF16PtrFromString(className)
+		wc := w32.WNDCLASS{
+			Style:         0,
+			LpfnWndProc:   wndProcFuncPtr, // 每次有消息，就會送通知到此函數
+			CbClsExtra:    0,
+			CbWndExtra:    0,
+			HInstance:     hInstance,
+			HIcon:         user32dll.MustLoadIcon(0, w32.MakeIntResource(w32.IDI_WINLOGO)),
+			HCursor:       user32dll.MustLoadCursor(0, w32.MakeIntResource(w32.IDC_ARROW)),
+			HbrBackground: 0,
+			LpszMenuName:  nil,
+			LpszClassName: pUTF16ClassName,
+		}
+
+		if atom, errno := user32dll.RegisterClass(&wc); atom == 0 {
+			fmt.Printf("%s", errno)
+			return
+		}
+
+		var (
+			hwnd  w32.HWND
+			errno syscall.Errno
+			ok    bool
+		)
+
+		defer func() {
+			if ok, errno = user32dll.UnregisterClass(className, hInstance); !ok {
+				fmt.Printf("[UnregisterClass] %s", errno)
+			}
+		}()
+
+		fmt.Println("CreateWindowEx")
+		if hwnd, errno = user32dll.CreateWindowEx(0,
+			className,
+			"myWindowName", // 視窗左上角的標題名稱
+			w32.WS_OVERLAPPEDWINDOW,
+
+			// Size and position
+			w32.CW_USEDEFAULT, w32.CW_USEDEFAULT, w32.CW_USEDEFAULT, w32.CW_USEDEFAULT,
+
+			hwndParent, // 0, // Parent window
+			0,          // Menu
+			hInstance,
+			uintptr(unsafe.Pointer(&AppData{"Demo-CreateWindowEx", 6})), // Additional application data // 可以不給(設定為0). 如果有給，這個資料會在WM_CREATE的時候傳入給lParam
+		); hwnd == 0 {
+			fmt.Printf("%s", errno)
+			return
+		} else {
+			channel <- hwnd
+		}
+
+		// 消息循環
+		var msg w32.MSG
+		for {
+			if status, _ := user32dll.GetMessage(&msg, 0, 0, 0); status <= 0 {
+				fmt.Println("===quit the window===")
+				channel <- 0
+				break
+			}
+			user32dll.TranslateMessage(&msg)
+			user32dll.DispatchMessage(&msg)
+		}
+	}(ch)
+
+	// 如果視窗成功被建立會傳送該hwnd
+	hwnd := <-ch
+
+	// 如果視窗建立失敗，會得到空hwnd，不做其他處理直接返回
+	if hwnd == 0 {
+		return
+	}
+
+	// 以下為模擬外層程式，向視窗發送訊息
+	{
+		fmt.Println("ShowWindow")
+		user32dll.ShowWindow(hwnd, w32.SW_MAXIMIZE)
+
+		fmt.Println("CloseWindow")                         // 僅是縮小視窗
+		if ok, errno := user32dll.CloseWindow(hwnd); !ok { // close只是把它縮小並沒有真正關閉
+			fmt.Printf("[CloseWindow] %s\n", errno)
+		}
+	}
+
+	// 測試來自於視窗所寫入的使用者資料
+	// 這種用法是取記憶體中的資訊，所以不管哪一個視窗還是程式，只要知道確切的hwnd還有類型(GWLP_USERDATA, ...)，就可以強制轉換來取得資料(前提是該記憶體位置已經有被寫入該資料，也就是一定要有人用SetWindowLongPtr先放資料進去)
+	if userDataPtr, _ := user32dll.GetWindowLongPtr(hwnd, w32.GWLP_USERDATA); userDataPtr != 0 {
+		res := *((*Response)(unsafe.Pointer(userDataPtr)))
+		if uintptr(res.MsgLen) <= unsafe.Sizeof(res.Msg) { // set資料的時候可能會發生問題，導致此長度已經不正確，對於不正確的結果就不顯示
+			log.Printf("%s\n", string(res.Msg[:res.MsgLen])) // Msg from WM_CREATE
+		}
+		log.Println(res.Status) // 200
+	}
+
+	fmt.Println("DestroyWindow")
+	// user32dll.DestroyWindow(hwnd) // 注意！ DestroyWindow不要在外面呼叫，需要在callback之中運行, 不然可能會得到錯誤: Access is denied.
+	_, _, _ = user32dll.SendMessage(hwnd, w32.WM_DESTROY, 0, 0) // 如果您想要在視窗上進行操作，可以把這列註解，運行的時候再去手動關閉視窗即可結束
+
+	<-ch // wait window close
+
+	fmt.Print("bye")
+
+	// Output:
+	// CreateWindowEx
+	// WM_NCCREATE
+	// Demo-CreateWindowEx
+	// 6
+	// ShowWindow
+	// CloseWindow
+	// DestroyWindow
+	// ===quit the window===
+	// bye
+}
