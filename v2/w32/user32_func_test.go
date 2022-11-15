@@ -454,6 +454,198 @@ func ExampleUser32DLL_LoadImage() {
 	// Output:
 }
 
+// https://stackoverflow.com/a/68845977/9935654
+func ExampleUser32DLL_CreatePopupMenu() {
+	user32dll := w32.NewUser32DLL()
+	gdi32dll := w32.NewGdi32DLL(w32.PNDeleteObject)
+	kernel32dll := w32.NewKernel32DLL(w32.PNGetModuleHandle)
+
+	var (
+		hIcon w32.HICON
+		iInfo w32.ICONINFO
+	)
+	{
+		hIcon = w32.HICON(user32dll.MustLoadImage(
+			0,
+			"testdata/img/golang.ico",
+			w32.IMAGE_ICON,
+			0, 0,
+			w32.LR_LOADFROMFILE|w32.LR_DEFAULTSIZE|w32.LR_SHARED,
+		))
+
+		if !user32dll.GetIconInfo(hIcon, &iInfo) {
+			return
+		}
+
+		// Remember to release when you are not using the HBITMAP.
+		defer func() {
+			_ = gdi32dll.DeleteObject(w32.HGDIOBJ(iInfo.HbmColor))
+			_ = gdi32dll.DeleteObject(w32.HGDIOBJ(iInfo.HbmMask))
+		}()
+	}
+
+	// Create Menu
+	var hMenu w32.HMENU
+	{
+		hMenu = user32dll.CreatePopupMenu()
+		_, _ = user32dll.AppendMenu(hMenu, w32.MF_STRING, 1023, "Open")
+
+		// 設定含有icon的Menu
+		// _, _ = user32dll.AppendMenu(hMenu, w32.MF_STRING, 1024, "Hello") // 可以先指定string，再用SetMenuItemInfo添加icon或者直接在SetMenuItemInfo添加string或icon都可以
+		var menuItemInfo w32.MENUITEMINFO
+		pMsg, _ := syscall.UTF16PtrFromString("Hello")
+		menuItemInfo = w32.MENUITEMINFO{
+			CbSize: uint32(unsafe.Sizeof(menuItemInfo)),
+
+			// FMask是一個開關，當有設定這些mask，某些欄位設定數值才會有意義
+			FMask: w32.MIIM_BITMAP | // sets the hbmpItem member.
+				w32.MIIM_ID | // sets the wID member.
+				w32.MIIM_STRING, // sets the dwTypeData member.
+
+			WID:        1024,
+			DwTypeData: pMsg,
+			HbmpItem:   iInfo.HbmColor,
+		}
+		_, _ = user32dll.SetMenuItemInfo(hMenu, 1024, false, &menuItemInfo)
+
+		_, _ = user32dll.AppendMenu(hMenu, w32.MF_STRING, 1025, "Exit program")
+
+		defer func() {
+			if ok, errno := user32dll.DestroyMenu(hMenu); !ok {
+				log.Printf("%s\n", errno)
+			}
+		}()
+	}
+
+	ch := make(chan w32.HWND)
+	go func(chanWin chan<- w32.HWND) {
+		// define WNDPROC
+		wndProcFuncPtr := syscall.NewCallback(w32.WNDPROC(func(hwnd w32.HWND, uMsg w32.UINT, wParam w32.WPARAM, lParam w32.LPARAM) w32.LRESULT {
+			switch uMsg {
+			case w32.WM_DESTROY:
+				log.Println("WM_DESTROY")
+				user32dll.PostQuitMessage(0)
+				return 0
+			case w32.WM_RBUTTONDOWN:
+				log.Println("WM_RBUTTONDOWN")
+				// Show the menu
+				// hwnd = user32dll.GetForegroundWindow() // 如果當前所在的窗口非自己所建，在TrackPopupMenu可能會遇到The parameter is incorrect.的問題
+				user32dll.SetForegroundWindow(hwnd)
+				var pos w32.POINT
+				if ok, errno := user32dll.GetCursorPos(&pos); !ok {
+					fmt.Printf("GetCursorPos %s", errno)
+				}
+				if wParam != 123 {
+					if result, errno := user32dll.TrackPopupMenu(hMenu, w32.TPM_LEFTALIGN, pos.X, pos.Y, 0, hwnd, nil); result == 0 {
+						// 如果出現The parameter is incorrect. 問題可能在於hwnd本身，如果該hwnd是您所建立的視窗就一定沒有問題，但若不是就可能會導致該問題發生，建議GetForegroundWindow要慎用
+						log.Printf("Error TrackPopupMenu %s\n", errno)
+					}
+				} else {
+					cmd, _ := user32dll.TrackPopupMenu(hMenu, w32.TPM_LEFTALIGN|w32.TPM_RETURNCMD, pos.X, pos.Y, 0, hwnd, nil)
+					if cmd > 0 {
+						log.Println("TrackPopupMenu with TPM_RETURNCMD")
+						_, _, _ = user32dll.SendMessage(hwnd, w32.WM_COMMAND, uintptr(cmd), 0)
+					}
+				}
+			case w32.WM_COMMAND:
+				id := w32.LOWORD(uint32(wParam))
+				switch id {
+				case 1023:
+					log.Println("open")
+				case 1024:
+					log.Println("hello")
+				case 1025:
+					log.Println("1025")
+					_, _ = user32dll.PostMessage(hwnd, w32.WM_DESTROY, 0, 0)
+				}
+			}
+			return user32dll.DefWindowProc(hwnd, uMsg, wParam, lParam)
+		}))
+
+		const (
+			wndClassName  = "classCreatePopupMenu"
+			wndWindowName = "windowCreatePopupMenu"
+		)
+
+		// Register
+		pUTF16ClassName, _ := syscall.UTF16PtrFromString(wndClassName)
+		hInstance := w32.HINSTANCE(kernel32dll.GetModuleHandle(""))
+
+		if atom, errno := user32dll.RegisterClass(&w32.WNDCLASS{
+			Style:         w32.CS_HREDRAW | w32.CS_HREDRAW,
+			HbrBackground: w32.COLOR_WINDOW,
+			LpfnWndProc:   wndProcFuncPtr,
+			HInstance:     hInstance,
+			HIcon:         hIcon,
+			LpszClassName: pUTF16ClassName,
+		}); atom == 0 {
+			fmt.Printf("%s", errno)
+			chanWin <- 0
+			return
+		}
+
+		// Create window
+		hwnd, errno := user32dll.CreateWindowEx(0,
+			wndClassName,
+			wndWindowName,
+			w32.WS_OVERLAPPEDWINDOW,
+
+			// Size and position
+			w32.CW_USEDEFAULT, w32.CW_USEDEFAULT, w32.CW_USEDEFAULT, w32.CW_USEDEFAULT,
+
+			0, // Parent window
+			0, // Menu
+			hInstance,
+			0, // Additional application data
+		)
+
+		if hwnd == 0 {
+			fmt.Printf("%s\n", errno)
+			if ok, errno2 := user32dll.UnregisterClass(wndClassName, hInstance); !ok {
+				fmt.Printf("Error UnregisterClass: %s", errno2)
+			}
+			chanWin <- hwnd
+			return
+		}
+
+		// Make sure it can be unregistered when exiting.
+		defer func() {
+			if ok, errno2 := user32dll.UnregisterClass(wndClassName, hInstance); !ok {
+				log.Printf("Error UnregisterClass: %s", errno2)
+			} else {
+				log.Println("OK UnregisterClass")
+			}
+
+			close(chanWin)
+		}()
+
+		chanWin <- hwnd
+
+		var msg w32.MSG
+		for {
+			if status, _ := user32dll.GetMessage(&msg, 0, 0, 0); status <= 0 {
+				break
+			}
+			user32dll.TranslateMessage(&msg)
+			user32dll.DispatchMessage(&msg)
+		}
+	}(ch)
+
+	hwnd := <-ch
+	user32dll.ShowWindow(hwnd, w32.SW_SHOW) // 如果沒有顯示，對於不使用TPM_RETURNCMD的選單，不會觸發WM_COMMAND，也就是雖然選單會出來，但選中的項目沒有任何意義，但對有設計TPM_RETURNCMD則不影響，選中的行為仍有效
+
+	_, _ = user32dll.PostMessage(hwnd, w32.WM_RBUTTONDOWN, 0, 0)   // 選單測試
+	_, _ = user32dll.PostMessage(hwnd, w32.WM_RBUTTONDOWN, 123, 0) // with TPM_RETURNCMD
+
+	// 🕹️ 如果您要手動嘗試，請把以下的SendMessage.WM_CLOSE註解掉，避免自動關閉
+	_, _, _ = user32dll.SendMessage(hwnd, w32.WM_CLOSE, 0, 0)
+
+	// wait user close the window
+	<-ch
+
+	// Output:
+}
+
 // https://learn.microsoft.com/en-us/windows/win32/learnwin32/creating-a-window
 // https://learn.microsoft.com/en-us/windows/win32/winmsg/using-messages-and-message-queues#creating-a-message-loop
 func ExampleUser32DLL_CreateWindowEx() {

@@ -62,7 +62,11 @@ type (
 	LPSTR   *CHAR
 	LPCSTR  *byte
 	LPCWSTR *uint16
+	LPWSTR  *uint16
 )
+
+type HOOKPROC func(code int32, wParam WPARAM, lParam LPARAM) LRESULT
+type HHOOK HANDLE
 
 /* 這些的定義還是有特別的意思在，如果都把它們混為一談，不太恰當
 type Handle interface {

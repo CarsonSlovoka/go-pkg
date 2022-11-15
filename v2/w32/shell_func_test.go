@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"syscall"
 	"testing"
+	"time"
 	"unsafe"
 )
 
@@ -144,13 +145,17 @@ func ExampleShellDLL_ShellNotifyIcon() {
 	user32dll := w32.NewUser32DLL()
 	shell32dll := w32.NewShellDLL()
 	kernel32dll := w32.NewKernel32DLL(w32.PNGetModuleHandle)
+	gdi32dll := w32.NewGdi32DLL(w32.PNGetObject, w32.PNDeleteObject)
 
 	// prepare test data
-	var myHICON w32.HICON
+	var (
+		myHICON w32.HICON
+		iInfo   w32.ICONINFO
+	)
+
 	{
 		// myHICON = shell32dll.ExtractIcon(0, "notepad", 0) // 不是隨便載入一個HICON都可以被順利呈現
 		// myHICON, _ := user32dll.LoadIcon(0, w32.MakeIntResource(w32.IDI_QUESTION)) // <- 使用這個系統圖標測試是可行的
-
 		myHICON = w32.HICON(user32dll.MustLoadImage( // returns a HANDLE so we have to cast to HICON
 			0,                         // hInstance must be NULL when loading from a file
 			"testdata/img/golang.ico", // the icon file name
@@ -163,6 +168,23 @@ func ExampleShellDLL_ShellNotifyIcon() {
 				w32.LR_DEFAULTSIZE| // default metrics based on the type (IMAGE_ICON, 32x32)
 				w32.LR_SHARED, // let the system release the handle when it's no longer used
 		))
+
+		// get IconInfo, 為了SetMenuItemInfo須提供HBITMAP才可以設置成功
+		{
+			if !user32dll.GetIconInfo(myHICON, &iInfo) {
+				return
+			}
+
+			// Remember to release when you are not using the HBITMAP.
+			defer func() {
+				if !gdi32dll.DeleteObject(w32.HGDIOBJ(iInfo.HbmColor)) {
+					fmt.Println("error DeleteObject HbmColor")
+				}
+				if !gdi32dll.DeleteObject(w32.HGDIOBJ(iInfo.HbmMask)) {
+					fmt.Println("error DeleteObject HbmMask")
+				}
+			}()
+		}
 	}
 
 	// variable used for createWindow
@@ -178,24 +200,26 @@ func ExampleShellDLL_ShellNotifyIcon() {
 		// 定義訊息處理函數
 		wndProcFuncPtr := syscall.NewCallback(w32.WNDPROC(func(hwnd w32.HWND, uMsg w32.UINT, wParam w32.WPARAM, lParam w32.LPARAM) w32.LRESULT {
 			switch uMsg {
+			case w32.WM_CLOSE:
+				if wParam != 123 {
+					log.Println("縮小視窗，不真的結束")
+					user32dll.ShowWindow(hwnd, w32.SW_HIDE)
+					return 0
+				}
 			case w32.WM_DESTROY: // 這個訊息要寫，不能倚靠DefWindowProc，否則會關閉不掉
 				log.Println("WM_DESTROY")
 				user32dll.PostQuitMessage(0)
 				return 0
-			case w32.WM_CONTEXTMENU:
-				log.Println("WM_CONTEXTMENU")
-			case w32.WM_RBUTTONDOWN:
-				log.Println("WM_RBUTTONDOWN")
-			case w32.WM_LBUTTONDBLCLK:
-				user32dll.ShowWindow(hwnd, w32.SW_MAXIMIZE)
-				log.Println("WM_LBUTTONDBLCLK")
 			case WMNotifyIconMsg:
 				switch lParam {
 				case w32.WM_LBUTTONUP:
-					fmt.Println("WMNotifyIconMsg->WM_LBUTTONUP")
+					log.Println("WMNotifyIconMsg->WM_LBUTTONUP")
+					if wParam == 123 {
+						fmt.Println("WMNotifyIconMsg->WM_LBUTTONUP")
+					}
 				case w32.WM_LBUTTONDBLCLK:
 					log.Println("WMNotifyIconMsg->WM_LBUTTONDBLCLK")
-					user32dll.ShowWindow(hwnd, w32.SW_MAXIMIZE)
+					user32dll.ShowWindow(hwnd, w32.SW_SHOWNORMAL) // SW_MAXIMIZE
 				case w32.WM_RBUTTONDBLCLK:
 					if ok, errno := user32dll.DestroyWindow(hwnd); !ok {
 						log.Printf("%s", errno)
@@ -203,18 +227,44 @@ func ExampleShellDLL_ShellNotifyIcon() {
 					}
 				case w32.WM_RBUTTONUP:
 					log.Println("WMNotifyIconMsg->WM_RBUTTONUP")
-					/*
-						menu := user32dll.CreatePopupMenu()
-						user32dll.AppendMenu(menu, w32.MF_STRING, 1023, "Display Dialog")
-						user32dll.AppendMenu(menu, w32.MF_STRING, 1024, "Say Hello")
-						user32dll.AppendMenu(menu, w32.MF_STRING, 1025, "Exit program")
-						pos := user32dll.GetCursorPos()
-						user32dll.SetForegroundWindow(hwnd)
-						user32dll.TrackPopupMenu(menu, w32.TPM_LEFTALIGN, pos[0], pos[1], 0, hwnd, 0)
-						user32dll.PostMessage(hwnd, win32con.WM_NULL, 0, 0)
-					*/
+					hMenu := user32dll.CreatePopupMenu()
+					_, _ = user32dll.AppendMenu(hMenu, w32.MF_STRING, 1023, "Display Dialog")
+					_, _ = user32dll.AppendMenu(hMenu, w32.MF_STRING, 1024, "Say Hello 哈囉！")
+					var menuItemInfo w32.MENUITEMINFO
+					menuItemInfo.CbSize = uint32(unsafe.Sizeof(menuItemInfo))
+					menuItemInfo.FMask = w32.MIIM_BITMAP
+					menuItemInfo.HbmpItem = iInfo.HbmColor
+					_, _ = user32dll.SetMenuItemInfo(hMenu, 1024, false, &menuItemInfo)
+					_, _ = user32dll.AppendMenu(hMenu, w32.MF_STRING, 1025, "Exit program")
+
+					defer func() {
+						// gdi32dll.DeleteObject(w32.HGDIOBJ(menuItemInfo.HbmpItem)) // 不需要把這個HBITMAP銷毀，否則下一次在新建就看不到該HICON了
+						if ok, errno := user32dll.DestroyMenu(hMenu); !ok { // 因為每次右鍵都會新增一個HMENU，所以不用之後要在銷毀，避免一直累積
+							log.Printf("%s\n", errno)
+						}
+					}()
+
+					var pos w32.POINT
+					if ok, errno := user32dll.GetCursorPos(&pos); !ok {
+						fmt.Printf("%s", errno)
+						return 1
+					}
+					user32dll.SetForegroundWindow(hwnd)
+					_, _ = user32dll.TrackPopupMenu(hMenu, w32.TPM_LEFTALIGN, pos.X, pos.Y, 0, hwnd, nil)
+					// _, _ = user32dll.PostMessage(hwnd, w32.WM_NULL, 0, 0)
 				}
 				return 1 // 讓消息循環繼續處理其他訊息(>0即可)
+			case w32.WM_COMMAND:
+				id := w32.LOWORD(uint32(wParam))
+				switch id {
+				case 1023:
+					_, _ = user32dll.PostMessage(hwnd, WMNotifyIconMsg, 0, w32.WM_LBUTTONDBLCLK)
+				case 1024:
+					log.Println("hello")
+				case 1025:
+					log.Println("1025")
+					_, _ = user32dll.PostMessage(hwnd, w32.WM_DESTROY, 0, 0)
+				}
 			}
 			return user32dll.DefWindowProc(hwnd, uMsg, wParam, lParam)
 		}))
@@ -312,7 +362,7 @@ func ExampleShellDLL_ShellNotifyIcon() {
 		defer func() {
 			// 刪除認的是NIF_GUID，所以只要NOTIFYICONDATA中的GuidItem相同，就會被刪掉
 			if !shell32dll.ShellNotifyIcon(w32.NIM_DELETE, &notifyIconDataCopy) {
-				log.Fatalf("NIM_DELETE ERROR")
+				log.Println("NIM_DELETE ERROR")
 			}
 		}()
 	}
@@ -323,11 +373,11 @@ func ExampleShellDLL_ShellNotifyIcon() {
 
 	if !shell32dll.ShellNotifyIcon(w32.NIM_ADD, &notifyIconData) {
 		// 關閉所建立的背景視窗
-		_, _, _ = user32dll.SendMessage(hwndTarget, w32.WM_CLOSE, 0, 0)
+		_, _, _ = user32dll.SendMessage(hwndTarget, w32.WM_CLOSE, 123, 0)
 
 		// 等待背景視窗確實被關閉
 		<-chanWin
-		log.Fatalf("NIM_ADD ERROR")
+		log.Println("NIM_ADD ERROR")
 		return
 	}
 
@@ -379,11 +429,16 @@ func ExampleShellDLL_ShellNotifyIcon() {
 	}
 
 	// 傳送自定義的訊息到notifyIcon上
-	_, _, _ = user32dll.SendMessage(hwndTarget, WMNotifyIconMsg, 0, w32.WM_LBUTTONUP)
+	{
+		_, _ = user32dll.PostMessage(hwndTarget, WMNotifyIconMsg, 123, w32.WM_LBUTTONUP)
+		_, _ = user32dll.PostMessage(hwndTarget, WMNotifyIconMsg, 0, w32.WM_RBUTTONUP) // 選單測試
+
+		time.Sleep(time.Second) // 我們想要自動結束，又想測試選單功能，所以採用PostMessage，否則使用SendMessage必須要選擇選單中的內容(或者取消)才可再往下進行。而如果PostMessage緊接著就關閉視窗，可能也會導致選單訊息還在處理之前就被關閉了，所以才會等待1秒鐘
+	}
 
 	// 🕹️ 如果您要手動嘗試，請把以下的SendMessage.WM_CLOSE註解掉，手動雙擊右鍵(兩下)即可結束
 	// 自動發送關閉訊息, 作為github.action的測試，我們不做其他UI控件的處理，僅確認ShellNotifyIcon有被創建成功即可
-	_, _, _ = user32dll.SendMessage(hwndTarget, w32.WM_CLOSE, 0, 0) // 不要用WM_DESTROY 不然UnregisterClass會因為視窗還存在而跑出錯誤Class still has open windows.
+	_, _, _ = user32dll.SendMessage(hwndTarget, w32.WM_CLOSE, 123 /* 自定義內容 */, 0) // 不要用WM_DESTROY 不然UnregisterClass會因為視窗還存在而跑出錯誤Class still has open windows.
 
 	<-chanWin
 	// Output:

@@ -9,13 +9,17 @@ import (
 )
 
 const (
+	PNAppendMenu ProcName = "AppendMenuW"
+
 	PNCloseWindow ProcName = "CloseWindow"
 
 	PNCopyImage ProcName = "CopyImage"
 
 	PNCreateIconFromResourceEx ProcName = "CreateIconFromResourceEx"
+	PNCreatePopupMenu          ProcName = "CreatePopupMenu"
 	PNCreateWindowEx           ProcName = "CreateWindowExW"
 
+	PNDestroyMenu   ProcName = "DestroyMenu"
 	PNDestroyWindow ProcName = "DestroyWindow"
 
 	PNDefWindowProc ProcName = "DefWindowProcW"
@@ -31,6 +35,7 @@ const (
 	PNGetActiveWindow     ProcName = "GetActiveWindow"
 	PNGetClassName        ProcName = "GetClassNameW"
 	PNGetClientRect       ProcName = "GetClientRect"
+	PNGetCursorPos        ProcName = "GetCursorPos"
 	PNGetDC               ProcName = "GetDC"
 	PNGetForegroundWindow ProcName = "GetForegroundWindow"
 	PNGetIconInfo         ProcName = "GetIconInfo"
@@ -54,12 +59,15 @@ const (
 
 	PNReleaseDC ProcName = "ReleaseDC"
 
-	PNSetWindowLongPtr ProcName = "SetWindowLongPtrW"
+	PNSetForegroundWindow ProcName = "SetForegroundWindow"
+	PNSetMenuItemInfo     ProcName = "SetMenuItemInfoW"
+	PNSetWindowLongPtr    ProcName = "SetWindowLongPtrW"
 
 	PNSendMessage ProcName = "SendMessageW"
 
 	PNShowWindow ProcName = "ShowWindow"
 
+	PNTrackPopupMenu   ProcName = "TrackPopupMenu"
 	PNTranslateMessage ProcName = "TranslateMessage"
 
 	PNUnregisterClass ProcName = "UnregisterClassW"
@@ -75,13 +83,17 @@ type User32DLL struct {
 func NewUser32DLL(procList ...ProcName) *User32DLL {
 	if len(procList) == 0 {
 		procList = []ProcName{
+			PNAppendMenu,
+
 			PNCloseWindow,
 
 			PNCopyImage,
 
 			PNCreateIconFromResourceEx,
+			PNCreatePopupMenu,
 			PNCreateWindowEx,
 
+			PNDestroyMenu,
 			PNDestroyWindow,
 
 			PNDefWindowProc,
@@ -97,6 +109,7 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 			PNGetActiveWindow,
 			PNGetClassName,
 			PNGetClientRect,
+			PNGetCursorPos,
 			PNGetDC,
 			PNGetForegroundWindow,
 			PNGetIconInfo,
@@ -120,12 +133,16 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 
 			PNReleaseDC,
 
+			PNSetForegroundWindow,
+			PNSetMenuItemInfo,
 			PNSetWindowLongPtr,
+			PNSetWindowsHookEx,
 
 			PNSendMessage,
 
 			PNShowWindow,
 
+			PNTrackPopupMenu,
 			PNTranslateMessage,
 
 			PNUnregisterClass,
@@ -133,6 +150,19 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 	}
 	dll := newDll(DNUser32, procList)
 	return &User32DLL{dll}
+}
+
+// AppendMenu https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-appendmenuw
+// If the function succeeds, the return value is nonzero.
+func (dll *User32DLL) AppendMenu(hMenu HMENU, uFlags uint32, uIDNewItem UINT_PTR, lpNewItem string) (bool, syscall.Errno) {
+	proc := dll.mustProc(PNAppendMenu)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hMenu),
+		uintptr(uFlags),
+		uintptr(unsafe.Pointer(uIDNewItem)),
+		UintptrFromStr(lpNewItem),
+	)
+	return r1 != 0, errno
 }
 
 // CloseWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-closewindow
@@ -195,6 +225,14 @@ func (dll *User32DLL) CreateIconFromResourceEx(
 	return HICON(r1)
 }
 
+// CreatePopupMenu https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-createpopupmenu
+// If the function fails, the return value is NULL.
+func (dll *User32DLL) CreatePopupMenu() HMENU {
+	proc := dll.mustProc(PNCreatePopupMenu)
+	r1, _, _ := syscall.SyscallN(proc.Addr())
+	return HMENU(r1)
+}
+
 // CreateWindowEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-createwindowexw
 // If the function succeeds, the return value is a handle to the new window.
 // If the function fails, the return value is NULL.
@@ -224,6 +262,16 @@ func (dll *User32DLL) CreateWindowEx(
 		uintptr(lpParam),
 	)
 	return HWND(r1), errno
+}
+
+// DestroyMenu https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-destroymenu
+// If the function succeeds, the return value is nonzero.
+func (dll *User32DLL) DestroyMenu(hMenu HMENU) (bool, syscall.Errno) {
+	proc := dll.mustProc(PNDestroyMenu)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hMenu),
+	)
+	return r1 != 0, errno
 }
 
 // DestroyWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-destroywindow
@@ -376,6 +424,18 @@ func (dll *User32DLL) GetClientRect(hwnd HWND, lpRect *RECT) (bool, syscall.Errn
 	r1, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hwnd),
 		uintptr(unsafe.Pointer(lpRect)),
+	)
+	return r1 != 0, errno
+}
+
+// GetCursorPos https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getcursorpos
+// Returns nonzero if successful or zero otherwise.
+func (dll *User32DLL) GetCursorPos(
+	lpPoint *POINT, // [out]
+) (bool, syscall.Errno) {
+	proc := dll.mustProc(PNGetCursorPos)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(unsafe.Pointer(lpPoint)),
 	)
 	return r1 != 0, errno
 }
@@ -595,6 +655,30 @@ func (dll *User32DLL) ReleaseDC(hwnd HWND, hdc HDC) int32 {
 	return int32(r1)
 }
 
+// SetForegroundWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setforegroundwindow
+// If the window was brought to the foreground, the return value is nonzero.
+// If the window was not brought to the foreground, the return value is zero.
+func (dll *User32DLL) SetForegroundWindow(hWnd HWND) bool {
+	proc := dll.mustProc(PNSetForegroundWindow)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+	)
+	return r1 != 0
+}
+
+// SetMenuItemInfo https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setmenuiteminfow
+// If the function succeeds, the return value is nonzero.
+func (dll *User32DLL) SetMenuItemInfo(hmenu HMENU, item UINT, fByPosition bool, lpmii /*const*/ *MENUITEMINFO) (bool, syscall.Errno) {
+	proc := dll.mustProc(PNSetMenuItemInfo)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hmenu),
+		uintptr(item),
+		UintptrFromBool(fByPosition),
+		uintptr(unsafe.Pointer(lpmii)),
+	)
+	return r1 != 0, errno
+}
+
 // SetWindowLongPtr https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowlongptrw
 // If the function fails, the return value is zero.
 func (dll *User32DLL) SetWindowLongPtr(hWnd HWND, nIndex int32, dwNewLong uintptr) (uintptr, syscall.Errno) {
@@ -622,6 +706,27 @@ func (dll *User32DLL) ShowWindow(hWnd HWND, nCmdShow int32) bool {
 		uintptr(nCmdShow),
 	)
 	return r1 != 0
+}
+
+// TrackPopupMenu https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-trackpopupmenu
+// 當TPM_RETURNCMD有設定的時候，且回傳值>0，表示該wParam的識別號，即:
+// cmd := TrackPopupMenu(hMenu, TPM_RETURNCMD, x, y, 0, hwnd, 0)
+// if (cmd) { SendMessage(hwnd, WM_COMMAND, cmd, 0) }
+// 當TPM_RETURNCMD沒有設定，回傳值!=0時，表示成功，且會自動發送命令，不需要再靠SendMessage去發送消息, 若回傳值0表示失敗，沒任何失敗訊息
+func (dll *User32DLL) TrackPopupMenu(hMenu HMENU, uFlags uint32, x int32, y int32, nReserved int32, hWnd HWND,
+	prcRect /*const*/ *RECT, // [in, optional] Ignored.
+) (int32, syscall.Errno) {
+	proc := dll.mustProc(PNTrackPopupMenu)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hMenu),
+		uintptr(uFlags),
+		uintptr(x),
+		uintptr(y),
+		uintptr(nReserved),
+		uintptr(hWnd),
+		uintptr(unsafe.Pointer(prcRect)),
+	)
+	return int32(r1), errno
 }
 
 // TranslateMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-translatemessage
