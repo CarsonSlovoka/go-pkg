@@ -1321,4 +1321,5 @@ isXButton2Done:%t
 	_, _, _ = user32dll.SendMessage(hwnd, w32.WM_CLOSE, 0, 0)
 
 	<-ch
+	// Output:
 }
