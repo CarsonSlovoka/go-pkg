@@ -638,7 +638,7 @@ func ExampleUser32DLL_CreatePopupMenu() {
 	_, _ = user32dll.PostMessage(hwnd, w32.WM_RBUTTONDOWN, 123, 0) // with TPM_RETURNCMD
 
 	// 🕹️ 如果您要手動嘗試，請把以下的SendMessage.WM_CLOSE註解掉，避免自動關閉
-	// _, _, _ = user32dll.SendMessage(hwnd, w32.WM_CLOSE, 0, 0)
+	_, _, _ = user32dll.SendMessage(hwnd, w32.WM_CLOSE, 0, 0)
 
 	// wait user close the window
 	<-ch
@@ -1321,6 +1321,4 @@ isXButton2Done:%t
 	_, _, _ = user32dll.SendMessage(hwnd, w32.WM_CLOSE, 0, 0)
 
 	<-ch
-
-	// Output:
 }

@@ -215,7 +215,7 @@ func ExampleShellDLL_ShellNotifyIcon() {
 				case w32.WM_LBUTTONUP:
 					log.Println("WMNotifyIconMsg->WM_LBUTTONUP")
 					if wParam == 123 {
-						fmt.Println("WMNotifyIconMsg->WM_LBUTTONUP")
+						log.Println("WMNotifyIconMsg->WM_LBUTTONUP")
 					}
 				case w32.WM_LBUTTONDBLCLK:
 					log.Println("WMNotifyIconMsg->WM_LBUTTONDBLCLK")
@@ -442,5 +442,4 @@ func ExampleShellDLL_ShellNotifyIcon() {
 
 	<-chanWin
 	// Output:
-	// WMNotifyIconMsg->WM_LBUTTONUP
 }
