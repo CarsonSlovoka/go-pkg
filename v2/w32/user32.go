@@ -483,7 +483,7 @@ const (
 	VK_RETURN              = 13
 	VK_SHIFT               = 16
 	VK_CONTROL             = 17
-	VK_MENU                = 18
+	VK_MENU                = 18 // ALT
 	VK_PAUSE               = 19
 	VK_CAPITAL             = 20
 	VK_KANA                = 0x15
@@ -778,7 +778,7 @@ const (
 	WM_NCCALCSIZE             = 131
 	WM_NCCREATE               = 129 // The WM_NCCREATE message is sent prior to the WM_CREATE message when a window is first created.
 	WM_NCDESTROY              = 130
-	WM_NCHITTEST              = 132
+	WM_NCHITTEST              = 132 // https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-nchittest  This can happen, for example, when the cursor moves, when a mouse button is pressed or released, or in response to a call to a function such as WindowFromPoint.
 	WM_NCLBUTTONDBLCLK        = 163
 	WM_NCLBUTTONDOWN          = 161
 	WM_NCLBUTTONUP            = 162
@@ -821,7 +821,7 @@ const (
 	WM_QUIT                   = 18
 	WM_RENDERALLFORMATS       = 774
 	WM_RENDERFORMAT           = 773
-	WM_SETCURSOR              = 32
+	WM_SETCURSOR              = 32 // https://learn.microsoft.com/en-us/windows/win32/menurc/wm-setcursor Sent to a window if the mouse causes the cursor to move within a window and mouse input is not captured.
 	WM_SETFOCUS               = 7
 	WM_SETFONT                = 48
 	WM_SETHOTKEY              = 50
@@ -840,8 +840,8 @@ const (
 	WM_SYSCOLORCHANGE         = 21
 	WM_SYSCOMMAND             = 274
 	WM_SYSDEADCHAR            = 263
-	WM_SYSKEYDOWN             = 260
-	WM_SYSKEYUP               = 261
+	WM_SYSKEYDOWN             = 260 // https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-syskeydown F10 or hold down the ALT key and then presses another key
+	WM_SYSKEYUP               = 261 // https://learn.microsoft.com/en-us/windows/win32/inputdev/wm-syskeyup Posted to the window with the keyboard focus when the user releases a key that was pressed while the ALT key was held down
 	WM_TCARD                  = 82
 	WM_THEMECHANGED           = 794
 	WM_TIMECHANGE             = 30
@@ -1751,4 +1751,23 @@ const (
 	MF_SEPARATOR           = 0x00000800
 	MF_STRING              = 0x00000000
 	MF_UNCHECKED           = 0x00000000
+)
+
+// HOOK https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowshookexw
+const (
+	WH_CALLWNDPROC     = 4
+	WH_CALLWNDPROCRET  = 12
+	WH_CBT             = 5
+	WH_DEBUG           = 9
+	WH_FOREGROUNDIDLE  = 11
+	WH_GETMESSAGE      = 3
+	WH_JOURNALPLAYBACK = 1
+	WH_JOURNALRECORD   = 0
+	WH_KEYBOARD        = 2
+	WH_KEYBOARD_LL     = 13
+	WH_MOUSE           = 7
+	WH_MOUSE_LL        = 14
+	WH_MSGFILTER       = -1
+	WH_SHELL           = 10
+	WH_SYSMSGFILTER    = 6
 )

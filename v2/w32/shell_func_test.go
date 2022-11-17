@@ -196,7 +196,7 @@ func ExampleShellDLL_ShellNotifyIcon() {
 	hInstance := w32.HINSTANCE(kernel32dll.GetModuleHandle(""))
 	const WMNotifyIconMsg = w32.WM_APP + 123 // 定義notifyIcon會觸發的訊息ID
 	// Create a window https://github.com/CarsonSlovoka/go-pkg/blob/efe1c50fa40229c299232fe3b236135b1046ef35/v2/w32/user32_func_test.go#L457-L659
-	go func(chan<- w32.HWND) {
+	go func(ch chan<- w32.HWND) {
 		// 定義訊息處理函數
 		wndProcFuncPtr := syscall.NewCallback(w32.WNDPROC(func(hwnd w32.HWND, uMsg w32.UINT, wParam w32.WPARAM, lParam w32.LPARAM) w32.LRESULT {
 			switch uMsg {
@@ -255,7 +255,7 @@ func ExampleShellDLL_ShellNotifyIcon() {
 				}
 				return 1 // 讓消息循環繼續處理其他訊息(>0即可)
 			case w32.WM_COMMAND:
-				id := w32.LOWORD(uint32(wParam))
+				id := w32.LOWORD(wParam)
 				switch id {
 				case 1023:
 					_, _ = user32dll.PostMessage(hwnd, WMNotifyIconMsg, 0, w32.WM_LBUTTONDBLCLK)
@@ -304,7 +304,7 @@ func ExampleShellDLL_ShellNotifyIcon() {
 			if ok, errno2 := user32dll.UnregisterClass(wndClassName, hInstance); !ok {
 				fmt.Printf("Error UnregisterClass: %s", errno2)
 			}
-			chanWin <- hwnd
+			ch <- hwnd
 			return
 		}
 
@@ -317,10 +317,10 @@ func ExampleShellDLL_ShellNotifyIcon() {
 			}
 
 			// 通知外部程式用
-			close(chanWin)
+			close(ch)
 		}()
 
-		chanWin <- hwnd
+		ch <- hwnd
 
 		// 消息循環
 		var msg w32.MSG

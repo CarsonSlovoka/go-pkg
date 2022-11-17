@@ -39,7 +39,8 @@ type (
 	UINT8    uint8
 	UINT_PTR uintptr
 
-	LONG int32
+	SHORT int16
+	LONG  int32
 
 	ULONG     uint32
 	ULONG64   uint64

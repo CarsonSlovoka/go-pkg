@@ -25,6 +25,7 @@ const (
 	PNFreeLibrary ProcName = "FreeLibrary"
 
 	PNGetCurrentThread     ProcName = "GetCurrentThread"
+	PNGetCurrentThreadId   ProcName = "GetCurrentThreadId"
 	PNGetLastError         ProcName = "GetLastError"
 	PNGetModuleHandle      ProcName = "GetModuleHandleW"
 	PNGetNativeSystemInfo  ProcName = "GetNativeSystemInfo"
@@ -77,6 +78,7 @@ func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 			PNFreeLibrary,
 
 			PNGetCurrentThread,
+			PNGetCurrentThreadId,
 			PNGetLastError,
 			PNGetModuleHandle,
 			PNGetNativeSystemInfo,
@@ -246,6 +248,12 @@ func (dll *Kernel32DLL) GetCurrentThread() HANDLE {
 	proc := dll.mustProc(PNGetCurrentThread)
 	r1, _, _ := syscall.SyscallN(proc.Addr())
 	return HANDLE(r1)
+}
+
+func (dll *Kernel32DLL) GetCurrentThreadId() uint32 {
+	proc := dll.mustProc(PNGetCurrentThreadId)
+	r1, _, _ := syscall.SyscallN(proc.Addr())
+	return uint32(r1)
 }
 
 func (dll *Kernel32DLL) GetLastError() uint32 {

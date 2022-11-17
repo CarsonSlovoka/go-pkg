@@ -11,6 +11,8 @@ import (
 const (
 	PNAppendMenu ProcName = "AppendMenuW"
 
+	PNCallNextHookEx ProcName = "CallNextHookEx"
+
 	PNCloseWindow ProcName = "CloseWindow"
 
 	PNCopyImage ProcName = "CopyImage"
@@ -32,17 +34,18 @@ const (
 	PNFindWindow   ProcName = "FindWindowW"
 	PNFindWindowEx ProcName = "FindWindowExW"
 
-	PNGetActiveWindow     ProcName = "GetActiveWindow"
-	PNGetClassName        ProcName = "GetClassNameW"
-	PNGetClientRect       ProcName = "GetClientRect"
-	PNGetCursorPos        ProcName = "GetCursorPos"
-	PNGetDC               ProcName = "GetDC"
-	PNGetForegroundWindow ProcName = "GetForegroundWindow"
-	PNGetIconInfo         ProcName = "GetIconInfo"
-	PNGetMessage          ProcName = "GetMessageW"
-	PNGetSystemMetrics    ProcName = "GetSystemMetrics"
-	PNGetWindowLongPtr    ProcName = "GetWindowLongPtrW"
-	PNGetWindowText       ProcName = "GetWindowTextW"
+	PNGetActiveWindow          ProcName = "GetActiveWindow"
+	PNGetClassName             ProcName = "GetClassNameW"
+	PNGetClientRect            ProcName = "GetClientRect"
+	PNGetCursorPos             ProcName = "GetCursorPos"
+	PNGetDC                    ProcName = "GetDC"
+	PNGetForegroundWindow      ProcName = "GetForegroundWindow"
+	PNGetIconInfo              ProcName = "GetIconInfo"
+	PNGetMessage               ProcName = "GetMessageW"
+	PNGetSystemMetrics         ProcName = "GetSystemMetrics"
+	PNGetWindowLongPtr         ProcName = "GetWindowLongPtrW"
+	PNGetWindowText            ProcName = "GetWindowTextW"
+	PNGetWindowThreadProcessId ProcName = "GetWindowThreadProcessId"
 
 	PNLoadCursor ProcName = "LoadCursorW"
 	PNLoadIcon   ProcName = "LoadIconW"
@@ -50,7 +53,8 @@ const (
 
 	PNLookupIconIdFromDirectoryEx ProcName = "LookupIconIdFromDirectoryEx"
 
-	PNMessageBox ProcName = "MessageBoxW"
+	PNMapVirtualKey ProcName = "MapVirtualKeyW"
+	PNMessageBox    ProcName = "MessageBoxW"
 
 	PNPostMessage     ProcName = "PostMessageW"
 	PNPostQuitMessage ProcName = "PostQuitMessage"
@@ -62,6 +66,7 @@ const (
 	PNSetForegroundWindow ProcName = "SetForegroundWindow"
 	PNSetMenuItemInfo     ProcName = "SetMenuItemInfoW"
 	PNSetWindowLongPtr    ProcName = "SetWindowLongPtrW"
+	PNSetWindowsHookEx    ProcName = "SetWindowsHookExW"
 
 	PNSendMessage ProcName = "SendMessageW"
 
@@ -69,6 +74,8 @@ const (
 
 	PNTrackPopupMenu   ProcName = "TrackPopupMenu"
 	PNTranslateMessage ProcName = "TranslateMessage"
+
+	PNUnhookWindowsHookEx ProcName = "UnhookWindowsHookEx"
 
 	PNUnregisterClass ProcName = "UnregisterClassW"
 )
@@ -84,6 +91,8 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 	if len(procList) == 0 {
 		procList = []ProcName{
 			PNAppendMenu,
+
+			PNCallNextHookEx,
 
 			PNCloseWindow,
 
@@ -117,6 +126,7 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 			PNGetSystemMetrics,
 			PNGetWindowLongPtr,
 			PNGetWindowText,
+			PNGetWindowThreadProcessId,
 
 			PNLoadCursor,
 			PNLoadIcon,
@@ -124,6 +134,7 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 
 			PNLookupIconIdFromDirectoryEx,
 
+			PNMapVirtualKey,
 			PNMessageBox,
 
 			PNPostMessage,
@@ -145,6 +156,8 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 			PNTrackPopupMenu,
 			PNTranslateMessage,
 
+			PNUnhookWindowsHookEx,
+
 			PNUnregisterClass,
 		}
 	}
@@ -159,10 +172,22 @@ func (dll *User32DLL) AppendMenu(hMenu HMENU, uFlags uint32, uIDNewItem UINT_PTR
 	r1, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hMenu),
 		uintptr(uFlags),
-		uintptr(unsafe.Pointer(uIDNewItem)),
+		uintptr(uIDNewItem),
 		UintptrFromStr(lpNewItem),
 	)
 	return r1 != 0, errno
+}
+
+// CallNextHookEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-callnexthookex
+func (dll *User32DLL) CallNextHookEx(hhk HHOOK, nCode int32, wParam WPARAM, lParam LPARAM) LRESULT {
+	proc := dll.mustProc(PNCallNextHookEx)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hhk),
+		uintptr(nCode),
+		uintptr(wParam),
+		uintptr(lParam),
+	)
+	return LRESULT(r1)
 }
 
 // CloseWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-closewindow
@@ -525,6 +550,17 @@ func (dll *User32DLL) GetWindowText(hwnd HWND) (string, error) {
 	return syscall.UTF16ToString(textName), nil
 }
 
+// GetWindowThreadProcessId https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowthreadprocessid
+// The return value is the identifier of the thread that created the window.
+func (dll *User32DLL) GetWindowThreadProcessId(hWnd HWND, lpdwProcessId *uint32) uint32 {
+	proc := dll.mustProc(PNGetWindowThreadProcessId)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+		uintptr(unsafe.Pointer(lpdwProcessId)),
+	)
+	return uint32(r1)
+}
+
 // LoadCursor https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadcursorw
 func (dll *User32DLL) LoadCursor(hInstance HINSTANCE, lpCursorName *uint16) (HCURSOR, syscall.Errno) {
 	proc := dll.mustProc(PNLoadCursor)
@@ -603,6 +639,18 @@ func (dll *User32DLL) LookupIconIdFromDirectoryEx(presBits uintptr,
 		uintptr(flags),
 	)
 	return int(r1)
+}
+
+// MapVirtualKey https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-mapvirtualkeyw
+// 可以區分、不區分左右的shift等等
+// If there is no translation, the return value is zero.
+func (dll *User32DLL) MapVirtualKey(uCode uint32, uMapType uint32) uint32 {
+	proc := dll.mustProc(PNMapVirtualKey)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(uCode),
+		uintptr(uMapType),
+	)
+	return uint32(r1)
 }
 
 // MessageBox https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-messageboxw
@@ -691,6 +739,23 @@ func (dll *User32DLL) SetWindowLongPtr(hWnd HWND, nIndex int32, dwNewLong uintpt
 	return r1, errno
 }
 
+// SetWindowsHookEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowshookexw
+// If the function fails, the return value is NULL.
+func (dll *User32DLL) SetWindowsHookEx(idHook int32, lpfn HOOKPROC, hMod HINSTANCE, dwThreadId uint32) (HHOOK, syscall.Errno) {
+	proc := dll.mustProc(PNSetWindowsHookEx)
+	lpfnCallback := syscall.NewCallback(func(codeRawArg int32, wParamRawArg WPARAM, lParamRawArg LPARAM) uintptr {
+		ret := lpfn(codeRawArg, wParamRawArg, lParamRawArg)
+		return uintptr(ret)
+	})
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(idHook),
+		lpfnCallback,
+		uintptr(hMod),
+		uintptr(dwThreadId),
+	)
+	return HHOOK(r1), errno
+}
+
 // SendMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendmessage
 // 注意，他會等待回應，會造成程式當掉的錯覺 https://social.msdn.microsoft.com/Forums/en-US/6900f74f-6ece-47da-88fc-f9c8bcd40206/sendmessage-api-slow?forum=wpf
 func (dll *User32DLL) SendMessage(hwnd HWND, wmMsgID uint32, wParam, lParam uintptr) (r1, r2 uintptr, err error) {
@@ -737,6 +802,16 @@ func (dll *User32DLL) TranslateMessage(lpMsg /*const*/ *MSG) bool {
 		uintptr(unsafe.Pointer(lpMsg)),
 	)
 	return r1 != 0
+}
+
+// UnhookWindowsHookEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-unhookwindowshookex
+// If the function fails, the return value is zero.
+func (dll *User32DLL) UnhookWindowsHookEx(hhk HHOOK) (bool, syscall.Errno) {
+	proc := dll.mustProc(PNUnhookWindowsHookEx)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hhk),
+	)
+	return r1 != 0, errno
 }
 
 // UnregisterClass https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-unregisterclassw
