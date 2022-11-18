@@ -418,8 +418,11 @@ func ExampleShellDLL_ShellNotifyIcon() {
 		if enableBalloonIcon {
 			notifyIconData.DwInfoFlags |= w32.NIIF_USER | w32.NIIF_LARGE_ICON // Windows XP: hIcon as the notification, Windows Vista and later: hBalloonIcon as the notification balloon's title icon.
 			// 所以建議把hIcon與hBalloonIcon都設定就不用擔心是XP還是新版本的問題
-			notifyIconData.HIcon = myHICON
-			notifyIconData.HBalloonIcon = myHICON
+
+			// 氣球圖標
+			hIconQuestion, _ := user32dll.LoadIcon(0, w32.MakeIntResource(w32.IDI_EXCLAMATION))
+			notifyIconData.HIcon = hIconQuestion // myHICON 也可以用應用程式圖標，但建議可以用系統圖標來區分訊息的種類(question, warning, error, ...)
+			notifyIconData.HBalloonIcon = hIconQuestion
 		}
 	}
 
@@ -430,6 +433,7 @@ func ExampleShellDLL_ShellNotifyIcon() {
 	}
 
 	if enableIcon {
+		// 應用程式主圖標
 		notifyIconData.UFlags |= w32.NIF_ICON // The hIcon member is valid.
 		notifyIconData.HIcon = myHICON
 	}
