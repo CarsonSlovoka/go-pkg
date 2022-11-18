@@ -97,10 +97,6 @@ const (
 	NIIF_LARGE_ICON         = 0x00000020 // 圖標的尺寸為: SM_CXICON x SM_CYICON 可以使用[stock icons](https://learn.microsoft.com/en-us/windows/win32/api/shellapi/ne-shellapi-shstockiconid) 也建議設定hicon與hBalloonIcon
 	NIIF_RESPECT_QUIET_TIME = 0x00000080 // 適用在windows7之後的版本, 在登錄帳戶的第一個小時, 則會忽略掉氣球通知，不要打擾客戶(尊重他們)
 	NIIF_ICON_MASK          = 0x0000000F // Reserved
-
-	NIN_BALLOONSHOW      = 0x0402
-	NIN_BALLOONTIMEOUT   = 0x0404
-	NIN_BALLOONUSERCLICK = 0x0405
 )
 
 type SHSTOCKICONID int32

@@ -144,12 +144,16 @@ func ExampleNOTIFYICONDATA_SetTimeout() {
 // 4. 開啟工作管理員(taskmgr.exe)，刪除所有explorer.exe的項目
 // 5. 重新執行explorer.exe
 // 做完之後無效的圖示應該就會被清除
+//
+// 注意事項:
+// 1. 如果您在NIM_ADD就出錯，請依造上述的方法將IconStreams, PastIconsStream兩個數值刪掉，之後重啟
+// 2. 確保管理通知->通知與動作-> [X] 取得來自應用程式與其他發送來源的通知 (確保此項是開啟的，否則會收不到通知)
+// 3. 沒有橫幅通知: 請檢查是否處於「專注」模式。專注模式會擋掉橫幅的通知，只會讓通知顯示在通知清單之中
 func ExampleShellDLL_ShellNotifyIcon() {
 	user32dll := w32.NewUser32DLL()
 	shell32dll := w32.NewShellDLL()
 	kernel32dll := w32.NewKernel32DLL(w32.PNGetModuleHandle)
 	gdi32dll := w32.NewGdi32DLL(w32.PNGetObject, w32.PNDeleteObject)
-
 	// prepare test data
 	var (
 		myHICON w32.HICON
@@ -192,14 +196,11 @@ func ExampleShellDLL_ShellNotifyIcon() {
 
 	// variable used for createWindow
 	chanWin := make(chan w32.HWND)
-	const (
-		wndClassName  = "classShellNotifyIcon"
-		wndWindowName = "windowShellNotifyIcon"
-	)
+
 	hInstance := w32.HINSTANCE(kernel32dll.GetModuleHandle(""))
 	const WMNotifyIconMsg = w32.WM_APP + 123 // 定義notifyIcon會觸發的訊息ID
 	// Create a window https://github.com/CarsonSlovoka/go-pkg/blob/efe1c50fa40229c299232fe3b236135b1046ef35/v2/w32/user32_func_test.go#L457-L659
-	go func(ch chan<- w32.HWND) {
+	go func(wndClassName, wndWindowName string, ch chan<- w32.HWND) {
 		// 定義訊息處理函數
 		wndProcFuncPtr := syscall.NewCallback(w32.WNDPROC(func(hwnd w32.HWND, uMsg w32.UINT, wParam w32.WPARAM, lParam w32.LPARAM) w32.LRESULT {
 			switch uMsg {
@@ -213,8 +214,19 @@ func ExampleShellDLL_ShellNotifyIcon() {
 				log.Println("WM_DESTROY")
 				user32dll.PostQuitMessage(0)
 				return 0
+			case w32.WM_CREATE:
+				ch <- hwnd
 			case WMNotifyIconMsg:
 				switch lParam {
+				case w32.WM_MOUSEMOVE: // 當滑鼠在shellNotifyIcon附近移動的時候，也會觸發此命令
+					log.Println("WMNotifyIconMsg WM_MOUSEMOVE")
+				case w32.NIN_BALLOONUSERCLICK:
+					log.Println("NIN_BALLOONUSERCLICK 滑鼠點擊通知橫幅")
+					user32dll.ShowWindow(hwnd, w32.SW_SHOW)
+				case w32.NIN_BALLOONSHOW:
+					log.Println("NIN_BALLOONSHOW")
+				case w32.NIN_BALLOONTIMEOUT:
+					log.Println("NIN_BALLOONTIMEOUT")
 				case w32.WM_LBUTTONUP:
 					log.Println("WMNotifyIconMsg->WM_LBUTTONUP")
 					if wParam == 123 {
@@ -255,6 +267,8 @@ func ExampleShellDLL_ShellNotifyIcon() {
 					user32dll.SetForegroundWindow(hwnd)
 					_, _ = user32dll.TrackPopupMenu(hMenu, w32.TPM_LEFTALIGN, pos.X, pos.Y, 0, hwnd, nil)
 					// _, _ = user32dll.PostMessage(hwnd, w32.WM_NULL, 0, 0)
+				default:
+					log.Printf("WMNotifyIconMsg unknown lParam: %d\n", lParam)
 				}
 				return 1 // 讓消息循環繼續處理其他訊息(>0即可)
 			case w32.WM_COMMAND:
@@ -283,9 +297,21 @@ func ExampleShellDLL_ShellNotifyIcon() {
 			LpszClassName: pUTF16ClassName,
 		}); atom == 0 {
 			fmt.Printf("%s", errno)
-			chanWin <- 0
+			close(ch)
 			return
 		}
+
+		// 確保程式結束之後能解除註冊名稱
+		defer func() {
+			if ok, errno2 := user32dll.UnregisterClass(wndClassName, hInstance); !ok {
+				log.Printf("Error UnregisterClass: %s", errno2)
+			} else {
+				log.Println("OK UnregisterClass")
+			}
+
+			// 通知外部程式用
+			close(ch)
+		}()
 
 		// 創建視窗
 		hwnd, errno := user32dll.CreateWindowEx(0,
@@ -304,26 +330,8 @@ func ExampleShellDLL_ShellNotifyIcon() {
 
 		if hwnd == 0 {
 			fmt.Printf("%s\n", errno)
-			if ok, errno2 := user32dll.UnregisterClass(wndClassName, hInstance); !ok {
-				fmt.Printf("Error UnregisterClass: %s", errno2)
-			}
-			ch <- hwnd
 			return
 		}
-
-		// 確保程式結束之後能解除註冊名稱
-		defer func() {
-			if ok, errno2 := user32dll.UnregisterClass(wndClassName, hInstance); !ok {
-				log.Printf("Error UnregisterClass: %s", errno2)
-			} else {
-				log.Println("OK UnregisterClass")
-			}
-
-			// 通知外部程式用
-			close(ch)
-		}()
-
-		ch <- hwnd
 
 		// 消息循環
 		var msg w32.MSG
@@ -334,14 +342,14 @@ func ExampleShellDLL_ShellNotifyIcon() {
 			user32dll.TranslateMessage(&msg)
 			user32dll.DispatchMessage(&msg)
 		}
-	}(chanWin)
+	}("classShellNotifyIcon", "windowShellNotifyIcon", chanWin)
 
 	// 不能隨便找hwnd過來，除非這些hwnd會處理您的自訂訊息WMNotifyIconMsg，因此我們需要自己創建視窗
 	// hwndTarget := user32dll.GetForegroundWindow()
 	// hwndTarget := user32dll.FindWindow("powershell", "")
 	// hwndTarget := user32dll.GetActiveWindow()
-	hwndTarget := <-chanWin
-	if hwndTarget == 0 {
+	hwndTarget, isOpen := <-chanWin
+	if !isOpen {
 		return
 	}
 
@@ -353,6 +361,7 @@ func ExampleShellDLL_ShellNotifyIcon() {
 			HWnd:     hwndTarget,   // 注意！不是用您創建的window的HWND，是要用當前app的hwnd
 			UFlags:   w32.NIF_GUID, // NIF_GUID有設定就可以讓GuidItem生效
 			GuidItem: guid,
+			// DwState:  w32.NIS_SHAREDICON | w32.NIS_HIDDEN,
 		}
 		notifyIconData.SetVersion(w32.NOTIFYICON_VERSION_4)
 		notifyIconDataCopy := notifyIconData // 這個只是用來驗證，刪除的資訊與其他資訊無關，它依照GuidItem的內容去刪
@@ -398,10 +407,10 @@ func ExampleShellDLL_ShellNotifyIcon() {
 	flag.BoolVar(&enableBalloonIcon, "eBalloonIcon", true, "")
 	flag.Parse()
 
-	if !enableInfo {
+	if enableInfo {
 		notifyIconData.UFlags |= w32.NIF_INFO // The szInfo, szInfoTitle, dwInfoFlags, and uTimeout members are valid. Note that uTimeout is valid only in Windows 2000 and Windows XP.
-		infoMsg, _ := syscall.UTF16FromString("SzInfo")
-		infoTitle, _ := syscall.UTF16FromString("SzInfoTitle")
+		infoMsg, _ := syscall.UTF16FromString("SzInfo 內文")
+		infoTitle, _ := syscall.UTF16FromString("SzInfoTitle 標題")
 		copy(notifyIconData.SzInfo[:], infoMsg)
 		copy(notifyIconData.SzInfoTitle[:], infoTitle)
 
@@ -416,7 +425,7 @@ func ExampleShellDLL_ShellNotifyIcon() {
 
 	if enableTooltip {
 		notifyIconData.UFlags |= w32.NIF_TIP // tip有設定, SzTip就會生效 The szTip member is valid.
-		utf16Title, _ := syscall.UTF16FromString("SzTip")
+		utf16Title, _ := syscall.UTF16FromString("SzTip 懸停時會顯示的內容")
 		copy(notifyIconData.SzTip[:], utf16Title) // windows幾乎都採用utf16編碼
 	}
 
