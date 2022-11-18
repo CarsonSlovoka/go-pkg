@@ -21,6 +21,9 @@ func ExampleUser32DLL_GetWindowText() {
 
 	curHwnd := user32dll.GetForegroundWindow()
 	log.Println("current window HWND:", curHwnd) // 當前窗口的識別號
+	if curHwnd == 0 {
+		return
+	}
 
 	clsName, err := user32dll.GetClassName(curHwnd)
 	if err != nil {
