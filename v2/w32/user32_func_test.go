@@ -1265,6 +1265,18 @@ isXButton2Done:%t
 			return
 		}
 
+		// 確保程式結束之後能解除註冊名稱
+		defer func() {
+			if ok, errno2 := user32dll.UnregisterClass(wndClassName, hInstance); !ok {
+				log.Printf("Error UnregisterClass: %s", errno2)
+			} else {
+				log.Println("OK UnregisterClass")
+			}
+
+			// 通知外部程式用
+			close(chanWin)
+		}()
+
 		// Create window
 		hwnd, errno := user32dll.CreateWindowEx(0,
 			wndClassName,
@@ -1282,24 +1294,8 @@ isXButton2Done:%t
 
 		if hwnd == 0 {
 			fmt.Printf("%s\n", errno)
-			if ok, errno2 := user32dll.UnregisterClass(wndClassName, hInstance); !ok {
-				fmt.Printf("Error UnregisterClass: %s", errno2)
-			}
-			chanWin <- hwnd
 			return
 		}
-
-		// 確保程式結束之後能解除註冊名稱
-		defer func() {
-			if ok, errno2 := user32dll.UnregisterClass(wndClassName, hInstance); !ok {
-				log.Printf("Error UnregisterClass: %s", errno2)
-			} else {
-				log.Println("OK UnregisterClass")
-			}
-
-			// 通知外部程式用
-			close(chanWin)
-		}()
 
 		chanWin <- hwnd
 
@@ -1312,7 +1308,10 @@ isXButton2Done:%t
 			user32dll.DispatchMessage(&msg)
 		}
 	}(ch)
-	hwnd := <-ch
+	hwnd, isOpen := <-ch
+	if !isOpen {
+		return
+	}
 	log.Println(hwnd)
 
 	user32dll.ShowWindow(hwnd, w32.SW_SHOW)
@@ -1322,4 +1321,108 @@ isXButton2Done:%t
 
 	<-ch
 	// Output:
+}
+
+func ExampleUser32DLL_RegisterHotKey() {
+	user32dll := w32.NewUser32DLL()
+	kernel32dll := w32.NewKernel32DLL()
+
+	const (
+		HokeyIDHello = 123
+		HokeyIDBye   = 124
+	)
+
+	ch := make(chan w32.HWND)
+	go func(className, windowName string, channel chan<- w32.HWND) {
+		wndProcFuncPtr := syscall.NewCallback(w32.WNDPROC(func(hwnd w32.HWND, uMsg w32.UINT, wParam w32.WPARAM, lParam w32.LPARAM) w32.LRESULT {
+			switch uMsg {
+			case w32.WM_DESTROY:
+				log.Println("WM_DESTROY")
+				for _, hotkeyID := range []int32{HokeyIDHello, HokeyIDBye} {
+					if ok, errno := user32dll.UnregisterHotKey(hwnd, hotkeyID); !ok {
+						log.Printf("Error [UnregisterHotKey] %s", errno)
+					}
+				}
+				log.Println("haha")
+				user32dll.PostQuitMessage(0)
+				return 0
+			case w32.WM_CREATE:
+				if ok, errno := user32dll.RegisterHotKey(hwnd, HokeyIDHello, w32.MOD_CONTROL|w32.MOD_ALT, w32.VK_F1); !ok {
+					log.Printf("%s\n", errno)
+				}
+				if ok, errno := user32dll.RegisterHotKey(hwnd, HokeyIDBye, w32.MOD_ALT, 65 /* A */); !ok {
+					log.Printf("%s\n", errno)
+				}
+
+			case w32.WM_HOTKEY:
+				switch wParam {
+				case HokeyIDHello:
+					log.Println("hello")
+					if lParam == 5 {
+						fmt.Println("hello")
+					}
+				case HokeyIDBye:
+					log.Println("bye~")
+					_, _ = user32dll.PostMessage(hwnd, w32.WM_CLOSE, 0, 0)
+				}
+			}
+			return user32dll.DefWindowProc(hwnd, uMsg, wParam, lParam) // default window proc
+		}))
+
+		hInstance := w32.HINSTANCE(kernel32dll.GetModuleHandle(""))
+		pUTF16ClassName, _ := syscall.UTF16PtrFromString(className)
+		wc := w32.WNDCLASS{
+			LpfnWndProc:   wndProcFuncPtr,
+			HInstance:     hInstance,
+			LpszClassName: pUTF16ClassName,
+		}
+
+		if atom, errno := user32dll.RegisterClass(&wc); atom == 0 {
+			fmt.Printf("%s", errno)
+			return
+		}
+
+		defer func() {
+			if ok, errno := user32dll.UnregisterClass(className, hInstance); !ok {
+				fmt.Printf("[UnregisterClass] %s", errno)
+			}
+			close(channel)
+		}()
+
+		if hwnd, errno := user32dll.CreateWindowEx(0,
+			className, windowName,
+			w32.WS_OVERLAPPEDWINDOW,
+			w32.CW_USEDEFAULT, w32.CW_USEDEFAULT, w32.CW_USEDEFAULT, w32.CW_USEDEFAULT,
+			0, 0,
+			hInstance, 0,
+		); hwnd == 0 {
+			fmt.Printf("%s", errno)
+			return
+		} else {
+			channel <- hwnd
+		}
+
+		var msg w32.MSG
+		for {
+			if status, _ := user32dll.GetMessage(&msg, 0, 0, 0); status <= 0 {
+				break
+			}
+			user32dll.TranslateMessage(&msg)
+			user32dll.DispatchMessage(&msg)
+		}
+	}("classRegisterHotKey", "windowRegisterHotKey", ch)
+
+	hwnd, isOpen := <-ch
+	if !isOpen {
+		return
+	}
+
+	// user32dll.ShowWindow(hwnd, w32.SW_SHOW) // 不需要顯示視窗一樣可以觸發hotkey
+	_, _, _ = user32dll.SendMessage(hwnd, w32.WM_HOTKEY, HokeyIDHello, 5)
+	_, _, _ = user32dll.SendMessage(hwnd, w32.WM_HOTKEY, HokeyIDHello, 0)
+	_, _, _ = user32dll.SendMessage(hwnd, w32.WM_CLOSE, 0, 0)
+	<-ch
+
+	// Output:
+	// hello
 }

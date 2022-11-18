@@ -59,7 +59,8 @@ const (
 	PNPostMessage     ProcName = "PostMessageW"
 	PNPostQuitMessage ProcName = "PostQuitMessage"
 
-	PNRegisterClass ProcName = "RegisterClassW"
+	PNRegisterClass  ProcName = "RegisterClassW"
+	PNRegisterHotKey ProcName = "RegisterHotKey"
 
 	PNReleaseDC ProcName = "ReleaseDC"
 
@@ -77,7 +78,8 @@ const (
 
 	PNUnhookWindowsHookEx ProcName = "UnhookWindowsHookEx"
 
-	PNUnregisterClass ProcName = "UnregisterClassW"
+	PNUnregisterClass  ProcName = "UnregisterClassW"
+	PNUnregisterHotKey ProcName = "UnregisterHotKey"
 )
 
 type User32DLL struct {
@@ -141,6 +143,7 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 			PNPostQuitMessage,
 
 			PNRegisterClass,
+			PNRegisterHotKey,
 
 			PNReleaseDC,
 
@@ -159,6 +162,7 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 			PNUnhookWindowsHookEx,
 
 			PNUnregisterClass,
+			PNUnregisterHotKey,
 		}
 	}
 	dll := newDll(DNUser32, procList)
@@ -692,6 +696,18 @@ func (dll *User32DLL) RegisterClass(lpWndClass /* const */ *WNDCLASS) (ATOM, sys
 	return ATOM(r1), errno
 }
 
+// RegisterHotKey https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerhotkey?redirectedfrom=MSDN
+func (dll *User32DLL) RegisterHotKey(hWnd HWND, id int32, fsModifiers uint32, vk uint32) (bool, syscall.Errno) {
+	proc := dll.mustProc(PNRegisterHotKey)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+		uintptr(id),
+		uintptr(fsModifiers),
+		uintptr(vk),
+	)
+	return r1 != 0, errno
+}
+
 // ReleaseDC https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-releasedc
 // If the DC was released, the return value is 1 or 0 otherwise.
 func (dll *User32DLL) ReleaseDC(hwnd HWND, hdc HDC) int32 {
@@ -821,6 +837,16 @@ func (dll *User32DLL) UnregisterClass(lpClassName string, hInstance HINSTANCE) (
 	r1, _, errno := syscall.SyscallN(proc.Addr(),
 		UintptrFromStr(lpClassName),
 		uintptr(hInstance),
+	)
+	return r1 != 0, errno
+}
+
+// UnregisterHotKey https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-unregisterhotkey
+func (dll *User32DLL) UnregisterHotKey(hWnd HWND, id int32) (bool, syscall.Errno) {
+	proc := dll.mustProc(PNUnregisterHotKey)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+		uintptr(id),
 	)
 	return r1 != 0, errno
 }

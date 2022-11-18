@@ -129,7 +129,10 @@ func TestGetGuid(t *testing.T) {
 // SetTimeout uTimeout is valid only in Windows 2000 and Windows XP.
 func ExampleNOTIFYICONDATA_SetTimeout() {
 	var n w32.NOTIFYICONDATA
-	n.SetTimeout(3500) // 3.5 sec
+	// 3.5 sec
+	n.SetTimeout(3500)
+
+	// Output:
 }
 
 // https://www.programcreek.com/python/?code=IronLanguages%2Fironpython2%2Fironpython2-master%2FSrc%2FStdLib%2FLib%2Fsite-packages%2Fwin32%2FDemos%2Fwin32gui_taskbar.py

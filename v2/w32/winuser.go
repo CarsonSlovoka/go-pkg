@@ -188,3 +188,12 @@ const (
 	HCBT_SYSCOMMAND   = 8
 	HCBT_SETFOCUS     = 9 // A window is about to receive the keyboard focus.
 )
+
+// https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerhotkey#parameters
+const (
+	MOD_ALT      = 0x0001
+	MOD_CONTROL  = 0x0002
+	MOD_SHIFT    = 0x0004
+	MOD_WIN      = 0x0008
+	MOD_NOREPEAT = 0x4000
+)
