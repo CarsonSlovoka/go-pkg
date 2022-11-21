@@ -15,8 +15,9 @@ const (
 
 	PNCopyFile ProcName = "CopyFileW"
 
-	PNCreateFile  ProcName = "CreateFileW"
-	PNCreateMutex ProcName = "CreateMutexW"
+	PNCreateFile               ProcName = "CreateFileW"
+	PNCreateMutex              ProcName = "CreateMutexW"
+	PNCreateToolHelp32Snapshot ProcName = "CreateToolhelp32Snapshot"
 
 	PNEndUpdateResource ProcName = "EndUpdateResourceW"
 
@@ -39,6 +40,9 @@ const (
 	PNLoadLibrary  ProcName = "LoadLibraryW"
 	PNLoadResource ProcName = "LoadResource"
 	PNLockResource ProcName = "LockResource"
+
+	PNProcess32First ProcName = "Process32FirstW"
+	PNProcess32Next  ProcName = "Process32NextW"
 
 	PNReadDirectoryChanges ProcName = "ReadDirectoryChangesW"
 
@@ -70,6 +74,7 @@ func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 
 			PNCreateFile,
 			PNCreateMutex,
+			PNCreateToolHelp32Snapshot,
 
 			PNEndUpdateResource,
 
@@ -92,6 +97,9 @@ func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 			PNLoadLibrary,
 			PNLoadResource,
 			PNLockResource,
+
+			PNProcess32First,
+			PNProcess32Next,
 
 			PNReadDirectoryChanges,
 
@@ -193,6 +201,17 @@ func (dll *Kernel32DLL) CreateMutex(lpMutexAttributes *SECURITY_ATTRIBUTES, bIni
 			return handle, nil
 		}
 	*/
+	return HANDLE(r1), errno
+}
+
+// CreateToolHelp32Snapshot https://learn.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-createtoolhelp32snapshot
+// If the function fails, it returns INVALID_HANDLE_VALUE.
+func (dll *Kernel32DLL) CreateToolHelp32Snapshot(dwFlags uint32, th32ProcessID uint32) (HANDLE, syscall.Errno) {
+	proc := dll.mustProc(PNCreateToolHelp32Snapshot)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(dwFlags),
+		uintptr(th32ProcessID),
+	)
 	return HANDLE(r1), errno
 }
 
@@ -365,6 +384,32 @@ func (dll *Kernel32DLL) LockResource(hResData HGLOBAL) uintptr {
 		uintptr(hResData),
 	)
 	return ret
+}
+
+// Process32First https://learn.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-process32firstw
+// Returns TRUE if the next entry of the process list has been copied to the buffer or FALSE otherwise
+// The ERROR_NO_MORE_FILES error value is returned by the GetLastError function
+func (dll *Kernel32DLL) Process32First(hSnapshot HANDLE,
+	lppe *PROCESSENTRY32W, // [out]
+) (int32, syscall.Errno) {
+	proc := dll.mustProc(PNProcess32First)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hSnapshot),
+		uintptr(unsafe.Pointer(lppe)),
+	)
+	return int32(r1), errno
+}
+
+// Process32Next https://learn.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-process32nextw
+// Returns TRUE if the next entry of the process list has been copied to the buffer or FALSE otherwise
+// The ERROR_NO_MORE_FILES error value is returned by the GetLastError function
+func (dll *Kernel32DLL) Process32Next(hSnapshot HANDLE, lppe *PROCESSENTRY32W) (int32, syscall.Errno) {
+	proc := dll.mustProc(PNProcess32Next)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hSnapshot),
+		uintptr(unsafe.Pointer(lppe)),
+	)
+	return int32(r1), errno
 }
 
 // ReadDirectoryChanges https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-readdirectorychangesw?redirectedfrom=MSDN

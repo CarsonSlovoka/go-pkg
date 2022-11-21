@@ -76,6 +76,59 @@ func ExampleKernel32DLL_CreateMutex() {
 
 }
 
+func ExampleKernel32DLL_CreateToolHelp32Snapshot() {
+
+	kernel32dll := w32.NewKernel32DLL()
+
+	const searchEXEName = "chrome.exe"
+
+	handleSnapshot, errno := kernel32dll.CreateToolHelp32Snapshot(w32.TH32CS_SNAPPROCESS, 0)
+	if uintptr(handleSnapshot) == w32.INVALID_HANDLE_VALUE {
+		fmt.Printf("%s\n", errno)
+		return
+	}
+
+	defer func() {
+		if ok, errno2 := kernel32dll.CloseHandle(handleSnapshot); !ok {
+			fmt.Printf("%s", errno2)
+		}
+	}()
+
+	var ok int32
+	entry := w32.NewPROCESSENTRY32W()
+
+	ok, errno = kernel32dll.Process32First(handleSnapshot, entry)
+	if ok == 0 {
+		if ok == w32.ERROR_NO_MORE_FILES {
+			log.Println(errno)
+		}
+	}
+
+	var numProcess = 0
+	for {
+		ok, errno = kernel32dll.Process32Next(handleSnapshot, entry)
+		if ok == 0 {
+			if ok == w32.ERROR_NO_MORE_FILES {
+				log.Println(errno)
+			}
+			break
+		}
+		numProcess++
+
+		if numProcess == 1 {
+			// show the first process
+			log.Println(entry.ExeFileName())
+		}
+
+		if entry.ExeFileName() == searchEXEName {
+			log.Printf("The program is running. %+v", entry)
+		}
+	}
+
+	log.Println("numProcess", numProcess)
+	// Output:
+}
+
 func ExampleKernel32DLL_GetNativeSystemInfo() {
 	kernel32dll := w32.NewKernel32DLL(w32.PNGetNativeSystemInfo)
 	info := kernel32dll.GetNativeSystemInfo()
@@ -149,7 +202,7 @@ func ExampleKernel32DLL_CopyFile() {
 		0,                                  // no template
 	)
 
-	if int(hFile) == w32.INVALID_HANDLE_VALUE {
+	if uintptr(hFile) == w32.INVALID_HANDLE_VALUE {
 		fmt.Println("Could not create file.") // 有可能是目錄路徑不存在
 		return
 	}

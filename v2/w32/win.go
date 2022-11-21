@@ -62,5 +62,5 @@ const (
 	TRUNCATE_EXISTING                    = 5
 	FILE_FLAG_FIRST_PIPE_INSTANCE        = 0x00080000
 
-	INVALID_HANDLE_VALUE int = -1
+	INVALID_HANDLE_VALUE = ^uintptr(0) // -1
 )
