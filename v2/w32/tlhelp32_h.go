@@ -22,7 +22,7 @@ type PROCESSENTRY32W struct {
 
 func NewPROCESSENTRY32W() *PROCESSENTRY32W {
 	var entry PROCESSENTRY32W
-	entry.DwSize = uint32(unsafe.Sizeof(entry))
+	entry.DwSize = uint32(unsafe.Sizeof(entry)) // https://www.autohotkey.com/boards/viewtopic.php?t=65745 // U64: 568, U32: 556
 	return &entry
 }
 

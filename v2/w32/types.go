@@ -42,6 +42,7 @@ type (
 	SHORT int16
 	LONG  int32
 
+	FLONG     uint32
 	ULONG     uint32
 	ULONG64   uint64
 	ULONGLONG uint64

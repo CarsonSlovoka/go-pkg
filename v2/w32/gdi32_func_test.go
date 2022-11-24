@@ -47,19 +47,39 @@ func ExampleGdi32DLL_AddFontResourceEx() {
 	ttfPath := "./testdata/fonts/teamviewer15.otf"
 	gdi32dll := w32.NewGdi32DLL(w32.PNAddFontResourceEx, w32.PNRemoveFontResourceEx)
 	user32dll := w32.NewUser32DLL(w32.PNPostMessage)
+
+	// FR_PRIVATE 就只有自己本身程式(呼叫者)能用
+	// 至於FR_NOT_ENUM，您可以先把flag設定為0，開啟notepad選該字體並再Remove之前先選中該字體，接著再移除
+	// 完成後不要更換字體(此時選單已經選不到該字體)
+	// 再執行本程式一次，把flag改為FR_NOT_ENUM
+	// 同樣的也在remove之前下斷點
+	// 會發現字型有改變，但選單然仍選不到該字體
+	// 也就是FR_NOT_ENUM可以讓選單不出現字體，但如果字體已經有被加載過，在還沒有重開機(或登出)前再用FR_NOT_ENUM，還是能讓應用程式顯示到該字體(前提是您不能更換字體)
+	var flag uint32 = w32.FR_NOT_ENUM // w32.FR_PRIVATE // RemoveFontResourceEx要與AddFontResourceEx所使用的flag一致
+	for {
+		// 刪除舊有的資料
+		if !gdi32dll.RemoveFontResourceEx(ttfPath,
+			flag,
+			0,
+		) {
+			break
+		}
+	}
+
 	numFont := gdi32dll.AddFontResourceEx(ttfPath,
-		w32.FR_NOT_ENUM, // 若使用FR_PRIVATE程式結束會自動刪除，同時FR_PRIVATE沒有辦法讓其他應用程式訪問到該字型，即其他應用程式沒辦法選到該字型；但是FR_NOT_ENUM可以讓其他應用程式選到該字型
+		flag,
 		0)
 	if numFont == 0 {
 		return
 	}
 
 	defer func() {
-		if err := gdi32dll.RemoveFontResourceEx(ttfPath,
-			w32.FR_NOT_ENUM, // flag 要與AddFontResourceEx所使用的flag一致
-			0,
-		); err == 0 {
-			log.Fatal(err)
+		// 注意，應該要用迴圈不斷執行，直到刪不到東西為止(假設您不曉得到底成功加入了多少字體)
+		for i := 1; ; i++ {
+			if !gdi32dll.RemoveFontResourceEx(ttfPath, flag, 0) {
+				break
+			}
+			log.Println("RemoveFontResourceEx:", i)
 		}
 	}()
 
@@ -268,7 +288,7 @@ func ExampleGdi32DLL_CreateCompatibleBitmap() {
 		0,
 	)
 
-	if int(hFile) == w32.INVALID_HANDLE_VALUE {
+	if uintptr(hFile) == w32.INVALID_HANDLE_VALUE {
 		log.Fatalf("%s\n", errno)
 	}
 
@@ -415,5 +435,52 @@ func Example_saveFileIconAsBitmap() {
 			_ = f.Close()
 		}
 	}
+	// Output:
+}
+
+func ExampleGdi32DLL_EnumFonts() {
+	gdi32dll := w32.NewGdi32DLL()
+	user32dll := w32.NewUser32DLL()
+	var fontEnumProc w32.FONTENUMPROC
+	fontEnumProc = func(lpLF *w32.LOGFONT, lpTM *w32.TEXTMETRIC, dwType uint32, lpData w32.LPARAM) int32 {
+		log.Println(lpLF.GetFaceName())
+		return 1
+	}
+
+	hwndTarget := user32dll.FindWindow("Notepad", "")
+	if hwndTarget == 0 {
+		log.Println("Notepad not found. Using the screen instead.")
+	}
+	hdcTarget := user32dll.GetDC(hwndTarget)
+	defer func() {
+		user32dll.ReleaseDC(hwndTarget, hdcTarget)
+	}()
+	// gdi32dll.EnumFonts(hdcTarget, "", fontEnumProc, 0) // List All
+	gdi32dll.EnumFonts(hdcTarget, "Arial", fontEnumProc, 0) // 列出所有FaceName含Arial(宋體)的項目
+	// Output:
+}
+
+func ExampleGdi32DLL_EnumFontFamilies() {
+	gdi32dll := w32.NewGdi32DLL()
+	user32dll := w32.NewUser32DLL()
+	hdc := user32dll.GetDC(0)
+	defer func() {
+		user32dll.ReleaseDC(0, hdc)
+	}()
+
+	var enumFontFamProc w32.EnumFontFamProc
+	enumFontFamProc = func(logFont *w32.ENUMLOGFONT, textMetric *w32.TEXTMETRIC, fontType uint32, lParam w32.LPARAM) int32 {
+		log.Println(logFont.GetFullName(), "|", logFont.GetStyle(), "|",
+			logFont.LogFont.GetFaceName(), "|",
+			"W:", logFont.LogFont.LfWeight,
+			"Italic:", logFont.LogFont.IsItalic(),
+			"Strike:", logFont.LogFont.IsStrikeOut(),
+			"U:", logFont.LogFont.IsUnderline())
+		return 1
+	}
+
+	// gdi32dll.EnumFontFamilies(hdc, "", enumFontFamProc, 0) // Enum All
+	gdi32dll.EnumFontFamilies(hdc, "Arial", enumFontFamProc, 0)
+
 	// Output:
 }

@@ -20,6 +20,9 @@ const (
 
 	PNDeleteObject ProcName = "DeleteObject"
 
+	PNEnumFontFamilies ProcName = "EnumFontFamiliesW"
+	PNEnumFonts        ProcName = "EnumFontsW"
+
 	PNGetDIBits ProcName = "GetDIBits"
 	PNGetObject ProcName = "GetObjectW"
 
@@ -54,6 +57,9 @@ func NewGdi32DLL(procList ...ProcName) *Gdi32DLL {
 			PNCreateCompatibleDC,
 
 			PNDeleteObject,
+
+			PNEnumFontFamilies,
+			PNEnumFonts,
 
 			PNGetDIBits,
 			PNGetObject,
@@ -153,7 +159,7 @@ func (dll *Gdi32DLL) AddFontMemResourceEx(pFileView uintptr, cjSize uint32, pvRe
 // If the function succeeds, the return value specifies the number of fonts added.
 // If the function fails, the return value is zero.
 // No extended error information is available.
-// 此函數可以添加字型，如果您沒有再調用RemoveFontResource，那麼已經添加的字型會一直等待下次重開機後才會被清除
+// 此函數可以添加字型，如果您沒有再調用RemoveFontResource，那麼已經添加的字型會一直等待下次重開機(或登出)後才會被清除
 //
 // 如果要安裝永久字型有以下兩種方法:
 // 1. HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts : 寫入到裡面的字型，如果省略絕對路徑，則表示此字型應該在系統字型資料夾之中: 即%winDir%\Fonts之中可以找到。相關專案參考: https://github.com/CarsonSlovoka/font-install/blob/8b9fb28d0b299ca0ac061e0d0eefc03faf4ea7ad/install_windows.go#L68-L79
@@ -164,16 +170,14 @@ func (dll *Gdi32DLL) AddFontResource(fontPath string) int {
 	return int(r1)
 }
 
-// AddFontResourceEx 使用此函數，可以讓字型只能被自己使用，其他程式不能訪問其資源(用FR_PRIVATE而非FR_NOT_ENUM) https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-addfontresourceexw
-// 一般來說，所有試用版本的字型，它們如果加載到記憶體之中，都不會使用這個函數，因為這樣除了自己以外的應用程式都沒辦法使用到該字型
-// 因此使用者取得該試用字型，如果不能在自己熟悉的應用程式中查看效果，將大大降低使用者的體驗。
-// reserved: Reserved. Must be zero.
-//
-// Return value
-//
-//	If the function succeeds, the return value specifies the number of fonts added.
-//	If the function fails, the return value is zero. No extended error information is available.
-func (dll *Gdi32DLL) AddFontResourceEx(fontPath string, flag uint32, reserved uintptr) int {
+// AddFontResourceEx https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-addfontresourceexw
+// Return value:
+// If the function succeeds, the return value specifies the number of fonts added.
+// If the function fails, the return value is zero. No extended error information is available.
+func (dll *Gdi32DLL) AddFontResourceEx(fontPath string,
+	flag uint32, // 可以是FR_PRIVATE或FR_NOT_ENUM,又或者為0，用0與沒有Ex效果相同
+	reserved uintptr, // Reserved. Must be zero.
+) int {
 	proc := dll.mustProc(PNAddFontResourceEx)
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
 		UintptrFromStr(fontPath),
@@ -242,6 +246,52 @@ func (dll *Gdi32DLL) DeleteObject(hObject HGDIOBJ) bool {
 	return r1 != 0
 }
 
+// EnumFontFamilies https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-enumfontfamiliesw
+// ENUMLOGFONT
+// The return value is the last value returned by the callback function. Its meaning is implementation specific.
+func (dll *Gdi32DLL) EnumFontFamilies(hdc HDC,
+	lpLogfont string, // NULL => selects and enumerates one font of "each" available type family.
+	lpProc EnumFontFamProc, lParam LPARAM) int32 {
+	proc := dll.mustProc(PNEnumFontFamilies)
+
+	// https://learn.microsoft.com/en-us/previous-versions/dd162621(v=vs.85)
+	lpProcCallback := syscall.NewCallback(func(logFont *ENUMLOGFONT, textMetric *TEXTMETRIC, fontType uint32, lParam LPARAM) uintptr {
+		ret := lpProc(logFont, textMetric, fontType, lParam)
+		return uintptr(ret)
+	})
+
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+		UintptrFromStr(lpLogfont),
+		lpProcCallback,
+		uintptr(lParam),
+	)
+	return int32(r1)
+}
+
+// EnumFonts https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-enumfontsw
+// LOGFONT
+// The return value is the last value returned by the callback function. Its meaning is defined by the application
+func (dll *Gdi32DLL) EnumFonts(hdc HDC,
+	lpLogfont string, // If NULL => enumerates one font of "each" available typeface.
+	lpProc FONTENUMPROC, lParam LPARAM) int32 {
+	proc := dll.mustProc(PNEnumFonts)
+
+	// https://learn.microsoft.com/en-us/previous-versions/dd162623(v=vs.85)
+	lpProcCallback := syscall.NewCallback(func(logFont *LOGFONT, textMetric *TEXTMETRIC, fontType uint32, lpData LPARAM) uintptr {
+		ret := lpProc(logFont, textMetric, fontType, lpData)
+		return uintptr(ret)
+	})
+
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+		UintptrFromStr(lpLogfont),
+		lpProcCallback,
+		uintptr(lParam),
+	)
+	return int32(r1)
+}
+
 // GetDIBits retrieves the bits of the specified compatible bitmap and copies them into a buffer as a DIB(Device-Independent Bitmap) using the specified format.
 // https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-getdibits
 // If the function fails, the return value is zero.
@@ -295,16 +345,17 @@ func (dll *Gdi32DLL) RemoveFontResource(name string) int {
 }
 
 // RemoveFontResourceEx https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-removefontresourceexw
+// 如果已經呼叫成功，卻還是看的到字型，重開機或者登出就不見了
 // If the function succeeds, the return value is nonzero.
 // If the function fails, the return value is zero.
-func (dll *Gdi32DLL) RemoveFontResourceEx(name string, flag uint32, reserved uintptr) int {
+func (dll *Gdi32DLL) RemoveFontResourceEx(name string, flag uint32, reserved uintptr) bool {
 	proc := dll.mustProc(PNRemoveFontResourceEx)
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
 		UintptrFromStr(name),
 		uintptr(flag),
 		reserved,
 	)
-	return int(r1)
+	return r1 != 0
 }
 
 // SelectObject https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-selectobject

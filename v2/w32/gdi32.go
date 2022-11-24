@@ -2,6 +2,8 @@
 
 package w32
 
+import "syscall"
+
 // GetDeviceCaps index constants
 const (
 	DRIVERVERSION   = 0
@@ -251,6 +253,9 @@ const (
 )
 
 const LF_FACESIZE = 32
+const LF_FULLFACESIZE = 64
+
+const MM_MAX_NUMAXES = 16
 
 // Font weight constants
 const (
@@ -752,8 +757,8 @@ const (
 // https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-addfontresourceexw#parameters
 // AddFontResourceEx flags
 const (
-	FR_PRIVATE  = 0x10 // 程式關閉後會自動刪除
-	FR_NOT_ENUM = 0x20 // 不允許process有能力列舉字型
+	FR_PRIVATE  = 0x10 // 私有(僅自己才可以用)
+	FR_NOT_ENUM = 0x20 // 任何process(包含自己)都不能列舉此字型。(不能列舉但是如果該字體已經有被載入過，就能被使用。例如AddFontResourceEx(fontPath, 0, 0)，當您選中該字體之後再卸載，選單會看不見該字體，但您如果沒有更換字體，再調用AddFontResourceEx(fontPath, FR_NOT_ENUM, 0)雖然選單中還是沒看到該字體，但字體樣式會改變。
 )
 
 type (
@@ -799,12 +804,13 @@ type PIXELFORMATDESCRIPTOR struct {
 	DwDamageMask    uint32
 }
 
+// LOGFONT https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-logfontw
 type LOGFONT struct {
 	LfHeight         int32
 	LfWidth          int32
 	LfEscapement     int32
 	LfOrientation    int32
-	LfWeight         int32
+	LfWeight         int32 // 0~1000 0:default, 400:normal 700:Bold
 	LfItalic         byte
 	LfUnderline      byte
 	LfStrikeOut      byte
@@ -814,6 +820,22 @@ type LOGFONT struct {
 	LfQuality        byte
 	LfPitchAndFamily byte
 	LfFaceName       [LF_FACESIZE]uint16
+}
+
+func (f *LOGFONT) IsItalic() bool {
+	return f.LfItalic == 1
+}
+
+func (f *LOGFONT) IsStrikeOut() bool {
+	return f.LfStrikeOut == 1
+}
+
+func (f *LOGFONT) IsUnderline() bool {
+	return f.LfUnderline == 1
+}
+
+func (f *LOGFONT) GetFaceName() string {
+	return syscall.UTF16ToString(f.LfFaceName[:])
 }
 
 type TEXTMETRIC struct {
