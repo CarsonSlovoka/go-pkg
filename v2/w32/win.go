@@ -19,8 +19,8 @@ const (
 )
 
 const (
-	FALSE = 0
-	TRUE  = 1
+	FALSE BOOL = 0
+	TRUE  BOOL = 1
 )
 
 type (

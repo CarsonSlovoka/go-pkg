@@ -301,6 +301,7 @@ const (
 )
 
 // Font output precision constants
+// https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createfontw
 const (
 	OUT_DEFAULT_PRECIS   = 0
 	OUT_STRING_PRECIS    = 1
@@ -629,9 +630,10 @@ const (
 )
 
 // Background modes
+// https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-setbkmode#parameters
 const (
-	TRANSPARENT = 1
-	OPAQUE      = 2
+	TRANSPARENT = 1 // Background remains untouched.
+	OPAQUE      = 2 // 	Background is filled with the current background color before the text, hatched brush, or pen is drawn.
 )
 
 // Ternary raster operations
@@ -806,36 +808,36 @@ type PIXELFORMATDESCRIPTOR struct {
 
 // LOGFONT https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-logfontw
 type LOGFONT struct {
-	LfHeight         int32
-	LfWidth          int32
-	LfEscapement     int32
-	LfOrientation    int32
-	LfWeight         int32 // 0~1000 0:default, 400:normal 700:Bold
-	LfItalic         byte
-	LfUnderline      byte
-	LfStrikeOut      byte
-	LfCharSet        byte
-	LfOutPrecision   byte
-	LfClipPrecision  byte
-	LfQuality        byte
-	LfPitchAndFamily byte
-	LfFaceName       [LF_FACESIZE]uint16
+	Height         int32
+	Width          int32
+	Escapement     int32
+	Orientation    int32
+	Weight         int32 // 0~1000 0:default, 400:normal 700:Bold
+	Italic         byte
+	Underline      byte
+	StrikeOut      byte
+	CharSet        byte
+	OutPrecision   byte
+	ClipPrecision  byte
+	Quality        byte
+	PitchAndFamily byte
+	FaceName       [LF_FACESIZE]uint16
 }
 
 func (f *LOGFONT) IsItalic() bool {
-	return f.LfItalic == 1
+	return f.Italic == 1
 }
 
 func (f *LOGFONT) IsStrikeOut() bool {
-	return f.LfStrikeOut == 1
+	return f.StrikeOut == 1
 }
 
 func (f *LOGFONT) IsUnderline() bool {
-	return f.LfUnderline == 1
+	return f.Underline == 1
 }
 
 func (f *LOGFONT) GetFaceName() string {
-	return syscall.UTF16ToString(f.LfFaceName[:])
+	return syscall.UTF16ToString(f.FaceName[:])
 }
 
 type TEXTMETRIC struct {

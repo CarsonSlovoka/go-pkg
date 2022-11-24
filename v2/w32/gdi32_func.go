@@ -17,11 +17,17 @@ const (
 
 	PNCreateCompatibleBitmap ProcName = "CreateCompatibleBitmap"
 	PNCreateCompatibleDC     ProcName = "CreateCompatibleDC"
+	PNCreateFontIndirect     ProcName = "CreateFontIndirectW"
+	PNCreateFont             ProcName = "CreateFontW"
+	PNCreateRectRgnIndirect  ProcName = "CreateRectRgnIndirect"
+	PNCreateSolidBrush       ProcName = "CreateSolidBrush"
 
 	PNDeleteObject ProcName = "DeleteObject"
 
 	PNEnumFontFamilies ProcName = "EnumFontFamiliesW"
 	PNEnumFonts        ProcName = "EnumFontsW"
+
+	PNFillRgn ProcName = "FillRgn"
 
 	PNGetDIBits ProcName = "GetDIBits"
 	PNGetObject ProcName = "GetObjectW"
@@ -32,9 +38,14 @@ const (
 
 	PNSelectObject ProcName = "SelectObject"
 
+	PNSetBkColor        ProcName = "SetBkColor"
+	PNSetBkMode         ProcName = "SetBkMode"
 	PNSetStretchBltMode ProcName = "SetStretchBltMode"
+	PNSetTextColor      ProcName = "SetTextColor"
 
 	PNStretchBlt ProcName = "StretchBlt"
+
+	PNTextOut ProcName = "TextOutW"
 )
 
 type Gdi32DLL struct {
@@ -55,11 +66,17 @@ func NewGdi32DLL(procList ...ProcName) *Gdi32DLL {
 
 			PNCreateCompatibleBitmap,
 			PNCreateCompatibleDC,
+			PNCreateFontIndirect,
+			PNCreateFont,
+			PNCreateRectRgnIndirect,
+			PNCreateSolidBrush,
 
 			PNDeleteObject,
 
 			PNEnumFontFamilies,
 			PNEnumFonts,
+
+			PNFillRgn,
 
 			PNGetDIBits,
 			PNGetObject,
@@ -70,9 +87,14 @@ func NewGdi32DLL(procList ...ProcName) *Gdi32DLL {
 
 			PNSelectObject,
 
+			PNSetBkColor,
+			PNSetBkMode,
 			PNSetStretchBltMode,
+			PNSetTextColor,
 
 			PNStretchBlt,
+
+			PNTextOut,
 		}
 	}
 	dll := newDll(DNGdi32, procList)
@@ -234,6 +256,56 @@ func (dll *Gdi32DLL) CreateCompatibleDC(hdc HDC) HDC {
 	return HDC(r1)
 }
 
+// CreateFontIndirect https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createfontindirectw
+// If the function fails, the return value is NULL.
+func (dll *Gdi32DLL) CreateFontIndirect(logFont *LOGFONT) HFONT {
+	proc := dll.mustProc(PNCreateFontIndirect)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(unsafe.Pointer(logFont)),
+	)
+	return HFONT(r1)
+}
+
+// CreateFont https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createfontw
+// If the function fails, the return value is NULL.
+func (dll *Gdi32DLL) CreateFont(
+	cHeight int32,
+	cWidth int32, // If this value is zero, the font mapper chooses a closest match value.
+	cEscapement int32, cOrientation int32, cWeight int32,
+	bItalic uint32, bUnderline uint32, bStrikeOut uint32,
+	iCharSet uint32, iOutPrecision uint32, iClipPrecision uint32, iQuality uint32, iPitchAndFamily uint32,
+	pszFaceName string,
+) HFONT {
+	proc := dll.mustProc(PNCreateFont)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(cHeight),
+		uintptr(cWidth),
+		uintptr(cEscapement),
+		uintptr(cOrientation),
+		uintptr(cWeight),
+		uintptr(bItalic),
+		uintptr(bUnderline),
+		uintptr(bStrikeOut),
+		uintptr(iCharSet),
+		uintptr(iOutPrecision),
+		uintptr(iClipPrecision),
+		uintptr(iQuality),
+		uintptr(iPitchAndFamily),
+		UintptrFromStr(pszFaceName),
+	)
+	return HFONT(r1)
+}
+
+// CreateRectRgnIndirect https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createrectrgnindirect
+// If the function fails, the return value is NULL.
+func (dll *Gdi32DLL) CreateRectRgnIndirect(lpRect *RECT) HRGN {
+	proc := dll.mustProc(PNCreateRectRgnIndirect)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(unsafe.Pointer(lpRect)),
+	)
+	return HRGN(r1)
+}
+
 // DeleteObject https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-deleteobject
 // hObject: A handle to a logical pen, brush, font, bitmap, region, or palette.
 // If the function succeeds, the return value is nonzero.
@@ -244,6 +316,16 @@ func (dll *Gdi32DLL) DeleteObject(hObject HGDIOBJ) bool {
 		uintptr(hObject),
 	)
 	return r1 != 0
+}
+
+// CreateSolidBrush https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createsolidbrush
+// If the function fails, the return value is NULL.
+func (dll *Gdi32DLL) CreateSolidBrush(color COLORREF) HBRUSH {
+	proc := dll.mustProc(PNCreateSolidBrush)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(color),
+	)
+	return HBRUSH(r1)
 }
 
 // EnumFontFamilies https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-enumfontfamiliesw
@@ -290,6 +372,17 @@ func (dll *Gdi32DLL) EnumFonts(hdc HDC,
 		uintptr(lParam),
 	)
 	return int32(r1)
+}
+
+// FillRgn https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-fillrgn
+// If the function fails, the return value is zero.
+func (dll *Gdi32DLL) FillRgn(hdc HDC, hrgn HRGN, hbr HBRUSH) bool {
+	proc := dll.mustProc(PNFillRgn)
+	ret1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+		uintptr(hrgn),
+		uintptr(hbr))
+	return ret1 != 0
 }
 
 // GetDIBits retrieves the bits of the specified compatible bitmap and copies them into a buffer as a DIB(Device-Independent Bitmap) using the specified format.
@@ -369,6 +462,31 @@ func (dll *Gdi32DLL) SelectObject(hdc HDC, h HGDIOBJ) HGDIOBJ {
 	return HGDIOBJ(r1)
 }
 
+// SetBkColor https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-setbkcolor
+// If the function fails, the return value is CLR_INVALID.
+func (dll *Gdi32DLL) SetBkColor(hdc HDC, color COLORREF) COLORREF {
+	proc := dll.mustProc(PNSetBkColor)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+		uintptr(color),
+	)
+	return COLORREF(r1)
+}
+
+// SetBkMode https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-setbkmode
+// If the function succeeds, the return value specifies the previous background mode.
+// If the function fails, the return value is zero.
+func (dll *Gdi32DLL) SetBkMode(hdc HDC,
+	mode int32, // OPAQUE, TRANSPARENT
+) int32 {
+	proc := dll.mustProc(PNSetBkMode)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+		uintptr(mode),
+	)
+	return int32(r1)
+}
+
 // SetStretchBltMode https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-setstretchbltmode
 // If the function fails, the return value is zero.
 func (dll *Gdi32DLL) SetStretchBltMode(hdc HDC, mode int32) int32 {
@@ -378,6 +496,17 @@ func (dll *Gdi32DLL) SetStretchBltMode(hdc HDC, mode int32) int32 {
 		uintptr(mode),
 	)
 	return int32(r1)
+}
+
+// SetTextColor https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-settextcolor
+// If the function fails, the return value is CLR_INVALID.
+func (dll *Gdi32DLL) SetTextColor(hdc HDC, color COLORREF) COLORREF {
+	proc := dll.mustProc(PNSetTextColor)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+		uintptr(color),
+	)
+	return COLORREF(r1)
 }
 
 // StretchBlt https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-stretchblt
@@ -403,6 +532,23 @@ func (dll *Gdi32DLL) StretchBlt(
 		uintptr(srcW),
 		uintptr(srcH),
 		uintptr(rasterOperation),
+	)
+	return r1 != 0
+}
+
+// TextOut https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-textoutw
+// If the function fails, the return value is zero.
+func (dll *Gdi32DLL) TextOut(hdc HDC, x int32, y int32, lpString string, length int32) bool {
+	proc := dll.mustProc(PNTextOut)
+	if length == 0 {
+		length = int32((len(lpString) / 2) + 1) // 指的是utf16的個數，非utf8
+	}
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+		uintptr(x),
+		uintptr(y),
+		UintptrFromStr(lpString),
+		uintptr(length),
 	)
 	return r1 != 0
 }

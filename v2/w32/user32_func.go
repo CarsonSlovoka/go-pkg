@@ -11,6 +11,8 @@ import (
 const (
 	PNAppendMenu ProcName = "AppendMenuW"
 
+	PNBeginPaint ProcName = "BeginPaint"
+
 	PNCallNextHookEx ProcName = "CallNextHookEx"
 
 	PNCloseWindow ProcName = "CloseWindow"
@@ -30,6 +32,9 @@ const (
 
 	PNDrawIcon   ProcName = "DrawIcon"
 	PNDrawIconEx ProcName = "DrawIconEx"
+	PNDrawText   ProcName = "DrawTextW"
+
+	PNEndPaint ProcName = "EndPaint"
 
 	PNFindWindow   ProcName = "FindWindowW"
 	PNFindWindowEx ProcName = "FindWindowExW"
@@ -66,6 +71,7 @@ const (
 
 	PNSetForegroundWindow ProcName = "SetForegroundWindow"
 	PNSetMenuItemInfo     ProcName = "SetMenuItemInfoW"
+	PNSetRect             ProcName = "SetRect"
 	PNSetWindowLongPtr    ProcName = "SetWindowLongPtrW"
 	PNSetWindowsHookEx    ProcName = "SetWindowsHookExW"
 
@@ -94,6 +100,8 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 		procList = []ProcName{
 			PNAppendMenu,
 
+			PNBeginPaint,
+
 			PNCallNextHookEx,
 
 			PNCloseWindow,
@@ -113,6 +121,9 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 
 			PNDrawIcon,
 			PNDrawIconEx,
+			PNDrawText,
+
+			PNEndPaint,
 
 			PNFindWindow,
 			PNFindWindowEx,
@@ -149,6 +160,7 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 
 			PNSetForegroundWindow,
 			PNSetMenuItemInfo,
+			PNSetRect,
 			PNSetWindowLongPtr,
 			PNSetWindowsHookEx,
 
@@ -180,6 +192,22 @@ func (dll *User32DLL) AppendMenu(hMenu HMENU, uFlags uint32, uIDNewItem UINT_PTR
 		UintptrFromStr(lpNewItem),
 	)
 	return r1 != 0, errno
+}
+
+// BeginPaint https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-beginpaint
+// Sets the update region of a window to NULL. This clears the region, preventing it from generating subsequent WM_PAINT messages.
+// If an application processes a WM_PAINT message but does not call BeginPaint or otherwise clear the update region,
+// the application continues to receive WM_PAINT messages as long as the region is not empty.
+// In all cases, an application must clear the update region before returning from WM_PAINT message.
+//
+// If the function fails, the return value is NULL, indicating that no display device context is available.
+func (dll *User32DLL) BeginPaint(hWnd HWND, lpPaint *PAINTSTRUCT /* out */) HDC {
+	proc := dll.mustProc(PNBeginPaint)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+		uintptr(unsafe.Pointer(lpPaint)),
+	)
+	return HDC(r1)
 }
 
 // CallNextHookEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-callnexthookex
@@ -372,6 +400,34 @@ func (dll *User32DLL) DrawIconEx(hdc HDC,
 	return r1 != 0, errno
 }
 
+// DrawText https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-drawtextw
+// If the function fails, the return value is zero.
+func (dll *User32DLL) DrawText(hdc HDC, text string,
+	textLength int32, // If textLength is -1, then the "text" parameter is assumed to be a pointer to a null-terminated string and DrawText computes the character count automatically.
+	lprc *RECT, format UINT) int32 {
+	proc := dll.mustProc(PNDrawText)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+		UintptrFromStr(text),
+		uintptr(textLength),
+		uintptr(unsafe.Pointer(lprc)),
+		uintptr(format),
+	)
+	return int32(r1)
+}
+
+// EndPaint https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-endpaint
+// If the caret was hidden by BeginPaint, EndPaint restores the caret to the screen.
+// The return value is always nonzero.
+func (dll *User32DLL) EndPaint(hWnd HWND, lpPaint *PAINTSTRUCT) bool {
+	proc := dll.mustProc(PNEndPaint)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+		uintptr(unsafe.Pointer(lpPaint)),
+	)
+	return r1 != 0
+}
+
 // FindWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-findwindoww
 // If the function fails, the return value is NULL.
 func (dll *User32DLL) FindWindow(className, windowName string) HWND {
@@ -448,7 +504,7 @@ func (dll *User32DLL) GetClassName(hwnd HWND) (name string, err error) {
 }
 
 // GetClientRect https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getclientrect
-func (dll *User32DLL) GetClientRect(hwnd HWND, lpRect *RECT) (bool, syscall.Errno) {
+func (dll *User32DLL) GetClientRect(hwnd HWND, lpRect *RECT /* out */) (bool, syscall.Errno) {
 	proc := dll.mustProc(PNGetClientRect)
 	r1, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hwnd),
@@ -470,6 +526,7 @@ func (dll *User32DLL) GetCursorPos(
 }
 
 // GetDC LoadIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getdc
+// the default font is "System"
 func (dll *User32DLL) GetDC(hwnd HWND) HDC {
 	proc := dll.mustProc(PNGetDC)
 	hdc, _, _ := syscall.SyscallN(proc.Addr(),
@@ -741,6 +798,21 @@ func (dll *User32DLL) SetMenuItemInfo(hmenu HMENU, item UINT, fByPosition bool, 
 		uintptr(unsafe.Pointer(lpmii)),
 	)
 	return r1 != 0, errno
+}
+
+// SetRect https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setrect
+// If the function fails, the return value is zero.
+func (dll *User32DLL) SetRect(lprc *RECT, // [out]
+	xLeft int32, yTop int32, xRight int32, yBottom int32) bool {
+	proc := dll.mustProc(PNSetRect)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(unsafe.Pointer(lprc)),
+		uintptr(xLeft),
+		uintptr(yTop),
+		uintptr(xRight),
+		uintptr(yBottom),
+	)
+	return r1 != 0
 }
 
 // SetWindowLongPtr https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowlongptrw

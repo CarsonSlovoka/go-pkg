@@ -1044,6 +1044,7 @@ const (
 )
 
 // DrawText[Ex] format flags
+// https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-drawtext
 const (
 	DT_TOP                  = 0x00000000
 	DT_LEFT                 = 0x00000000
@@ -1055,7 +1056,7 @@ const (
 	DT_SINGLELINE           = 0x00000020
 	DT_EXPANDTABS           = 0x00000040
 	DT_TABSTOP              = 0x00000080
-	DT_NOCLIP               = 0x00000100
+	DT_NOCLIP               = 0x00000100 // Draws without clipping. DrawText is somewhat faster when DT_NOCLIP is used. // 使用這種方法速度會比較快一些
 	DT_EXTERNALLEADING      = 0x00000200
 	DT_CALCRECT             = 0x00000400
 	DT_NOPREFIX             = 0x00000800

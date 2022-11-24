@@ -48,10 +48,11 @@ type (
 	ULONGLONG uint64
 	ULONG_PTR *uint32
 
-	WORD  uint16
-	WCHAR uint16
-	PWSTR *WCHAR
-	PVOID uintptr
+	USHORT uint16
+	WORD   uint16
+	WCHAR  uint16
+	PWSTR  *WCHAR
+	PVOID  uintptr
 
 	SCODE LONG
 )

@@ -456,7 +456,7 @@ func ExampleGdi32DLL_EnumFonts() {
 		user32dll.ReleaseDC(hwndTarget, hdcTarget)
 	}()
 	// gdi32dll.EnumFonts(hdcTarget, "", fontEnumProc, 0) // List All
-	gdi32dll.EnumFonts(hdcTarget, "Arial", fontEnumProc, 0) // 列出所有FaceName含Arial(宋體)的項目
+	gdi32dll.EnumFonts(hdcTarget, "Arial", fontEnumProc, 0) // 列出所有FaceName含Arial(sans-serif)的項目
 	// Output:
 }
 
@@ -472,7 +472,7 @@ func ExampleGdi32DLL_EnumFontFamilies() {
 	enumFontFamProc = func(logFont *w32.ENUMLOGFONT, textMetric *w32.TEXTMETRIC, fontType uint32, lParam w32.LPARAM) int32 {
 		log.Println(logFont.GetFullName(), "|", logFont.GetStyle(), "|",
 			logFont.LogFont.GetFaceName(), "|",
-			"W:", logFont.LogFont.LfWeight,
+			"W:", logFont.LogFont.Weight,
 			"Italic:", logFont.LogFont.IsItalic(),
 			"Strike:", logFont.LogFont.IsStrikeOut(),
 			"U:", logFont.LogFont.IsUnderline())
@@ -481,6 +481,81 @@ func ExampleGdi32DLL_EnumFontFamilies() {
 
 	// gdi32dll.EnumFontFamilies(hdc, "", enumFontFamProc, 0) // Enum All
 	gdi32dll.EnumFontFamilies(hdc, "Arial", enumFontFamProc, 0)
+
+	// Output:
+}
+
+func ExampleGdi32DLL_CreateFont() {
+	gdi32dll := w32.NewGdi32DLL()
+	user32dll := w32.NewUser32DLL()
+	hwnd := user32dll.FindWindow("Notepad", "")
+	hdc := user32dll.GetDC(hwnd)
+	defer func() {
+		user32dll.ReleaseDC(hwnd, hdc)
+	}()
+
+	var (
+		hFontSystem w32.HFONT
+		hFontArial  w32.HFONT
+	)
+
+	// hFont: System 使用CreateFont來建立
+	{
+		hFontSystem = gdi32dll.CreateFont(
+			48, 0, 0, 0,
+			w32.FW_DONTCARE,
+			0, 1, 0, w32.DEFAULT_CHARSET,
+			w32.OUT_OUTLINE_PRECIS,
+			w32.CLIP_DEFAULT_PRECIS,
+			w32.CLEARTYPE_QUALITY,
+			w32.DEFAULT_PITCH,
+			"System",
+		)
+		if hFontSystem == 0 {
+			return
+		}
+		defer func() {
+			if gdi32dll.DeleteObject(w32.HGDIOBJ(hFontSystem)) {
+				log.Println("DeleteObject HFONT")
+			}
+		}()
+	}
+
+	// hFont: Arial 使用CreateFontIndirect來建立
+	{
+		var logFont w32.LOGFONT
+		{
+			gdi32dll.EnumFonts(hdc, "Arial",
+				func(lpLF *w32.LOGFONT, lpTM *w32.TEXTMETRIC, dwType uint32, lpData w32.LPARAM) int32 {
+					logFont = *lpLF
+					return 0 // DO NOT CONTINUE // 找到一個就停止
+				},
+				0)
+		}
+		logFont.Height = 66 // 可以再做調整
+		hFontArial = gdi32dll.CreateFontIndirect(&logFont)
+		defer func() {
+			if gdi32dll.DeleteObject(w32.HGDIOBJ(hFontArial)) {
+				log.Println("DeleteObject HFONT")
+			}
+		}()
+	}
+
+	gdi32dll.SetBkColor(hdc, w32.RGB(128, 128, 128))
+	gdi32dll.SetBkMode(hdc, w32.OPAQUE) // 預設就是不透明，可以不用設定
+	// gdi32dll.SetBkMode(hdc, w32.TRANSPARENT) // 如果設定成透明，那麼BkColor的顏色不會顯示
+
+	var rect w32.RECT
+	gdi32dll.SelectObject(hdc, w32.HGDIOBJ(hFontArial))
+	_, _ = user32dll.GetClientRect(hwnd, &rect)
+	user32dll.DrawText(hdc, "Hello World 您好 世界", -1, &rect, w32.DT_NOCLIP)
+
+	gdi32dll.SelectObject(hdc, w32.HGDIOBJ(hFontSystem))
+	user32dll.SetRect(&rect, 100, 100, 700, 200)
+	if gdi32dll.SetTextColor(hdc, w32.RGB(0, 255, 255)) == w32.CLR_INVALID {
+		fmt.Println("SetTextColor error")
+	}
+	user32dll.DrawText(hdc, "Hello World 您好 世界", -1, &rect, w32.DT_NOCLIP)
 
 	// Output:
 }

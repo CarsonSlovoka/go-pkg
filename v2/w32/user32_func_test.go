@@ -1346,7 +1346,6 @@ func ExampleUser32DLL_RegisterHotKey() {
 						log.Printf("Error [UnregisterHotKey] %s", errno)
 					}
 				}
-				log.Println("haha")
 				user32dll.PostQuitMessage(0)
 				return 0
 			case w32.WM_CREATE:
@@ -1428,4 +1427,100 @@ func ExampleUser32DLL_RegisterHotKey() {
 
 	// Output:
 	// hello
+}
+
+func ExampleUser32DLL_BeginPaint() {
+	user32dll := w32.NewUser32DLL()
+	kernel32dll := w32.NewKernel32DLL()
+	gdi32dll := w32.NewGdi32DLL()
+
+	ch := make(chan w32.HWND)
+	go func(className, windowName string, channel chan<- w32.HWND) {
+		wndProcFuncPtr := syscall.NewCallback(w32.WNDPROC(func(hwnd w32.HWND, uMsg w32.UINT, wParam w32.WPARAM, lParam w32.LPARAM) w32.LRESULT {
+			switch uMsg {
+			case w32.WM_DESTROY:
+				user32dll.PostQuitMessage(0)
+				return 0
+			case w32.WM_CREATE:
+				user32dll.ShowWindow(hwnd, w32.SW_SHOW)
+			case w32.WM_PAINT:
+				log.Println("WM_PAINT")
+				var paintStruct w32.PAINTSTRUCT
+				user32dll.BeginPaint(hwnd, &paintStruct)
+
+				hdc := user32dll.GetDC(hwnd)
+				defer func() {
+					user32dll.ReleaseDC(hwnd, hdc)
+				}()
+
+				var rect w32.RECT
+				_, _ = user32dll.GetClientRect(hwnd, &rect)
+
+				// Background Color
+				hRgnBackground := gdi32dll.CreateRectRgnIndirect(&rect)
+				hBrush := gdi32dll.CreateSolidBrush(w32.RGB(128, 128, 128))
+				gdi32dll.FillRgn(hdc, hRgnBackground, hBrush)
+
+				gdi32dll.SetTextColor(hdc, w32.RGB(255, 128, 0))
+
+				user32dll.DrawText(hdc, "Hello World 您好 世界", -1, &rect, w32.DT_NOCLIP)
+				gdi32dll.TextOut(hdc, 100, 200, "Hi, 您好", 0)
+				user32dll.EndPaint(hwnd, &paintStruct)
+			}
+			return user32dll.DefWindowProc(hwnd, uMsg, wParam, lParam) // default window proc
+		}))
+
+		hInstance := w32.HINSTANCE(kernel32dll.GetModuleHandle(""))
+		pUTF16ClassName, _ := syscall.UTF16PtrFromString(className)
+		wc := w32.WNDCLASS{
+			LpfnWndProc:   wndProcFuncPtr,
+			HInstance:     hInstance,
+			LpszClassName: pUTF16ClassName,
+		}
+
+		if atom, errno := user32dll.RegisterClass(&wc); atom == 0 {
+			fmt.Printf("%s", errno)
+			return
+		}
+
+		defer func() {
+			if ok, errno := user32dll.UnregisterClass(className, hInstance); !ok {
+				fmt.Printf("[UnregisterClass] %s", errno)
+			}
+			close(channel)
+		}()
+
+		if hwnd, errno := user32dll.CreateWindowEx(0,
+			className, windowName,
+			w32.WS_OVERLAPPEDWINDOW,
+			w32.CW_USEDEFAULT, w32.CW_USEDEFAULT, w32.CW_USEDEFAULT, w32.CW_USEDEFAULT,
+			0, 0,
+			hInstance, 0,
+		); hwnd == 0 {
+			fmt.Printf("%s", errno)
+			return
+		} else {
+			channel <- hwnd
+		}
+
+		var msg w32.MSG
+		for {
+			if status, _ := user32dll.GetMessage(&msg, 0, 0, 0); status <= 0 {
+				break
+			}
+			user32dll.TranslateMessage(&msg)
+			user32dll.DispatchMessage(&msg)
+		}
+	}("classExampleBeginPaint", "windowExampleBeginPaint", ch)
+
+	hwnd, isOpen := <-ch
+	if !isOpen {
+		return
+	}
+
+	_, _, _ = user32dll.SendMessage(hwnd, w32.WM_PAINT, 0, 0)
+	_, _, _ = user32dll.SendMessage(hwnd, w32.WM_CLOSE, 0, 0)
+
+	<-ch
+	// Output:
 }
