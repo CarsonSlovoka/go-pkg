@@ -12,9 +12,12 @@ import (
 )
 
 func ExampleRGB() {
-	fmt.Println(0xff80ff == w32.RGB(255, 128, 255))
+	rgb := w32.RGB(0xff, 0x80, 0x40) // 255, 128, 64
+	fmt.Println(0x4080ff == rgb)
+	fmt.Println(w32.GetRValue(rgb), w32.GetGValue(rgb), w32.GetBValue(rgb))
 	// Output:
 	// true
+	// 255 128 64
 }
 
 // 添加字型，不需要安裝。重開機或執行RemoveFontResource將會被移除
@@ -556,6 +559,49 @@ func ExampleGdi32DLL_CreateFont() {
 		fmt.Println("SetTextColor error")
 	}
 	user32dll.DrawText(hdc, "Hello World 您好 世界", -1, &rect, w32.DT_NOCLIP)
+
+	// Output:
+}
+
+func ExampleGdi32DLL_GetPixel() {
+	gdi32dll := w32.NewGdi32DLL()
+	user32dll := w32.NewUser32DLL()
+
+	hwnd := user32dll.GetDesktopWindow()
+	hdc := user32dll.GetDC(hwnd)
+	defer user32dll.ReleaseDC(hwnd, hdc)
+
+	hMemDC := gdi32dll.CreateCompatibleDC(hdc)
+	defer func() {
+		if gdi32dll.DeleteDC(hMemDC) {
+			log.Println("DeleteDC OK")
+		}
+	}()
+	var rect w32.RECT
+	if ok, errno := user32dll.GetWindowRect(hwnd, &rect); !ok {
+		fmt.Printf("%s\n", errno)
+		return
+	}
+	width := rect.Right - rect.Left
+	height := rect.Bottom - rect.Top
+	hBitmapMem := gdi32dll.CreateCompatibleBitmap(hdc, width, height)
+	gdi32dll.SelectObject(hMemDC, w32.HGDIOBJ(hBitmapMem))
+	if ok, errno := gdi32dll.BitBlt(hMemDC, 0, 0, width, height, hdc, 0, 0, w32.SRCCOPY); !ok {
+		fmt.Printf("%s\n", errno)
+		return
+	}
+
+	/*
+		var i, j int32
+		var color w32.COLORREF
+		for i = 0; i < 50; i++ {
+			for j = 0; j < 50; j++ {
+				color = gdi32dll.GetPixel(hMemDC, i, j)
+				log.Println(w32.GetRValue(color), w32.GetGValue(color), w32.GetBValue(color))
+			}
+		}
+	*/
+	return
 
 	// Output:
 }

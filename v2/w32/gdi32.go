@@ -689,6 +689,7 @@ const (
 
 const CBM_INIT = 4
 
+// https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-getpixel#return-value
 const (
 	CLR_INVALID = 0xFFFFFFFF
 	CLR_NONE    = CLR_INVALID

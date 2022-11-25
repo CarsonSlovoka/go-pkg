@@ -22,6 +22,7 @@ const (
 	PNCreateRectRgnIndirect  ProcName = "CreateRectRgnIndirect"
 	PNCreateSolidBrush       ProcName = "CreateSolidBrush"
 
+	PNDeleteDC     ProcName = "DeleteDC"
 	PNDeleteObject ProcName = "DeleteObject"
 
 	PNEnumFontFamilies ProcName = "EnumFontFamiliesW"
@@ -31,6 +32,7 @@ const (
 
 	PNGetDIBits ProcName = "GetDIBits"
 	PNGetObject ProcName = "GetObjectW"
+	PNGetPixel  ProcName = "GetPixel"
 
 	PNRemoveFontMemResourceEx ProcName = "RemoveFontMemResourceEx"
 	PNRemoveFontResource      ProcName = "RemoveFontResourceW"
@@ -71,6 +73,7 @@ func NewGdi32DLL(procList ...ProcName) *Gdi32DLL {
 			PNCreateRectRgnIndirect,
 			PNCreateSolidBrush,
 
+			PNDeleteDC,
 			PNDeleteObject,
 
 			PNEnumFontFamilies,
@@ -80,6 +83,7 @@ func NewGdi32DLL(procList ...ProcName) *Gdi32DLL {
 
 			PNGetDIBits,
 			PNGetObject,
+			PNGetPixel,
 
 			PNRemoveFontMemResourceEx,
 			PNRemoveFontResource,
@@ -102,7 +106,22 @@ func NewGdi32DLL(procList ...ProcName) *Gdi32DLL {
 }
 
 func RGB(r, g, b byte) COLORREF {
-	return COLORREF(r) | (COLORREF(g) << 8) | (COLORREF(b) << 16)
+	return (COLORREF(b) << 16) | (COLORREF(g) << 8) | COLORREF(r)
+}
+
+func GetRValue[T uint32 | COLORREF](rgb T) byte {
+	// return LOBYTE(uintptr(rgb)) // 不需要再透過一個函數再計算結果
+	return byte(rgb & 0xff)
+}
+
+func GetGValue[T uint32 | COLORREF](rgb T) byte {
+	// return LOBYTE(uintptr(uint16(rgb) >> 8))
+	return byte((rgb >> 8) & 0xff)
+}
+
+func GetBValue[T uint32 | COLORREF](rgb T) byte {
+	// return LOBYTE(uintptr(rgb >> 16))
+	return byte((rgb >> 16) & 0xff)
 }
 
 // NewFontMemResource 這不是屬於winapi正統的函數，是一個包裝，方便使用AddFontMemResourceEx
@@ -246,6 +265,8 @@ func (dll *Gdi32DLL) CreateCompatibleBitmap(hdc HDC, cx int32, cy int32) HBITMAP
 }
 
 // CreateCompatibleDC creates a memory device context (DC) compatible with the specified device.
+// We recommend that you call DeleteDC to delete the DC. However, you can also call DeleteObject with the HDC to delete the DC.
+// 🧙 Call DeleteDC(hdc) when you are not used. or DeleteObject(HGDIOBJ(hdc))
 // https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createcompatibledc
 // If the function fails, the return value is NULL.
 func (dll *Gdi32DLL) CreateCompatibleDC(hdc HDC) HDC {
@@ -305,6 +326,16 @@ func (dll *Gdi32DLL) CreateRectRgnIndirect(lpRect *RECT) HRGN {
 		uintptr(unsafe.Pointer(lpRect)),
 	)
 	return HRGN(r1)
+}
+
+// DeleteDC https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-deletedc
+// If the function fails, the return value is zero.
+func (dll *Gdi32DLL) DeleteDC(hdc HDC) bool {
+	proc := dll.mustProc(PNDeleteDC)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+	)
+	return r1 != 0
 }
 
 // DeleteObject https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-deleteobject
@@ -413,6 +444,18 @@ func (dll *Gdi32DLL) GetObject(h HANDLE, size int32, output uintptr) int32 {
 		uintptr(size),
 		output)
 	return int32(r1)
+}
+
+// GetPixel https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-getpixel
+// If the pixel is outside the current clipping region, the return value is CLR_INVALID
+func (dll *Gdi32DLL) GetPixel(hdc HDC, x int32, y int32) COLORREF {
+	proc := dll.mustProc(PNGetPixel)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+		uintptr(x),
+		uintptr(y),
+	)
+	return COLORREF(r1)
 }
 
 // RemoveFontMemResourceEx https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-removefontmemresourceex

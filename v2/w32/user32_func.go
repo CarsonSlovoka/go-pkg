@@ -44,11 +44,13 @@ const (
 	PNGetClientRect            ProcName = "GetClientRect"
 	PNGetCursorPos             ProcName = "GetCursorPos"
 	PNGetDC                    ProcName = "GetDC"
+	PNGetDesktopWindow         ProcName = "GetDesktopWindow"
 	PNGetForegroundWindow      ProcName = "GetForegroundWindow"
 	PNGetIconInfo              ProcName = "GetIconInfo"
 	PNGetMessage               ProcName = "GetMessageW"
 	PNGetSystemMetrics         ProcName = "GetSystemMetrics"
 	PNGetWindowLongPtr         ProcName = "GetWindowLongPtrW"
+	PNGetWindowRect            ProcName = "GetWindowRect"
 	PNGetWindowText            ProcName = "GetWindowTextW"
 	PNGetWindowThreadProcessId ProcName = "GetWindowThreadProcessId"
 
@@ -135,11 +137,13 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 			PNGetClientRect,
 			PNGetCursorPos,
 			PNGetDC,
+			PNGetDesktopWindow,
 			PNGetForegroundWindow,
 			PNGetIconInfo,
 			PNGetMessage,
 			PNGetSystemMetrics,
 			PNGetWindowLongPtr,
+			PNGetWindowRect,
 			PNGetWindowText,
 			PNGetWindowThreadProcessId,
 
@@ -540,6 +544,13 @@ func (dll *User32DLL) GetDC(hwnd HWND) HDC {
 	return HDC(hdc)
 }
 
+// GetDesktopWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getdesktopwindow
+func (dll *User32DLL) GetDesktopWindow() HWND {
+	proc := dll.mustProc(PNGetDesktopWindow)
+	r1, _, _ := syscall.SyscallN(proc.Addr())
+	return HWND(r1)
+}
+
 // GetForegroundWindow User32.dll 此函數可以獲得當前窗口的HWND
 // https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getforegroundwindow
 // The return value is a handle to the foreground window.
@@ -594,6 +605,19 @@ func (dll *User32DLL) GetWindowLongPtr(hWnd HWND, nIndex int32) (uintptr, syscal
 		uintptr(nIndex),
 	)
 	return r1, errno
+}
+
+// GetWindowRect https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowrect
+// If the function fails, the return value is zero.
+func (dll *User32DLL) GetWindowRect(hWnd HWND,
+	lpRect *RECT, // [out]
+) (bool, syscall.Errno) {
+	proc := dll.mustProc(PNGetWindowRect)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+		uintptr(unsafe.Pointer(lpRect)),
+	)
+	return r1 != 0, errno
 }
 
 // GetWindowText
