@@ -1458,7 +1458,10 @@ func ExampleUser32DLL_BeginPaint() {
 
 				// Background Color
 				hRgnBackground := gdi32dll.CreateRectRgnIndirect(&rect)
+				defer gdi32dll.DeleteObject(w32.HGDIOBJ(hRgnBackground))
 				hBrush := gdi32dll.CreateSolidBrush(w32.RGB(128, 128, 128))
+				defer gdi32dll.DeleteObject(w32.HGDIOBJ(hBrush))
+
 				gdi32dll.FillRgn(hdc, hRgnBackground, hBrush)
 
 				gdi32dll.SetTextColor(hdc, w32.RGB(255, 128, 0))
@@ -1563,13 +1566,50 @@ func ExampleUser32DLL_SendInput() {
 	log.Println("Example: [INPUT_MOUSE]")
 	{
 		var input w32.INPUT
-		// input.Type = w32.INPUT_MOUSE // not necessary
+		// input.Type = w32.INPUT_MOUSE // not necessary, since INPUT_MOUSE is zero
 		input.Mi().Dx = 10000
 		input.Mi().Dy = 30000
 		input.Mi().Flags = w32.MOUSEEVENTF_MOVE | w32.MOUSEEVENTF_ABSOLUTE
 		if n, errno := user32dll.SendInput(1, &input, int32(unsafe.Sizeof(input))); n == 0 {
 			log.Printf("%s", errno)
 		}
+	}
+
+	// Output:
+}
+
+func ExampleUser32DLL_SendInput_keyboard() {
+	user32dll := w32.NewUser32DLL()
+	myStr := "Hello World 您好世界 !"
+	var input []w32.INPUT
+	uint16Array, _ := syscall.UTF16FromString(myStr)
+	input = make([]w32.INPUT, len(uint16Array)*2) // *2: down and up
+
+	for i, uint16Val := range uint16Array {
+		input[2*i].Type = w32.INPUT_KEYBOARD
+		input[2*i].Ki().Flags = w32.KEYEVENTF_UNICODE
+		input[2*i].Ki().Scan = uint16Val
+
+		input[2*i+1].Type = w32.INPUT_KEYBOARD
+		input[2*i+1].Ki().Flags = w32.KEYEVENTF_UNICODE | w32.KEYEVENTF_KEYUP
+		input[2*i+1].Ki().Scan = uint16Val
+	}
+
+	hwnd := user32dll.FindWindow("Notepad", "")
+	hdc := user32dll.GetDC(hwnd)
+	defer user32dll.ReleaseDC(hwnd, hdc)
+
+	if hwnd != 0 {
+		user32dll.ShowWindow(hwnd, w32.SW_NORMAL) // 在視窗最小化時SetForegroundWindow或者SetActiveWindow都沒有用
+		// user32dll.SetForegroundWindow(hwnd)
+		var errno syscall.Errno
+		if hwnd, errno = user32dll.SetActiveWindow(hwnd); hwnd == 0 {
+			fmt.Printf("%s", errno)
+		}
+	}
+
+	if n, errno := user32dll.SendInput(uint32(len(uint16Array)*2), &input[0], int32(unsafe.Sizeof(input[0]))); n == 0 {
+		fmt.Printf("%s", errno)
 	}
 
 	// Output:

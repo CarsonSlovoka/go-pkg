@@ -69,6 +69,7 @@ const (
 
 	PNReleaseDC ProcName = "ReleaseDC"
 
+	PNSetActiveWindow     ProcName = "SetActiveWindow"
 	PNSetForegroundWindow ProcName = "SetForegroundWindow"
 	PNSetMenuItemInfo     ProcName = "SetMenuItemInfoW"
 	PNSetRect             ProcName = "SetRect"
@@ -159,6 +160,7 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 
 			PNReleaseDC,
 
+			PNSetActiveWindow,
 			PNSetForegroundWindow,
 			PNSetMenuItemInfo,
 			PNSetRect,
@@ -528,6 +530,7 @@ func (dll *User32DLL) GetCursorPos(
 }
 
 // GetDC LoadIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getdc
+// 🧙 Call ReleaseDC(hwnd, hdc) when you are not used.
 // the default font is "System"
 func (dll *User32DLL) GetDC(hwnd HWND) HDC {
 	proc := dll.mustProc(PNGetDC)
@@ -776,6 +779,16 @@ func (dll *User32DLL) ReleaseDC(hwnd HWND, hdc HDC) int32 {
 		uintptr(hdc),
 	)
 	return int32(r1)
+}
+
+// SetActiveWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setactivewindow
+// If the function fails, the return value is NULL.
+func (dll *User32DLL) SetActiveWindow(hWnd HWND) (HWND, syscall.Errno) {
+	proc := dll.mustProc(PNSetForegroundWindow)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+	)
+	return HWND(r1), errno
 }
 
 // SetForegroundWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setforegroundwindow

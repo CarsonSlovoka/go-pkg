@@ -297,6 +297,7 @@ func (dll *Gdi32DLL) CreateFont(
 }
 
 // CreateRectRgnIndirect https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createrectrgnindirect
+// 🧙 Call DeleteObject(HGDIOBJ(hRgn)) when you are not used.
 // If the function fails, the return value is NULL.
 func (dll *Gdi32DLL) CreateRectRgnIndirect(lpRect *RECT) HRGN {
 	proc := dll.mustProc(PNCreateRectRgnIndirect)
@@ -319,6 +320,7 @@ func (dll *Gdi32DLL) DeleteObject(hObject HGDIOBJ) bool {
 }
 
 // CreateSolidBrush https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createsolidbrush
+// 🧙 Call DeleteObject(HGDIOBJ(hBrush)) when you are not used.
 // If the function fails, the return value is NULL.
 func (dll *Gdi32DLL) CreateSolidBrush(color COLORREF) HBRUSH {
 	proc := dll.mustProc(PNCreateSolidBrush)

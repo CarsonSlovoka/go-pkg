@@ -221,7 +221,7 @@ func (input *INPUT) Hi() *HARDWAREINPUT {
 // KEYBDINPUT https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-keybdinput
 type KEYBDINPUT struct {
 	Vk        uint16
-	Scan      uint16
+	Scan      uint16 // If the Flags specifies KEYEVENTF_UNICODE, wScan specifies a Unicode character
 	Flags     uint32
 	Time      uint32
 	ExtraInfo ULONG_PTR
