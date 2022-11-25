@@ -1524,3 +1524,53 @@ func ExampleUser32DLL_BeginPaint() {
 	<-ch
 	// Output:
 }
+
+func TestINPUT_Hi(t *testing.T) {
+	var input w32.INPUT
+	input.Hi().Msg = 0
+	input.Hi().LParamL = 0
+	input.Hi().LParamH = 0
+}
+
+// https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendinput
+func ExampleUser32DLL_SendInput() {
+	user32dll := w32.NewUser32DLL()
+
+	log.Println("Example: [INPUT_KEYBOARD] Sending 'Win-D' to Display and hide the desktop.")
+	{
+		var input [4]w32.INPUT
+		input[0].Type = w32.INPUT_KEYBOARD
+		input[0].Ki().Vk = w32.VK_LWIN
+		input[1].Type = w32.INPUT_KEYBOARD
+		input[1].Ki().Vk = w32.VK_KEY_D
+
+		input[2].Type = w32.INPUT_KEYBOARD
+		input[2].Ki().Vk = w32.VK_KEY_D
+		input[2].Ki().Flags = w32.KEYEVENTF_KEYUP
+		input[3].Type = w32.INPUT_KEYBOARD
+		input[3].Ki().Vk = w32.VK_LWIN
+		input[3].Ki().Flags = w32.KEYEVENTF_KEYUP
+
+		// Display the desktop at the first one.
+		if n, errno := user32dll.SendInput(4, &input[0], int32(unsafe.Sizeof(input[0]))); n == 0 {
+			fmt.Printf("%s", errno)
+		}
+		// And try again will restore
+		time.Sleep(200 * time.Millisecond) // If running too fast may not work.
+		_, _ = user32dll.SendInput(4, &input[0], int32(unsafe.Sizeof(input[0])))
+	}
+
+	log.Println("Example: [INPUT_MOUSE]")
+	{
+		var input w32.INPUT
+		// input.Type = w32.INPUT_MOUSE // not necessary
+		input.Mi().Dx = 10000
+		input.Mi().Dy = 30000
+		input.Mi().Flags = w32.MOUSEEVENTF_MOVE | w32.MOUSEEVENTF_ABSOLUTE
+		if n, errno := user32dll.SendInput(1, &input, int32(unsafe.Sizeof(input))); n == 0 {
+			log.Printf("%s", errno)
+		}
+	}
+
+	// Output:
+}

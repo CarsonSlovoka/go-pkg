@@ -75,6 +75,7 @@ const (
 	PNSetWindowLongPtr    ProcName = "SetWindowLongPtrW"
 	PNSetWindowsHookEx    ProcName = "SetWindowsHookExW"
 
+	PNSendInput   ProcName = "SendInput"
 	PNSendMessage ProcName = "SendMessageW"
 
 	PNShowWindow ProcName = "ShowWindow"
@@ -164,6 +165,7 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 			PNSetWindowLongPtr,
 			PNSetWindowsHookEx,
 
+			PNSendInput,
 			PNSendMessage,
 
 			PNShowWindow,
@@ -842,6 +844,20 @@ func (dll *User32DLL) SetWindowsHookEx(idHook int32, lpfn HOOKPROC, hMod HINSTAN
 		uintptr(dwThreadId),
 	)
 	return HHOOK(r1), errno
+}
+
+// SendInput https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendinput
+// If the function returns zero
+func (dll *User32DLL) SendInput(arraySize uint32,
+	pInputs *INPUT, // An "array" of INPUT structures.
+	cbSize int32, // The size, in bytes, of "an" INPUT structure
+) (uint32, syscall.Errno) {
+	proc := dll.mustProc(PNSendInput)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(arraySize),
+		uintptr(unsafe.Pointer(pInputs)),
+		uintptr(cbSize))
+	return uint32(r1), errno
 }
 
 // SendMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendmessage

@@ -173,6 +173,9 @@ type MSLLHOOKSTRUCT struct {
 	DxExtraInfo ULONG_PTR
 }
 
+// WHEEL_DELTA
+// positive: that the wheel was rotated forward, away from the user;
+// negative: that the wheel was rotated backward, toward the user.
 const WHEEL_DELTA = 120 // Default value for rolling one notch
 
 // CBT Hook Codes
@@ -197,3 +200,47 @@ const (
 	MOD_WIN      = 0x0008
 	MOD_NOREPEAT = 0x4000
 )
+
+// INPUT https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-input
+type INPUT struct {
+	Type     uint32 // INPUT_MOUSE, INPUT_KEYBOARD, INPUT_HARDWARE // To know which struct should be used.
+	padding1 [pad4for64_0for32]byte
+	data     [8 * pad4for64_3for32]byte
+}
+
+func (input *INPUT) Mi() *MOUSEINPUT {
+	return (*MOUSEINPUT)(unsafe.Pointer(&input.data[0]))
+}
+func (input *INPUT) Ki() *KEYBDINPUT {
+	return (*KEYBDINPUT)(unsafe.Pointer(&input.data[0]))
+}
+func (input *INPUT) Hi() *HARDWAREINPUT {
+	return (*HARDWAREINPUT)(unsafe.Pointer(&input.data[0]))
+}
+
+// KEYBDINPUT https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-keybdinput
+type KEYBDINPUT struct {
+	Vk        uint16
+	Scan      uint16
+	Flags     uint32
+	Time      uint32
+	ExtraInfo ULONG_PTR
+}
+
+// MOUSEINPUT https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-mouseinput
+type MOUSEINPUT struct {
+	Dx        int32
+	Dy        int32
+	MouseData uint32 // for Flags:{MOUSEEVENTF_WHEEL(120 WHEEL_DELTA,-120), MOUSEEVENTF_XDOWN, MOUSEEVENTF_XUP} used. Otherwise should be zero.
+	Flags     uint32
+	Time      uint32
+	ExtraInfo ULONG_PTR
+}
+
+// HARDWAREINPUT https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-hardwareinput
+// https://www.computerhope.com/jargon/i/inputdev.htm
+type HARDWAREINPUT struct {
+	Msg     uint32
+	LParamL uint16 // The low-order word of the lParam parameter for uMsg.
+	LParamH uint16 // The high-order word of the lParam parameter for uMsg.
+}

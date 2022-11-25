@@ -514,7 +514,7 @@ const (
 	VK_INSERT              = 45
 	VK_DELETE              = 46
 	VK_HELP                = 47
-	VK_LWIN                = 0x5B
+	VK_LWIN                = 0x5B // 左側Windows按鍵
 	VK_RWIN                = 0x5C
 	VK_APPS                = 0x5D
 	VK_SLEEP               = 0x5F
@@ -608,6 +608,47 @@ const (
 	VK_NONAME              = 0xFC
 	VK_PA1                 = 0xFD
 	VK_OEM_CLEAR           = 0xFE
+)
+
+// http://www.kbdedit.com/manual/low_level_vk_list.html
+const (
+	VK_KEY_0 = 0x30
+	VK_KEY_1 = 0x31
+	VK_KEY_2 = 0x32
+	VK_KEY_3 = 0x33
+	VK_KEY_4 = 0x34
+	VK_KEY_5 = 0x35
+	VK_KEY_6 = 0x36
+	VK_KEY_7 = 0x37
+	VK_KEY_8 = 0x38
+	VK_KEY_9 = 0x39
+
+	VK_KEY_A = 0x41 //65(dec)
+	VK_KEY_B = 0x42
+	VK_KEY_C = 0x43
+	VK_KEY_D = 0x44
+	VK_KEY_E = 0x45
+	VK_KEY_F = 0x46
+	VK_KEY_G = 0x47
+	VK_KEY_H = 0x48
+	VK_KEY_I = 0x49
+	VK_KEY_J = 0x4A
+	VK_KEY_K = 0x4B
+	VK_KEY_L = 0x4C
+	VK_KEY_M = 0x4D
+	VK_KEY_N = 0x4E
+	VK_KEY_O = 0x4F
+	VK_KEY_P = 0x50
+	VK_KEY_Q = 0x51
+	VK_KEY_R = 0x52
+	VK_KEY_S = 0x53
+	VK_KEY_T = 0x54
+	VK_KEY_U = 0x55
+	VK_KEY_V = 0x56
+	VK_KEY_W = 0x57
+	VK_KEY_X = 0x58
+	VK_KEY_Y = 0x59
+	VK_KEY_Z = 0x5A
 )
 
 // Window style constants
@@ -1246,7 +1287,8 @@ const (
 	XBUTTON2 = 0x0002
 )
 
-// MOUSEINPUT DwFlags
+// MOUSEINPUT Flags
+// https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-mouse_event
 const (
 	MOUSEEVENTF_ABSOLUTE        = 0x8000
 	MOUSEEVENTF_HWHEEL          = 0x1000
@@ -1264,7 +1306,7 @@ const (
 	MOUSEEVENTF_XUP             = 0x0100
 )
 
-// KEYBDINPUT DwFlags
+// KEYBDINPUT Flags
 const (
 	KEYEVENTF_EXTENDEDKEY = 0x0001
 	KEYEVENTF_KEYUP       = 0x0002
@@ -1664,46 +1706,6 @@ type ICONINFO struct {
 	YHotspot uint32
 	HbmMask  HBITMAP
 	HbmColor HBITMAP
-}
-
-type MOUSE_INPUT struct {
-	Type uint32
-	Mi   MOUSEINPUT
-}
-
-type MOUSEINPUT struct {
-	Dx          int32
-	Dy          int32
-	MouseData   uint32
-	DwFlags     uint32
-	Time        uint32
-	DwExtraInfo uintptr
-}
-
-type KEYBD_INPUT struct {
-	Type uint32
-	Ki   KEYBDINPUT
-}
-
-type KEYBDINPUT struct {
-	WVk         uint16
-	WScan       uint16
-	DwFlags     uint32
-	Time        uint32
-	DwExtraInfo uintptr
-	Unused      [8]byte
-}
-
-type HARDWARE_INPUT struct {
-	Type uint32
-	Hi   HARDWAREINPUT
-}
-
-type HARDWAREINPUT struct {
-	UMsg    uint32
-	WParamL uint16
-	WParamH uint16
-	Unused  [16]byte
 }
 
 type SCROLLINFO struct {
