@@ -1304,7 +1304,7 @@ isXButton2Done:%t
 
 		var msg w32.MSG
 		for {
-			if status, _ := user32dll.GetMessage(&msg, 0, 0, 0); status <= 0 {
+			if status, _ := user32dll.GetMessage(&msg, 0, 0, 0); status <= 0 /* || msg.Message == w32.WM_QUIT */ {
 				break
 			}
 			user32dll.TranslateMessage(&msg)

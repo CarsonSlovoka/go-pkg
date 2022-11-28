@@ -7,6 +7,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"sync"
+	"syscall"
 	"time"
 	"unsafe"
 )
@@ -386,6 +388,7 @@ func Example_saveFileIconAsBitmap() {
 			BitCount:    32,
 			Compression: w32.BI_RGB,
 		}
+		// 列資料對齊: 每一列數據資料都以4byte對齊，如果不能被4整除，就會在結尾填充0直到能被整除
 		bmpSize := ((bmp.Width*int32(bitmapInfoHeader.BitCount) + 31) / 32) * 4 /* uint32 */ * bmp.Height // see the wiki: https://en.wikipedia.org/wiki/BMP_file_format#Pixel_storage
 
 		sizeofDIB := 14 + uint32(unsafe.Sizeof(bitmapInfoHeader)) + uint32(bmpSize)
@@ -563,45 +566,144 @@ func ExampleGdi32DLL_CreateFont() {
 	// Output:
 }
 
+// 點擊滑鼠左鍵，可以顯示當前鼠標位置其像素的顏色
+// 點擊右鍵可以終止程式
+// 可以在此網頁點擊不同的顏色進行測試: https://www.w3schools.com/colors/colors_rgb.asp
 func ExampleGdi32DLL_GetPixel() {
 	gdi32dll := w32.NewGdi32DLL()
 	user32dll := w32.NewUser32DLL()
 
-	hwnd := user32dll.GetDesktopWindow()
-	hdc := user32dll.GetDC(hwnd)
-	defer user32dll.ReleaseDC(hwnd, hdc)
+	// 🕹️ 如果您要運行久一點，請調整此常數
+	const inputRunTimeSecond = 2
 
-	hMemDC := gdi32dll.CreateCompatibleDC(hdc)
-	defer func() {
-		if gdi32dll.DeleteDC(hMemDC) {
-			log.Println("DeleteDC OK")
-		}
-	}()
-	var rect w32.RECT
-	if ok, errno := user32dll.GetWindowRect(hwnd, &rect); !ok {
-		fmt.Printf("%s\n", errno)
-		return
-	}
-	width := rect.Right - rect.Left
-	height := rect.Bottom - rect.Top
-	hBitmapMem := gdi32dll.CreateCompatibleBitmap(hdc, width, height)
-	gdi32dll.SelectObject(hMemDC, w32.HGDIOBJ(hBitmapMem))
-	if ok, errno := gdi32dll.BitBlt(hMemDC, 0, 0, width, height, hdc, 0, 0, w32.SRCCOPY); !ok {
-		fmt.Printf("%s\n", errno)
-		return
-	}
+	var (
+		hwnd          w32.HWND
+		hdc           w32.HDC
+		hMemDC        w32.HDC
+		hBitmapMem    w32.HBITMAP
+		width, height int32
+	)
 
-	/*
-		var i, j int32
-		var color w32.COLORREF
-		for i = 0; i < 50; i++ {
-			for j = 0; j < 50; j++ {
-				color = gdi32dll.GetPixel(hMemDC, i, j)
-				log.Println(w32.GetRValue(color), w32.GetGValue(color), w32.GetBValue(color))
+	// init
+	{
+		hwnd = user32dll.GetDesktopWindow()
+		hdc = user32dll.GetDC(hwnd)
+		defer user32dll.ReleaseDC(hwnd, hdc)
+
+		hMemDC = gdi32dll.CreateCompatibleDC(hdc)
+		defer func() {
+			if gdi32dll.DeleteDC(hMemDC) {
+				log.Println("DeleteDC OK")
 			}
+		}()
+		var rect w32.RECT
+		if ok, errno := user32dll.GetWindowRect(hwnd, &rect); !ok {
+			fmt.Printf("%s\n", errno)
+			return
 		}
-	*/
-	return
+		width = rect.Right - rect.Left
+		height = rect.Bottom - rect.Top
+		hBitmapMem = gdi32dll.CreateCompatibleBitmap(hdc, width, height)
+		defer func() {
+			if gdi32dll.DeleteObject(w32.HGDIOBJ(hBitmapMem)) {
+				log.Println("Delete hBitmapMem OK")
+			}
+		}()
+	}
+
+	GetPixel := func(x, y int32) (w32.COLORREF, error) {
+		// hdc = user32dll.GetDC(hwnd) // hdc表示裝置資訊，這種資訊不需要每次都要求要獲取，可以在外層初始化即可，在最後不用時在銷毀即可
+
+		hObjOld := gdi32dll.SelectObject(hMemDC, w32.HGDIOBJ(hBitmapMem))
+		// 開始傳輸，當BitBlt完成之後hBitmapMem的數據才會有資料
+		if ok, errno := gdi32dll.BitBlt(hMemDC, 0, 0, width, height, hdc, 0, 0, w32.SRCCOPY); !ok {
+			return 0, fmt.Errorf("%s", errno)
+		}
+
+		defer gdi32dll.SelectObject(hMemDC, hObjOld) // 不用之後可以考慮選回之前的物件
+
+		return gdi32dll.GetPixel(hMemDC, x, y), nil
+	}
+
+	// 手動觸發
+	if color, err := GetPixel(0, 0); err == nil {
+		log.Println(w32.GetRValue(color), w32.GetGValue(color), w32.GetBValue(color))
+	}
+
+	ch := make(chan bool)
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func(chQuit chan<- bool) {
+		var (
+			hLLMouseHook     w32.HHOOK
+			hLLMouseHookProc w32.HOOKPROC
+		)
+
+		hLLMouseHookProc = func(nCode int32, wParam w32.WPARAM, lParam w32.LPARAM) w32.LRESULT {
+			if nCode < 0 {
+				return user32dll.CallNextHookEx(hLLMouseHook, nCode, wParam, lParam)
+			}
+
+			if nCode == w32.HC_ACTION {
+				mouseMsgID := wParam
+				// msLLHookStruct := *(*w32.MSLLHOOKSTRUCT)(unsafe.Pointer(lParam))
+				switch mouseMsgID {
+				case w32.WM_LBUTTONDOWN:
+					var pos w32.POINT
+					if ok, errno := user32dll.GetCursorPos(&pos); !ok {
+						fmt.Printf("GetCursorPos %s", errno)
+					}
+					log.Println(pos.X, pos.Y)
+					color, err := GetPixel(pos.X, pos.Y)
+					if err != nil {
+						fmt.Println(err)
+					}
+					log.Println(w32.GetRValue(color), w32.GetGValue(color), w32.GetBValue(color))
+				case w32.WM_RBUTTONUP:
+					wg.Done()
+				}
+			}
+			return user32dll.CallNextHookEx(hLLMouseHook, nCode, wParam, lParam)
+		}
+
+		var errno syscall.Errno
+		kernel32dll := w32.NewKernel32DLL(w32.PNGetModuleHandle)
+		hInstance := w32.HINSTANCE(kernel32dll.GetModuleHandle(""))
+		if hLLMouseHook, errno = user32dll.SetWindowsHookEx(w32.WH_MOUSE_LL, hLLMouseHookProc, hInstance, 0); hLLMouseHook == 0 {
+			log.Printf("Error SetWindowsHookEx [WH_MOUSE_LL] %s", errno)
+			wg.Done()
+			return
+		}
+
+		defer func() {
+			if ok, _ := user32dll.UnhookWindowsHookEx(hLLMouseHook); ok {
+				log.Printf("UnhookWindowsHookEx OK")
+			}
+			close(chQuit)
+		}()
+
+		go func() {
+			// 一定要觸發GetMessage，之後Hook才會開始有作用，由於GetMessage之後就會一直鎖住，所以我們把它寫在另一個goRoutine，透過他的parent終止來關閉
+			var msg w32.MSG
+			if status, _ := user32dll.GetMessage(&msg, hwnd, 0, 0); status <= 0 {
+				return
+			}
+		}()
+		wg.Wait() // 這邊結束之後會自動把GetMessage的subRoutine給終止
+	}(ch)
+
+	for {
+		select {
+		case _, isOpen := <-ch:
+			if !isOpen {
+				return
+			}
+		case <-time.After(inputRunTimeSecond * time.Second):
+			log.Println("[MaxRuntime] quit.")
+			// return // 不直接結束，讓goroutine內的內容可以被完整運行完畢
+			wg.Done()
+		}
+	}
 
 	// Output:
 }

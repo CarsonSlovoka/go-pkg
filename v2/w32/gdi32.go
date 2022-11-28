@@ -672,8 +672,9 @@ const (
 )
 
 // Bitmap compression constants
+// https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-wmf/4e588f70-bd92-4a6f-b77f-35d0feaf7a57
 const (
-	BI_RGB       = 0
+	BI_RGB       = 0 // The bitmap is in **uncompressed** red green blue (RGB) format that is not compressed and does not use color masks.
 	BI_RLE8      = 1
 	BI_RLE4      = 2
 	BI_BITFIELDS = 3
@@ -745,11 +746,12 @@ const (
 )
 
 // Region Types
+// https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-selectobject#return-value
 const (
 	REGIONERROR   = 0
-	NULLREGION    = 1
-	SIMPLEREGION  = 2
-	COMPLEXREGION = 3
+	NULLREGION    = 1 // Region is empty.
+	SIMPLEREGION  = 2 // Region consists of a single rectangle.
+	COMPLEXREGION = 3 // Region consists of **more than one** rectangle.
 )
 
 // AlphaBlend operations
@@ -773,8 +775,8 @@ type (
 	HGDIOBJ      HANDLE
 	HENHMETAFILE HANDLE
 	HPALETTE     HGDIOBJ
-	HPEN         HGDIOBJ
-	HRGN         HGDIOBJ
+	HPEN         HGDIOBJ // CreatePen
+	HRGN         HGDIOBJ // Region // CreateRectRgn
 	CLIPFORMAT   uint16
 )
 
@@ -986,7 +988,7 @@ type BitmapInfoHeader struct {
 	Width         int32
 	Height        int32
 	Planes        uint16 // Specifies the number of planes for the target device. This value must be set to 1. // 位元圖數, 只能設定為1
-	BitCount      uint16 // Bits/pixel 1：單色點陣圖（使用 2 色調色盤）,... 8：8 位元點陣圖（使用 256 色調色盤）. 32：32 位元全彩點陣圖（不一定使用調色盤）
+	BitCount      uint16 // Specifies the number of bits per pixel (bpp). Bits/pixel 1：單色點陣圖（使用 2 色調色盤）,... 8：8 位元點陣圖（使用 256 色調色盤）. 32：32 位元全彩點陣圖（不一定使用調色盤）
 	Compression   uint32 // 壓縮方式, {0為為壓縮縮BI_RGB, BI_RLE8, BI_RLE4, BI_BITFIELDS}
 	SizeImage     uint32 // 指定圖像的大小，如果是為壓縮的RGB圖，可以設定為0
 	XPelsPerMeter int32

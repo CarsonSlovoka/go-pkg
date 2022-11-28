@@ -498,7 +498,12 @@ func (dll *Gdi32DLL) RemoveFontResourceEx(name string, flag uint32, reserved uin
 
 // SelectObject https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-selectobject
 // The SelectObject function selects an object into the specified device context (DC)
-func (dll *Gdi32DLL) SelectObject(hdc HDC, h HGDIOBJ) HGDIOBJ {
+// Return:
+// if h != HRGN => the return value is a handle to the object being replaced (oldHGDIOBJ)
+// if h == HRGN => SIMPLEREGION, COMPLEXREGION, NULLREGION
+func (dll *Gdi32DLL) SelectObject(hdc HDC,
+	h HGDIOBJ, // HBITMAP, HBRUSH, HFONT, HPEN, HRGN(Region)
+) HGDIOBJ {
 	proc := dll.mustProc(PNSelectObject)
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(hdc),
