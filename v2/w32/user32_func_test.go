@@ -372,10 +372,19 @@ func ExampleUser32DLL_FindWindow() {
 		w32.PNFindWindow,
 	)
 
-	// Chrome
-	// "Chrome_WidgetWin_1" You can find this information from Spy++ tool
-	hwnd := user32dll.FindWindow("Chrome_WidgetWin_1", "")
-	log.Println(hwnd)
+	for _, d := range []struct {
+		className  string
+		windowName string
+	}{
+		// "Chrome_WidgetWin_1" You can find this information from Spy++ tool
+		{"Chrome_WidgetWin_1", ""}, // 當省略windowName會以找到的第一筆當作依據
+		{"", "設定"},                 // className也可以省略, 有多筆時以最先找到的優先
+		{"Progman", "Program Manager"},
+	} {
+		hwnd := user32dll.FindWindow(d.className, d.windowName)
+		log.Println(hwnd)
+	}
+
 	// Output:
 }
 
@@ -1613,4 +1622,69 @@ func ExampleUser32DLL_SendInput_keyboard() {
 	}
 
 	// Output:
+}
+
+func ExampleUser32DLL_EnumWindows() {
+	user32dll := w32.NewUser32DLL()
+	kernel32dll := w32.NewKernel32DLL()
+
+	enumFuncOK := w32.WNDENUMPROC(func(hwnd w32.HWND, lParam w32.LPARAM) w32.BOOL {
+
+		if user32dll.IsWindowVisible(hwnd) {
+			var err error
+			var className, windowName string
+			if windowName, err = user32dll.GetWindowText(hwnd); err != nil {
+				return 1
+			}
+			if className, err = user32dll.GetClassName(hwnd); err != nil {
+				return 1
+			}
+			// log.Printf() // 很奇怪會相衝的樣子，導致顯示不完整，整個Example沒跑完
+			_, _ = fmt.Fprintf(os.Stderr, "%d _ %s _ %s\n", hwnd, className, windowName)
+		}
+		return 1
+	})
+
+	type MyData struct {
+		id  uint32
+		tag [4]byte
+	}
+
+	enumFuncOK2 := w32.WNDENUMPROC(func(hwnd w32.HWND, lParam w32.LPARAM) w32.BOOL {
+		d := *(*MyData)(unsafe.Pointer(lParam))
+		if d.id == 666 {
+			log.Println(string(d.tag[:])) // 123, wall
+		}
+		return 888
+	})
+
+	enumFuncErr := w32.WNDENUMPROC(func(hwnd w32.HWND, lParam w32.LPARAM) w32.BOOL {
+		if user32dll.IsWindowVisible(hwnd) {
+			if windowName, err := user32dll.GetWindowText(hwnd); err != nil {
+				kernel32dll.SetLastError(w32.ERROR_INVALID_DATA) // 自定義錯誤訊息
+				// kernel32dll.SetLastError(uint32(err.(syscall.Errno)))
+				return 0 // 只要回傳0，整個enum就會終止，不會再繼續下去
+			} else {
+				log.Println(windowName)
+			}
+		}
+		return 1
+	})
+
+	// Example 1 常規用法. 忽略錯誤且不計較回傳值
+	log.Println("test no error")
+	_, _ = user32dll.EnumWindows(enumFuncOK, 0)
+
+	// Example 2 傳遞參數給WndEnumProc, 並且接收回傳值
+	data := MyData{123, [4]byte{'w', 'a', 'l', 'l'}}
+	rtnVal, _ := user32dll.EnumWindows(enumFuncOK2, w32.LPARAM(unsafe.Pointer(&data)))
+	fmt.Println(rtnVal)
+
+	// Example 3 模擬錯誤的情況. 注意enumWindows當傳遞的函數傳回0之後就會直接終止，若不為0則會繼續直到窮舉完畢
+	log.Println("test error")
+	if r, errno := user32dll.EnumWindows(enumFuncErr, 0); r == 0 {
+		log.Printf("%d, %s\n", errno, errno)
+	}
+	// Output:
+	// 888
 }

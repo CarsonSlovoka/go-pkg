@@ -34,7 +34,8 @@ const (
 	PNDrawIconEx ProcName = "DrawIconEx"
 	PNDrawText   ProcName = "DrawTextW"
 
-	PNEndPaint ProcName = "EndPaint"
+	PNEndPaint    ProcName = "EndPaint"
+	PNEnumWindows ProcName = "EnumWindows"
 
 	PNFindWindow   ProcName = "FindWindowW"
 	PNFindWindowEx ProcName = "FindWindowExW"
@@ -53,6 +54,8 @@ const (
 	PNGetWindowRect            ProcName = "GetWindowRect"
 	PNGetWindowText            ProcName = "GetWindowTextW"
 	PNGetWindowThreadProcessId ProcName = "GetWindowThreadProcessId"
+
+	PNIsWindowVisible ProcName = "IsWindowVisible"
 
 	PNLoadCursor ProcName = "LoadCursorW"
 	PNLoadIcon   ProcName = "LoadIconW"
@@ -128,6 +131,7 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 			PNDrawText,
 
 			PNEndPaint,
+			PNEnumWindows,
 
 			PNFindWindow,
 			PNFindWindowEx,
@@ -146,6 +150,8 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 			PNGetWindowRect,
 			PNGetWindowText,
 			PNGetWindowThreadProcessId,
+
+			PNIsWindowVisible,
 
 			PNLoadCursor,
 			PNLoadIcon,
@@ -436,6 +442,24 @@ func (dll *User32DLL) EndPaint(hWnd HWND, lpPaint *PAINTSTRUCT) bool {
 	return r1 != 0
 }
 
+// EnumWindows https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-enumwindows
+// If the function succeeds, the return value is nonzero.
+func (dll *User32DLL) EnumWindows(
+	lpEnumFunc WNDENUMPROC, // 1. 當傳遞的函數傳回0之後就會直接終止，若不為0則會繼續直到窮舉完畢 // 2. If EnumWindowsProc returns zero, the return value is also zero. In this case, the callback function should call SetLastError to obtain a meaningful error code to be returned to the caller of EnumWindows.
+	lParam LPARAM, // An application-defined value to be passed to the callback function.
+) (BOOL, syscall.Errno) {
+	lpEnumFuncCallback := syscall.NewCallback(func(hWndRawArg HWND, lParamRawArg LPARAM) uintptr {
+		ret := lpEnumFunc(hWndRawArg, lParamRawArg)
+		return uintptr(ret)
+	})
+	proc := dll.mustProc(PNEnumWindows)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		lpEnumFuncCallback,
+		uintptr(lParam),
+		0)
+	return BOOL(r1), errno
+}
+
 // FindWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-findwindoww
 // If the function fails, the return value is NULL.
 func (dll *User32DLL) FindWindow(className, windowName string) HWND {
@@ -649,6 +673,15 @@ func (dll *User32DLL) GetWindowThreadProcessId(hWnd HWND, lpdwProcessId *uint32)
 		uintptr(unsafe.Pointer(lpdwProcessId)),
 	)
 	return uint32(r1)
+}
+
+// IsWindowVisible https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-iswindowvisible
+func (dll *User32DLL) IsWindowVisible(hWnd HWND) bool {
+	proc := dll.mustProc(PNIsWindowVisible)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+	)
+	return r1 != 0
 }
 
 // LoadCursor https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadcursorw
