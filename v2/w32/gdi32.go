@@ -637,6 +637,7 @@ const (
 )
 
 // Ternary raster operations
+// https://learn.microsoft.com/en-us/dotnet/api/system.drawing.copypixeloperation?view=dotnet-plat-ext-7.0
 const (
 	SRCCOPY        = 0x00CC0020
 	SRCPAINT       = 0x00EE0086
@@ -911,6 +912,14 @@ type RECT struct {
 	Left, Top, Right, Bottom int32
 }
 
+func (r *RECT) Width() int32 {
+	return r.Right - r.Left
+}
+
+func (r *RECT) Height() int32 {
+	return r.Bottom - r.Top
+}
+
 type SIZE struct {
 	CX, CY int32
 }
@@ -944,7 +953,7 @@ type CIEXYZTRIPLE struct {
 // Size: 14
 type BitmapFileHeader struct { // 14bytes
 	Type       uint16 // The file type; must be "BM". => BM  B: 0x42, M: 0x4D
-	Size       uint32 // The size, in bytes, of the bitmap file.
+	Size       uint32 // The size, in bytes, of the bitmap file. // BitmapFileHeader + BitmapInfoHeader + DATA
 	Reserved1  uint16
 	Reserved2  uint16
 	OffsetBits uint32 // raw data(bitmap bits)從哪裡開始寫起 即Sizeof(FileHeader)+Sizeof(DIPHeader)

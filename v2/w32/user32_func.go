@@ -50,6 +50,7 @@ const (
 	PNGetIconInfo              ProcName = "GetIconInfo"
 	PNGetMessage               ProcName = "GetMessageW"
 	PNGetSystemMetrics         ProcName = "GetSystemMetrics"
+	PNGetWindowDC              ProcName = "GetWindowDC"
 	PNGetWindowLongPtr         ProcName = "GetWindowLongPtrW"
 	PNGetWindowRect            ProcName = "GetWindowRect"
 	PNGetWindowText            ProcName = "GetWindowTextW"
@@ -146,6 +147,7 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 			PNGetIconInfo,
 			PNGetMessage,
 			PNGetSystemMetrics,
+			PNGetWindowDC,
 			PNGetWindowLongPtr,
 			PNGetWindowRect,
 			PNGetWindowText,
@@ -558,6 +560,7 @@ func (dll *User32DLL) GetCursorPos(
 }
 
 // GetDC LoadIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getdc
+// get client area NOT include: {title bar, menus, scroll bars}
 // 🧙 Call ReleaseDC(hwnd, hdc) when you are not used.
 // the default font is "System"
 func (dll *User32DLL) GetDC(hwnd HWND) HDC {
@@ -618,6 +621,18 @@ func (dll *User32DLL) GetSystemMetrics(targetIdx int32) int32 {
 	proc := dll.mustProc(PNGetSystemMetrics)
 	r0, _, _ := syscall.SyscallN(proc.Addr(), uintptr(targetIdx))
 	return int32(r0)
+}
+
+// GetWindowDC https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowdc
+// including title bar, menus, and scroll bars.
+// 🧙 Call ReleaseDC(hwnd, hdc) when you are not used.
+// If the function fails, the return value is NULL
+func (dll *User32DLL) GetWindowDC(hWnd HWND) HDC {
+	proc := dll.mustProc(PNGetWindowDC)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+	)
+	return HDC(r1)
 }
 
 // GetWindowLongPtr https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowlongptrw

@@ -216,7 +216,7 @@ func (dll *Gdi32DLL) AddFontResource(fontPath string) int {
 // If the function succeeds, the return value specifies the number of fonts added.
 // If the function fails, the return value is zero. No extended error information is available.
 func (dll *Gdi32DLL) AddFontResourceEx(fontPath string,
-	flag uint32, // 可以是FR_PRIVATE或FR_NOT_ENUM,又或者為0，用0與沒有Ex效果相同
+	flag uint32,      // 可以是FR_PRIVATE或FR_NOT_ENUM,又或者為0，用0與沒有Ex效果相同
 	reserved uintptr, // Reserved. Must be zero.
 ) int {
 	proc := dll.mustProc(PNAddFontResourceEx)
@@ -232,18 +232,18 @@ func (dll *Gdi32DLL) AddFontResourceEx(fontPath string,
 // 將src的點集資料傳送到dst中 (類似把圖複製到dst中去)
 func (dll *Gdi32DLL) BitBlt(
 	dstHDC HDC,
-	dstX int32, dstY int32, dstCx int32, dstCy int32,
+	dstX int32, dstY int32, dstWidth int32, dstHeight int32,
 	srcHDC HDC,
 	srcX int32, srcY int32,
-	rasterOperation DWORD,
+	rasterOperation DWORD, // SRCCOPY, BLACKNESS, ...
 ) (bool, syscall.Errno) {
 	proc := dll.mustProc(PNBitBlt)
 	r1, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(dstHDC),
 		uintptr(dstX),
 		uintptr(dstY),
-		uintptr(dstCx),
-		uintptr(dstCy),
+		uintptr(dstWidth),
+		uintptr(dstHeight),
 		uintptr(srcHDC),
 		uintptr(srcX),
 		uintptr(srcY),
@@ -253,13 +253,16 @@ func (dll *Gdi32DLL) BitBlt(
 }
 
 // CreateCompatibleBitmap https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createcompatiblebitmap
+// 創建了一個HBITMAP，他表示一個指標位址，該位址紀錄該hdc畫面的資訊
+// 雖然畫面可能會被異動，但異動的只是該記憶體空間的「內容」，而HBITMAP為該記憶體空間的位址，所以不管內容怎麼異動，HBITMAP本身都是固定的
+// 🧙 When you no longer need the bitmap, call the DeleteObject(w32.HGDIOBJ(hBitmap)) function to delete it.
 // If the function fails, the return value is NULL.
-func (dll *Gdi32DLL) CreateCompatibleBitmap(hdc HDC, cx int32, cy int32) HBITMAP {
+func (dll *Gdi32DLL) CreateCompatibleBitmap(hdc HDC, width int32, height int32) HBITMAP {
 	proc := dll.mustProc(PNCreateCompatibleBitmap)
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(hdc),
-		uintptr(cx),
-		uintptr(cy),
+		uintptr(width),
+		uintptr(height),
 	)
 	return HBITMAP(r1)
 }
@@ -418,10 +421,28 @@ func (dll *Gdi32DLL) FillRgn(hdc HDC, hrgn HRGN, hbr HBRUSH) bool {
 	return ret1 != 0
 }
 
-// GetDIBits retrieves the bits of the specified compatible bitmap and copies them into a buffer as a DIB(Device-Independent Bitmap) using the specified format.
-// https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-getdibits
+// GetDIBits https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-getdibits
+//
+// retrieves the bits of the specified compatible bitmap and copies them into a buffer as a DIB(Device-Independent Bitmap) using the specified format.
+// DDB(Device-Dependent Bitmap): 設備相關圖
+// DIB: 設備無關圖
+// 以上兩種都是一種關於圖的格式，早期使用DDB, 但他的缺點是沒辦法得知原始設備的分辨率，導致應用程序沒辦法快速判斷客戶機的顯示設備是否適合顯示這張圖片
+// 而DIB格式就能解決以上問題
+//
+// 通常會呼叫兩次GetDIBits, 第一次取得BitmapInfo的內容, 第二次取得資料內容，如下:
+//  1. GetDIBits(hdc, hbitmap, 0, 0, 0, BitmapInfo, DIB_RGB_COLORS)
+//  2. GetDIBits(hdc, hbitmap, 0, bitmapInfo.Header.Height, lpBitmapData, &BitmapInfo, DIB_RGB_COLORS)
+//
 // If the function fails, the return value is zero.
-func (dll *Gdi32DLL) GetDIBits(hdc HDC, hbm HBITMAP, start UINT, cLines UINT, lpvBits LPVOID, lpbmi *BitmapInfo, usage UINT) int32 {
+func (dll *Gdi32DLL) GetDIBits(
+	hdc HDC,
+	hbm HBITMAP, // A handle to the bitmap. This must be a compatible bitmap (DDB).
+	start UINT,
+	cLines UINT, // cLines - start 即為height
+	lpvBits LPVOID,
+	lpbmi *BitmapInfo, // A pointer to a BitmapInfo structure that specifies the desired format for the DIB data.
+	usage UINT,
+) int32 {
 	proc := dll.mustProc(PNGetDIBits)
 	ret1, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(hdc),
@@ -497,6 +518,10 @@ func (dll *Gdi32DLL) RemoveFontResourceEx(name string, flag uint32, reserved uin
 }
 
 // SelectObject https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-selectobject
+// 所謂HDC可以想像是一個物件內容, 該物件內容可以保存很東資訊，如HBITMAP, HBRUSH, HFONT, HPEN, HRGN(Region)...
+// 而當我們只對該HDC某些內容有興趣的時候，我們需要指標指向該資訊位址
+// 因此需要得到offset才能順利把當前的指標切換過去
+// 此函數的HGDIOBJ好比offset，當呼叫完SelectObject,此時hdc所指向的地方就是該物件本身
 // The SelectObject function selects an object into the specified device context (DC)
 // Return:
 // if h != HRGN => the return value is a handle to the object being replaced (oldHGDIOBJ)
@@ -538,6 +563,7 @@ func (dll *Gdi32DLL) SetBkMode(hdc HDC,
 }
 
 // SetStretchBltMode https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-setstretchbltmode
+// If the function succeeds, the return value is the "previous stretching mode".
 // If the function fails, the return value is zero.
 func (dll *Gdi32DLL) SetStretchBltMode(hdc HDC, mode int32) int32 {
 	proc := dll.mustProc(PNSetStretchBltMode)

@@ -431,7 +431,7 @@ func Example_saveFileIconAsBitmap() {
 
 			// bitmapData
 			bmpDatas := make([]byte, sizeofDIB)
-			var offset uint32 = 0
+			var offset uint32
 			for offset = 0; offset < sizeofDIB; offset += 1 {
 				curByteAddr := unsafe.Pointer(uintptr(lpBitmap) + uintptr(offset))
 				bmpDatas[offset] = *(*byte)(curByteAddr)
@@ -601,9 +601,7 @@ func ExampleGdi32DLL_GetPixel() {
 			fmt.Printf("%s\n", errno)
 			return
 		}
-		width = rect.Right - rect.Left
-		height = rect.Bottom - rect.Top
-		hBitmapMem = gdi32dll.CreateCompatibleBitmap(hdc, width, height)
+		hBitmapMem = gdi32dll.CreateCompatibleBitmap(hdc, rect.Width(), rect.Height())
 		defer func() {
 			if gdi32dll.DeleteObject(w32.HGDIOBJ(hBitmapMem)) {
 				log.Println("Delete hBitmapMem OK")
@@ -702,6 +700,157 @@ func ExampleGdi32DLL_GetPixel() {
 			log.Println("[MaxRuntime] quit.")
 			// return // 不直接結束，讓goroutine內的內容可以被完整運行完畢
 			wg.Done()
+		}
+	}
+
+	// Output:
+}
+
+func ExampleUser32DLL_GetWindowDC() {
+	user32dll := w32.NewUser32DLL()
+	hwnd := user32dll.GetDesktopWindow()
+	hdc := user32dll.GetWindowDC(hwnd)
+	defer user32dll.ReleaseDC(hwnd, hdc)
+	// Output:
+}
+
+// 擷取畫面, 投放到記事本上
+func ExampleGdi32DLL_BitBlt() {
+	user32dll := w32.NewUser32DLL()
+	gdi32dll := w32.NewGdi32DLL()
+
+	var (
+		// Screen
+		// 來源資料 (投放內容)
+		hwndS w32.HWND
+		hdcS  w32.HDC
+		rectS w32.RECT
+
+		// Notepad
+		// 目的資料 (放置被投放的內容)
+		hwndN       w32.HWND
+		hdcN        w32.HDC
+		hdcMemN     w32.HDC
+		hbitmapMemN w32.HBITMAP // 表明此hbitmap是仰賴hdcMemN所生成
+	)
+
+	// init
+	{
+		// hwndS = user32dll.FindWindow("ApplicationFrameWindow", "小算盤") // 擷取視窗除了desktopWindow以外的都會是黑畫面
+		hwndS = user32dll.GetDesktopWindow()
+		if hwndS == 0 {
+			return
+		}
+
+		// hwndNotepad
+		hwndN = user32dll.FindWindow("Notepad", "")
+		if hwndN == 0 {
+			return
+		}
+
+		hdcS = user32dll.GetWindowDC(hwndS)
+		defer user32dll.ReleaseDC(hwndS, hdcS)
+
+		if ok, errno := user32dll.GetClientRect(hwndS, &rectS); !ok {
+			log.Printf("%s\n", errno)
+			return
+		}
+
+		// hdcN = user32dll.GetDC(hwndN)
+		hdcN = user32dll.GetWindowDC(hwndN) // 我們想連menu, scroll bar都填充
+		defer user32dll.ReleaseDC(hwndN, hdcN)
+
+		hdcMemN = gdi32dll.CreateCompatibleDC(hdcN)
+		defer gdi32dll.DeleteDC(hdcMemN)
+	}
+
+	// 投放到notepad上
+	// 注意這種方法如果投影的不是GetDesktopWindow的對象，會得到黑畫面(即時用了SRCCOPY|CAPTUREBLT也是一樣)
+	{
+		// 方法一: 直接投射
+		_, _ = gdi32dll.BitBlt(hdcN,
+			0, 0, rectS.Width(), rectS.Height(), // dst
+			hdcS, 0, 0,
+			w32.SRCCOPY,
+		)
+
+		_, _ = gdi32dll.BitBlt(hdcN,
+			0, 0, rectS.Width(), rectS.Height(), // dst
+			hdcS, 100, 200, // 可以想成先0,0之後100, 200以上的部分都會被截掉
+			w32.SRCCOPY,
+		)
+
+		// 方法二: 帶有伸縮的投放方式
+		previousMode := gdi32dll.SetStretchBltMode(hdcN, w32.HALFTONE)
+		gdi32dll.StretchBlt(hdcN, 0, 0, 100, 200, // 會自動調整尺寸以符合100, 200
+			hdcS, 0, 0, user32dll.GetSystemMetrics(w32.SM_CXSCREEN), user32dll.GetSystemMetrics(w32.SM_CYSCREEN),
+			w32.SRCCOPY,
+		)
+		gdi32dll.SetStretchBltMode(hdcN, previousMode)
+	}
+
+	// 以下我們想把圖畫在記憶體之中
+	// init2
+	{
+		hbitmapMemN = gdi32dll.CreateCompatibleBitmap(hdcN, rectS.Width(), rectS.Height())
+		defer gdi32dll.DeleteObject(w32.HGDIOBJ(hbitmapMemN))
+	}
+
+	// 所有的CompatibleDC都要先指定物件，之後的動作才會知道是修改該物件的哪一部分{HBITMAP, HPEN, ...}
+	gdi32dll.SelectObject(hdcMemN, w32.HGDIOBJ(hbitmapMemN))
+
+	// 此動作完成之後hdcMemN.hbitmapN該資料區就會被寫入
+	_, _ = gdi32dll.BitBlt(hdcMemN,
+		0, 0, rectS.Width(), rectS.Height(),
+		hdcS, 0, 0,
+		w32.SRCCOPY,
+	)
+
+	// 為了印證該記憶體的圖資料已經被寫入，我們把來源改由記憶體，再重新用兩種畫法畫在notepad上
+	{
+		_, _ = gdi32dll.BitBlt(hdcN, 0, 0, rectS.Width(), rectS.Height(), // dst
+			hdcMemN, 0, 0,
+			w32.SRCCOPY,
+		)
+
+		// gdi32dll.SetStretchBltMode(hdcN, w32.HALFTONE) // 當我們省略衍伸模式，預設的模式會按照來源圖與目的圖，1對1複製，來源超過的部分將會自動被截掉
+		gdi32dll.StretchBlt(hdcN, 0, 0, rectS.Width(), rectS.Height(),
+			hdcMemN, 0, 0, user32dll.GetSystemMetrics(w32.SM_CXSCREEN), user32dll.GetSystemMetrics(w32.SM_CYSCREEN),
+			w32.SRCCOPY,
+		)
+	}
+
+	// 如果您的目的不是單純投放，而是想取得圖片點集的資訊，就要考慮使用以下內容(GetDIBits)來獲得點資料
+	{
+		// HBITMAP TO BITMAP
+		var bitmapN w32.Bitmap
+		gdi32dll.GetObject(w32.HANDLE(hbitmapMemN), int32(unsafe.Sizeof(bitmapN)), uintptr(unsafe.Pointer(&bitmapN)))
+
+		// 第一次呼叫GetDIBits取得BitmapInfo的資料
+		var bitmapInfo w32.BitmapInfo
+		gdi32dll.GetDIBits(hdcMemN, hbitmapMemN, 0, 0, 0, &bitmapInfo, w32.DIB_RGB_COLORS) // DDB to DIB
+
+		// 第二次呼叫GetDIBits取得圖的資料內容
+		var lpBitmapData w32.LPVOID // 這個資料包含三樣東西{BitmapFileHeader, BitmapInfoHeader, 點集資料}
+		gdi32dll.GetDIBits(hdcMemN, hbitmapMemN, 0, w32.UINT(bitmapInfo.Header.Height), lpBitmapData, &bitmapInfo, w32.DIB_RGB_COLORS)
+
+		// 以下我們只對點集的資料數據有興趣，header, info都不是我們所關心的
+		{
+			bmpSize := ((bitmapN.Width*int32(bitmapInfo.Header.BitCount) + 31) / 32) * 4 * bitmapN.Height
+
+			var bitmapFileHeader w32.BitmapFileHeader
+			sizeofDIB := 14 + uint32(unsafe.Sizeof(bitmapInfo.Header)) + uint32(bmpSize)
+			bitmapFileHeader = w32.BitmapFileHeader{
+				Type:       0x4D42,    // BM. // B: 42, M: 4D  // 因為BitmapFile所有的描述都要用"little-endian"讀取，所以要反過來寫4D42
+				Size:       sizeofDIB, // HEADER + INFO + DATA
+				OffsetBits: 14 + uint32(unsafe.Sizeof(bitmapInfo.Header)),
+			}
+
+			var offset uint32
+			bmpPointsDatas := make([]byte, bitmapFileHeader.OffsetBits) // 排除了header, info等資訊
+			for offset = 14 + uint32(unsafe.Sizeof(bitmapInfo.Header)); offset < bitmapFileHeader.OffsetBits; offset += 1 {
+				bmpPointsDatas[offset] = *(*byte)(unsafe.Pointer(uintptr(lpBitmapData) + uintptr(offset)))
+			}
 		}
 	}
 
