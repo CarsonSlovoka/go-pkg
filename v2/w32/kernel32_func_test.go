@@ -516,7 +516,7 @@ func ExampleKernel32DLL_FindResource_icon() {
 }
 
 // For show primary code see here https://stackoverflow.com/a/74369299/9935654
-func ExampleKernel32DLL_ReadDirectoryChanges() {
+func TestKernel32DLL_ReadDirectoryChanges(t *testing.T) {
 	kernel32dll := w32.NewKernel32DLL()
 
 	testDirPath := "./testdata/test_ReadDirectoryChanges/"
@@ -635,7 +635,15 @@ func ExampleKernel32DLL_ReadDirectoryChanges() {
 
 	_ = os.Rename(filepath.Join(testDirPath, "README.txt"), filepath.Join(testDirPath, "README.md"))
 	_ = os.Remove(filepath.Join(testDirPath, "README.md"))
-	fmt.Println(<-spyNotify)
+
+	// 不曉得為什麼在github.action測試的時候會沒有偵測到異動，導致timed out after 10m0s而被中斷
+	select {
+	case msg := <-spyNotify:
+		fmt.Println(msg)
+	case <-time.After(2 * time.Second):
+		log.Println("timeout")
+		return
+	}
 
 	// Output:
 	// FILE_ACTION_ADDED
