@@ -51,11 +51,13 @@ const (
 	PNGetMessage               ProcName = "GetMessageW"
 	PNGetSystemMetrics         ProcName = "GetSystemMetrics"
 	PNGetWindowDC              ProcName = "GetWindowDC"
+	PNGetWindowLong            ProcName = "GetWindowLongW"
 	PNGetWindowLongPtr         ProcName = "GetWindowLongPtrW"
 	PNGetWindowRect            ProcName = "GetWindowRect"
 	PNGetWindowText            ProcName = "GetWindowTextW"
 	PNGetWindowThreadProcessId ProcName = "GetWindowThreadProcessId"
 
+	PNIsIconic        ProcName = "IsIconic"
 	PNIsWindowVisible ProcName = "IsWindowVisible"
 
 	PNLoadCursor ProcName = "LoadCursorW"
@@ -69,6 +71,7 @@ const (
 
 	PNPostMessage     ProcName = "PostMessageW"
 	PNPostQuitMessage ProcName = "PostQuitMessage"
+	PNPrintWindow     ProcName = "PrintWindow"
 
 	PNRegisterClass  ProcName = "RegisterClassW"
 	PNRegisterHotKey ProcName = "RegisterHotKey"
@@ -148,11 +151,13 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 			PNGetMessage,
 			PNGetSystemMetrics,
 			PNGetWindowDC,
+			PNGetWindowLong,
 			PNGetWindowLongPtr,
 			PNGetWindowRect,
 			PNGetWindowText,
 			PNGetWindowThreadProcessId,
 
+			PNIsIconic,
 			PNIsWindowVisible,
 
 			PNLoadCursor,
@@ -166,6 +171,7 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 
 			PNPostMessage,
 			PNPostQuitMessage,
+			PNPrintWindow,
 
 			PNRegisterClass,
 			PNRegisterHotKey,
@@ -538,6 +544,7 @@ func (dll *User32DLL) GetClassName(hwnd HWND) (name string, err error) {
 }
 
 // GetClientRect https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getclientrect
+// the coordinates of the upper-left corner are (0,0).
 func (dll *User32DLL) GetClientRect(hwnd HWND, lpRect *RECT /* out */) (bool, syscall.Errno) {
 	proc := dll.mustProc(PNGetClientRect)
 	r1, _, errno := syscall.SyscallN(proc.Addr(),
@@ -635,6 +642,18 @@ func (dll *User32DLL) GetWindowDC(hWnd HWND) HDC {
 	return HDC(r1)
 }
 
+// GetWindowLong https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowlongw
+// nIndex: GWL_STYLE, GWL_EXSTYLE ...
+// If the function succeeds, the return value is the requested value.
+func (dll *User32DLL) GetWindowLong(hWnd HWND, nIndex int32) int32 {
+	proc := dll.mustProc(PNGetWindowLong)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+		uintptr(nIndex),
+	)
+	return int32(r1)
+}
+
 // GetWindowLongPtr https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowlongptrw
 // If the function fails, the return value is zero.
 func (dll *User32DLL) GetWindowLongPtr(hWnd HWND, nIndex int32) (uintptr, syscall.Errno) {
@@ -647,6 +666,7 @@ func (dll *User32DLL) GetWindowLongPtr(hWnd HWND, nIndex int32) (uintptr, syscal
 }
 
 // GetWindowRect https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowrect
+// The dimensions are given in screen coordinates that are "relative" to the upper-left corner of the screen.
 // If the function fails, the return value is zero.
 func (dll *User32DLL) GetWindowRect(hWnd HWND,
 	lpRect *RECT, // [out]
@@ -688,6 +708,18 @@ func (dll *User32DLL) GetWindowThreadProcessId(hWnd HWND, lpdwProcessId *uint32)
 		uintptr(unsafe.Pointer(lpdwProcessId)),
 	)
 	return uint32(r1)
+}
+
+// IsIconic https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-isiconic?redirectedfrom=MSDN
+// Determines whether the specified window is minimized (iconic).
+// If the window is iconic, the return value is nonzero.
+// If the window is not iconic, the return value is zero.
+func (dll *User32DLL) IsIconic(hWnd HWND) bool {
+	proc := dll.mustProc(PNIsIconic)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+	)
+	return r1 != 0
 }
 
 // IsWindowVisible https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-iswindowvisible
@@ -818,6 +850,17 @@ func (dll *User32DLL) PostQuitMessage(nExitCode int32) {
 	_, _, _ = syscall.SyscallN(proc.Addr(),
 		uintptr(nExitCode),
 	)
+}
+
+// PrintWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-printwindow
+// If the function fails, it returns zero.
+func (dll *User32DLL) PrintWindow(hwnd HWND, hdcBlt HDC, nFlags uint32) bool {
+	proc := dll.mustProc(PNPrintWindow)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hwnd),
+		uintptr(hdcBlt),
+		uintptr(nFlags))
+	return r1 != 0
 }
 
 // RegisterClass https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerclassw

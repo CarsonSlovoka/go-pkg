@@ -1728,3 +1728,234 @@ func TestUser32DLL_EnumWindows(t *testing.T) {
 	// Output:
 	// 888
 }
+
+func ExampleUser32DLL_PrintWindow() {
+	user32dll := w32.NewUser32DLL()
+	hwndDst := user32dll.FindWindow("ApplicationFrameWindow", "小算盤")
+	hdcDst := user32dll.GetDC(hwndDst)
+	defer user32dll.ReleaseDC(hwndDst, hdcDst)
+	hwndSrc := user32dll.FindWindow("Notepad", "")
+	if !user32dll.PrintWindow(hwndSrc, hdcDst, 0) {
+		log.Println("not ok")
+	}
+
+	// Output:
+}
+
+func ExampleUser32DLL_IsIconic() {
+	user32dll := w32.NewUser32DLL()
+	hwnd := user32dll.GetDesktopWindow()
+	if user32dll.IsIconic(hwnd) {
+		log.Println("is minimized")
+	}
+	// Output:
+}
+
+func ExampleUser32DLL_GetWindowLong() {
+	user32dll := w32.NewUser32DLL()
+	hwnd := user32dll.GetDesktopWindow()
+	if user32dll.GetWindowLong(hwnd, w32.GWL_STYLE)&w32.WS_MINIMIZE == w32.WS_MINIMIZE {
+		log.Println("is minimized")
+	}
+	// Output:
+}
+
+type HookData struct {
+	Type int32 // WH_KEYBOARD_LL, WH_MOUSE_LL,...
+	*w32.HHOOK
+	*w32.HOOKPROC
+}
+
+func StartLowLevelHook(user32dll *w32.User32DLL, chQuit chan<- bool, wg *sync.WaitGroup, hwndScreen w32.HWND, hookDatas ...HookData) {
+	if len(hookDatas) == 0 {
+		close(chQuit)
+		return
+	}
+
+	var errno syscall.Errno
+	kernel32dll := w32.NewKernel32DLL(w32.PNGetModuleHandle)
+	hInstance := w32.HINSTANCE(kernel32dll.GetModuleHandle(""))
+
+	for _, h := range hookDatas {
+		if *h.HHOOK, errno = user32dll.SetWindowsHookEx(h.Type, *h.HOOKPROC, hInstance, 0); *h.HHOOK == 0 {
+			log.Printf("Error [WH_KEYBOARD_LL] %s", errno)
+			wg.Done()
+			return
+		}
+	}
+
+	defer func() {
+		for _, h := range hookDatas {
+			if ok, _ := user32dll.UnhookWindowsHookEx(*h.HHOOK); ok {
+				log.Printf("UnhookWindowsHookEx OK")
+			}
+		}
+		close(chQuit)
+	}()
+
+	go func() {
+		var msg w32.MSG
+		if status, _ := user32dll.GetMessage(&msg, hwndScreen, 0, 0); status <= 0 {
+			return
+		}
+	}()
+	wg.Wait()
+}
+
+// Press F9 can capture the specific device screen and show it on the notepad.
+func Test_captureWindowByHotkey(t *testing.T) {
+	user32dll := w32.NewUser32DLL()
+	gdi32dll := w32.NewGdi32DLL()
+
+	// 🕹️ change this such that you have time to play more.
+	const timeout = 2 * time.Second
+
+	hwndScreen := user32dll.GetDesktopWindow()
+	hdcScreen := user32dll.GetDC(hwndScreen)
+	defer user32dll.ReleaseDC(hwndScreen, hdcScreen)
+
+	// Calculator
+	hwndC := user32dll.FindWindow("ApplicationFrameWindow", "小算盤")
+	if hwndC == 0 {
+		log.Println("Calculator not found")
+		hwndC = hwndScreen // In order to allow the test to continue, use this instead of it.
+	}
+
+	hwndDst := user32dll.FindWindow("Notepad", "")
+	if hwndDst == 0 {
+		log.Println("Notepad not found")
+	}
+	hdcDst := user32dll.GetWindowDC(hwndDst)
+	defer user32dll.ReleaseDC(hwndDst, hdcDst)
+
+	ch := make(chan bool)
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
+	var (
+		hLLKeyboardHook     w32.HHOOK
+		hLLKeyboardHookProc w32.HOOKPROC
+	)
+
+	// init hookProc
+	hLLKeyboardHookProc = func(nCode int32, wParam w32.WPARAM, lParam w32.LPARAM) w32.LRESULT {
+		if nCode < 0 {
+			return user32dll.CallNextHookEx(hLLKeyboardHook, nCode, wParam, lParam)
+		}
+		kbDllHookStruct := *(*w32.KBDLLHOOKSTRUCT)(unsafe.Pointer(lParam))
+		var rectTarget w32.RECT
+		if nCode == w32.HC_ACTION {
+			switch wParam {
+			case w32.WM_KEYUP:
+				switch kbDllHookStruct.VkCode {
+				case w32.VK_F6:
+					wg.Done() // Exit program
+				case w32.VK_F9:
+					// user32dll.GetWindowLong(hwndC, w32.GWL_STYLE)&w32.WS_MINIMIZE == w32.WS_MINIMIZE // below are better
+					if user32dll.IsIconic(hwndC) {
+						user32dll.ShowWindow(hwndC, w32.SW_NORMAL)
+					}
+
+					if ok, errno := user32dll.GetWindowRect(hwndC, &rectTarget); !ok {
+						log.Printf("%s", errno)
+						return user32dll.CallNextHookEx(hLLKeyboardHook, nCode, wParam, lParam)
+					}
+
+					if ok, errno := gdi32dll.BitBlt(
+						hdcDst, 0, 0, rectTarget.Width(), rectTarget.Height(),
+						hdcScreen, rectTarget.Left, rectTarget.Top, w32.SRCCOPY,
+					); !ok {
+						log.Printf("%s", errno)
+					}
+				}
+			}
+		}
+		return user32dll.CallNextHookEx(hLLKeyboardHook, nCode, wParam, lParam)
+	}
+	go StartLowLevelHook(user32dll, ch, &wg, hwndScreen, HookData{w32.WH_KEYBOARD_LL, &hLLKeyboardHook, &hLLKeyboardHookProc})
+
+	for {
+		select {
+		case _, isOpen := <-ch:
+			if !isOpen {
+				return
+			}
+		case <-time.After(timeout):
+			log.Println("timeout")
+			wg.Done()
+		}
+	}
+}
+
+// Capture the Calculator's screen every 0.1 seconds and then draw it on the notepad.
+func Test_captureWindow(t *testing.T) {
+	user32dll := w32.NewUser32DLL()
+	gdi32dll := w32.NewGdi32DLL()
+
+	// 🕹️ change this such that you have time to play more.
+	const timeout = 2 * time.Second
+
+	hwndScreen := user32dll.GetDesktopWindow()
+	hdcScreen := user32dll.GetDC(hwndScreen)
+	defer user32dll.ReleaseDC(hwndScreen, hdcScreen)
+
+	// Calculator
+	hwndC := user32dll.FindWindow("ApplicationFrameWindow", "小算盤")
+	if hwndC == 0 {
+		log.Println("Calculator not found")
+		hwndC = hwndScreen // In order to allow the test to continue, use this instead of it.
+	}
+
+	hwndDst := user32dll.FindWindow("Notepad", "")
+	if hwndDst == 0 {
+		log.Println("Notepad not found")
+		return
+	}
+	hdcDst := user32dll.GetWindowDC(hwndDst)
+	defer user32dll.ReleaseDC(hwndDst, hdcDst)
+
+	ch := make(chan bool)
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+		var rectNotepad w32.RECT
+		var rectC w32.RECT
+		gdi32dll.SetStretchBltMode(hdcDst, w32.HALFTONE)
+		for {
+			select {
+			case _, isOpen := <-ch:
+				if !isOpen {
+					wg.Done()
+					return
+				}
+			default:
+				time.Sleep(100 * time.Millisecond)
+			}
+			if ok, _ := user32dll.GetWindowRect(hwndDst, &rectNotepad); !ok {
+				continue
+			}
+			if ok, _ := user32dll.GetWindowRect(hwndC, &rectC); !ok {
+				continue
+			}
+
+			gdi32dll.StretchBlt(
+				hdcDst, rectNotepad.Width()/4, rectNotepad.Height()/4, rectNotepad.Width()/2, rectNotepad.Height()/2, // draw screen on the center
+				hdcScreen, rectC.Left, rectC.Top, rectC.Width(), rectC.Height(), w32.SRCCOPY,
+			)
+		}
+	}()
+
+	for {
+		select {
+		case _, isOpen := <-ch:
+			if !isOpen {
+				wg.Wait()
+				return
+			}
+		case <-time.After(timeout):
+			log.Println("timeout")
+			close(ch)
+		}
+	}
+}

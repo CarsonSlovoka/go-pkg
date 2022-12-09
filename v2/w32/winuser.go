@@ -244,3 +244,9 @@ type HARDWAREINPUT struct {
 	LParamL uint16 // The low-order word of the lParam parameter for uMsg.
 	LParamH uint16 // The high-order word of the lParam parameter for uMsg.
 }
+
+// https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-printwindow#parameters
+const (
+	PW_CLIENTONLY        = 0x00000001
+	PW_RENDERFULLCONTENT = 0x00000002
+)

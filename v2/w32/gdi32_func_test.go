@@ -738,9 +738,6 @@ func ExampleGdi32DLL_BitBlt() {
 	{
 		// hwndS = user32dll.FindWindow("ApplicationFrameWindow", "小算盤") // 擷取視窗除了desktopWindow以外的都會是黑畫面
 		hwndS = user32dll.GetDesktopWindow()
-		if hwndS == 0 {
-			return
-		}
 
 		// hwndNotepad
 		hwndN = user32dll.FindWindow("Notepad", "")
