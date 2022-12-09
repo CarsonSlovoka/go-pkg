@@ -6,6 +6,7 @@ import (
 	"github.com/CarsonSlovoka/go-pkg/v2/w32"
 	"log"
 	"os"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -686,9 +687,11 @@ func ExampleUser32DLL_CreateWindowEx() {
 
 	// 通知外層主程式用
 	ch := make(chan w32.HWND)
-
+	wg := sync.WaitGroup{}
 	// 新建一個執行緒來專門處理視窗{建立、消息循環}
-	go func(channel chan<- w32.HWND) {
+	go func(className, windowName string, channel chan<- w32.HWND, wg *sync.WaitGroup) {
+		wg.Add(1)
+
 		// define ProcFunc // https://learn.microsoft.com/en-us/windows/win32/learnwin32/writing-the-window-procedure
 		wndProcFuncPtr := syscall.NewCallback(w32.WNDPROC(func(hwnd w32.HWND, uMsg w32.UINT, wParam w32.WPARAM, lParam w32.LPARAM) w32.LRESULT {
 			// log.Printf("uMsg:%d\n", uMsg)
@@ -739,7 +742,6 @@ func ExampleUser32DLL_CreateWindowEx() {
 			return user32dll.DefWindowProc(hwnd, uMsg, wParam, lParam) // default window proc
 		}))
 
-		const className = "myClassName"
 		pUTF16ClassName, _ := syscall.UTF16PtrFromString(className)
 		wc := w32.WNDCLASS{
 			// Style:       0, // 可以不給，或者w32.CS_NOCLOSE禁用右上角的關閉按鈕) // CS_指的是class的style
@@ -754,8 +756,17 @@ func ExampleUser32DLL_CreateWindowEx() {
 			LpszClassName: pUTF16ClassName,
 		}
 
+		// 確保沒有殘留的資料
+		if ok, errno := user32dll.UnregisterClass(className, hInstance); ok {
+			log.Println("clear previous RegisterClass")
+		} else {
+			log.Printf("%s", errno) // Class does not exist.
+		}
+
 		if atom, errno := user32dll.RegisterClass(&wc); atom == 0 {
-			fmt.Printf("%s", errno)
+			log.Printf("%s", errno)
+			close(channel)
+			wg.Done()
 			return
 		}
 
@@ -767,15 +778,15 @@ func ExampleUser32DLL_CreateWindowEx() {
 
 		defer func() {
 			if ok, errno = user32dll.UnregisterClass(className, hInstance); !ok {
-				fmt.Printf("[UnregisterClass] %s", errno)
+				log.Printf("[UnregisterClass] %s\n", errno)
 			}
+			close(channel)
 		}()
 
 		fmt.Println("CreateWindowEx")
-		const windowName = "myWindowName" // 視窗左上角的標題名稱
 		if hwnd, errno = user32dll.CreateWindowEx(0,
 			className,
-			windowName,
+			windowName,              // 視窗左上角的標題名稱
 			w32.WS_OVERLAPPEDWINDOW, // 這項包含了: WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX // 如果不想要最小和最大化按鈕要在這邊調整，而關閉按鈕則是需要透過class註冊的時候就設定要還是不要
 
 			// Size and position
@@ -787,69 +798,87 @@ func ExampleUser32DLL_CreateWindowEx() {
 			uintptr(unsafe.Pointer(&AppData{"Demo-CreateWindowEx", 6})), // Additional application data // 可以不給(設定為0). 如果有給，這個資料會在WM_CREATE的時候傳入給lParam
 		); hwnd == 0 {
 			fmt.Printf("%s", errno)
-			channel <- 0
 			return
 		} else {
 			// test FindWindow
 			{
-				hwnd2 := user32dll.FindWindow("myClassName", windowName)
-				log.Println(hwnd == hwnd2) // true
+				hwnd2 := user32dll.FindWindow(className, windowName)
+				log.Println("hwnd == hwnd2 ", hwnd == hwnd2) // true
 			}
 
 			channel <- hwnd
 		}
 
 		// 消息循環
-		var msg w32.MSG
-		for {
-			if status, _ := user32dll.GetMessage(&msg, 0, 0, 0); status <= 0 {
-				fmt.Println("===quit the window===")
-				channel <- 0
-				break
+		go func() {
+			var msg w32.MSG
+			for {
+				if status, _ := user32dll.GetMessage(&msg, 0, 0, 0); status <= 0 {
+					log.Println("===quit the window===")
+					wg.Done()
+					break
+				}
+				user32dll.TranslateMessage(&msg)
+				user32dll.DispatchMessage(&msg)
 			}
-			user32dll.TranslateMessage(&msg)
-			user32dll.DispatchMessage(&msg)
-		}
-	}(ch)
+		}()
+		wg.Wait()
+	}("class_ExampleUser32DLL_CreateWindowEx", "ExampleUser32DLL_CreateWindowEx", ch, &wg)
 
 	// 如果視窗成功被建立會傳送該hwnd
-	hwnd := <-ch
+	hwnd, isOpen := <-ch
 
 	// 如果視窗建立失敗，會得到空hwnd，不做其他處理直接返回
-	if hwnd == 0 {
+	if !isOpen || hwnd == 0 {
 		return
 	}
 
-	// 以下為模擬外層程式，向視窗發送訊息
-	{
-		fmt.Println("ShowWindow")
-		user32dll.ShowWindow(hwnd, w32.SW_MAXIMIZE)
+	// 不確定什麼原因，在整個專案進行go test的時候，會卡死無法結束，所以在用一個routine包起來
+	go func() {
+		// 以下為模擬外層程式，向視窗發送訊息
+		{
+			fmt.Println("ShowWindow")
+			user32dll.ShowWindow(hwnd, w32.SW_MAXIMIZE)
 
-		fmt.Println("CloseWindow")                         // 僅是縮小視窗
-		if ok, errno := user32dll.CloseWindow(hwnd); !ok { // close只是把它縮小並沒有真正關閉
-			fmt.Printf("[CloseWindow] %s\n", errno)
+			fmt.Println("CloseWindow")                         // 僅是縮小視窗
+			if ok, errno := user32dll.CloseWindow(hwnd); !ok { // close只是把它縮小並沒有真正關閉
+				fmt.Printf("[CloseWindow] %s\n", errno)
+			}
+		}
+
+		// 測試來自於視窗所寫入的使用者資料
+		// 這種用法是取記憶體中的資訊，所以不管哪一個視窗還是程式，只要知道確切的hwnd還有類型(GWLP_USERDATA, ...)，就可以強制轉換來取得資料(前提是該記憶體位置已經有被寫入該資料，也就是一定要有人用SetWindowLongPtr先放資料進去)
+		if userDataPtr, _ := user32dll.GetWindowLongPtr(hwnd, w32.GWLP_USERDATA); userDataPtr != 0 {
+			res := *((*Response)(unsafe.Pointer(userDataPtr)))
+			if uintptr(res.MsgLen) <= unsafe.Sizeof(res.Msg) { // set資料的時候可能會發生問題，導致此長度已經不正確，對於不正確的結果就不顯示
+				log.Printf("%s\n", string(res.Msg[:res.MsgLen])) // Msg from WM_CREATE
+			}
+			log.Println(res.Status) // 200
+		}
+
+		fmt.Println("DestroyWindow")
+		// user32dll.DestroyWindow(hwnd) // 注意！ DestroyWindow不要在外面呼叫，需要在callback之中運行, 不然可能會得到錯誤: Access is denied.
+		// _, _, _ = user32dll.SendMessage(hwnd, w32.WM_DESTROY, 0, 0) // 如果您想要在視窗上進行操作，可以把這列註解，運行的時候再去手動關閉視窗即可結束
+	}()
+
+	maxTry := 2
+	for {
+		select {
+		case _, isOpen = <-ch:
+			if !isOpen {
+				log.Print("bye")
+				return
+			}
+		case <-time.After(2 * time.Second):
+			log.Println("timeout")
+			wg.Done()
+			maxTry--
+			if maxTry == 0 {
+				log.Println("reach maxTry")
+				return
+			}
 		}
 	}
-
-	// 測試來自於視窗所寫入的使用者資料
-	// 這種用法是取記憶體中的資訊，所以不管哪一個視窗還是程式，只要知道確切的hwnd還有類型(GWLP_USERDATA, ...)，就可以強制轉換來取得資料(前提是該記憶體位置已經有被寫入該資料，也就是一定要有人用SetWindowLongPtr先放資料進去)
-	if userDataPtr, _ := user32dll.GetWindowLongPtr(hwnd, w32.GWLP_USERDATA); userDataPtr != 0 {
-		res := *((*Response)(unsafe.Pointer(userDataPtr)))
-		if uintptr(res.MsgLen) <= unsafe.Sizeof(res.Msg) { // set資料的時候可能會發生問題，導致此長度已經不正確，對於不正確的結果就不顯示
-			log.Printf("%s\n", string(res.Msg[:res.MsgLen])) // Msg from WM_CREATE
-		}
-		log.Println(res.Status) // 200
-	}
-
-	fmt.Println("DestroyWindow")
-	// user32dll.DestroyWindow(hwnd) // 注意！ DestroyWindow不要在外面呼叫，需要在callback之中運行, 不然可能會得到錯誤: Access is denied.
-
-	// time.Sleep(time.Second * 5) // 可以暫停一段時間，之後再終止，當您設定CS_NOCLOSE，需要自己去關閉視窗
-	_, _, _ = user32dll.SendMessage(hwnd, w32.WM_DESTROY, 0, 0) // 如果您想要在視窗上進行操作，可以把這列註解，運行的時候再去手動關閉視窗即可結束
-
-	<-ch // wait window close
-
-	fmt.Print("bye")
 
 	// Output:
 	// CreateWindowEx
@@ -859,8 +888,6 @@ func ExampleUser32DLL_CreateWindowEx() {
 	// ShowWindow
 	// CloseWindow
 	// DestroyWindow
-	// ===quit the window===
-	// bye
 }
 
 func ExampleUser32DLL_GetWindowThreadProcessId() {
@@ -1395,7 +1422,7 @@ func ExampleUser32DLL_RegisterHotKey() {
 
 		defer func() {
 			if ok, errno := user32dll.UnregisterClass(className, hInstance); !ok {
-				fmt.Printf("[UnregisterClass] %s", errno)
+				fmt.Printf("[UnregisterClass] %s\n", errno)
 			}
 			close(channel)
 		}()
@@ -1497,7 +1524,7 @@ func ExampleUser32DLL_BeginPaint() {
 
 		defer func() {
 			if ok, errno := user32dll.UnregisterClass(className, hInstance); !ok {
-				fmt.Printf("[UnregisterClass] %s", errno)
+				fmt.Printf("[UnregisterClass] %s\n", errno)
 			}
 			close(channel)
 		}()
