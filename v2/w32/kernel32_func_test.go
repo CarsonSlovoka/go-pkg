@@ -569,9 +569,17 @@ func TestKernel32DLL_ReadDirectoryChanges(t *testing.T) {
 		}
 
 		var record w32.FILE_NOTIFY_INFORMATION
+		ready := false
 		for {
 			var dwBytes uint32 = 0
 			memset(buffer, 0) // 清空buffer, 再利用
+
+			if !ready {
+				time.AfterFunc(time.Second, func() {
+					spyNotify <- "ready"
+				})
+				ready = true
+			}
 
 			// 這個函數必須要不斷調用，才能做到持續監測的效果
 			if ok, err := kernel32dll.ReadDirectoryChanges(hDir,
@@ -628,7 +636,7 @@ func TestKernel32DLL_ReadDirectoryChanges(t *testing.T) {
 	}
 
 	go SpyDir(testDirPath, spyNotify)
-	time.Sleep(1 * time.Second) // 等待spy初始化完成
+	fmt.Println(<-spyNotify) // 等待spy初始化完成
 
 	f, _ := os.Create(filepath.Join(testDirPath, "README.txt"))
 	_ = f.Close()
@@ -646,6 +654,7 @@ func TestKernel32DLL_ReadDirectoryChanges(t *testing.T) {
 	}
 
 	// Output:
+	// ready
 	// FILE_ACTION_ADDED
 	// README.txt
 	// FILE_ACTION_RENAMED_OLD_NAME
