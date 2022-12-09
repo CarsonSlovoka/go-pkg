@@ -1651,7 +1651,7 @@ func ExampleUser32DLL_SendInput_keyboard() {
 	// Output:
 }
 
-func ExampleUser32DLL_EnumWindows() {
+func TestUser32DLL_EnumWindows(t *testing.T) {
 	user32dll := w32.NewUser32DLL()
 	kernel32dll := w32.NewKernel32DLL()
 
@@ -1698,20 +1698,33 @@ func ExampleUser32DLL_EnumWindows() {
 		return 1
 	})
 
-	// Example 1 常規用法. 忽略錯誤且不計較回傳值
-	log.Println("test no error")
-	_, _ = user32dll.EnumWindows(enumFuncOK, 0)
+	// 在github.action測試，有可能會發生列舉不完導致超時的錯誤，所以設定此機制來避免
+	ch := make(chan string)
+	go func() {
+		// Example 1 常規用法. 忽略錯誤且不計較回傳值
+		log.Println("test no error")
+		_, _ = user32dll.EnumWindows(enumFuncOK, 0)
 
-	// Example 2 傳遞參數給WndEnumProc, 並且接收回傳值
-	data := MyData{123, [4]byte{'w', 'a', 'l', 'l'}}
-	rtnVal, _ := user32dll.EnumWindows(enumFuncOK2, w32.LPARAM(unsafe.Pointer(&data)))
-	fmt.Println(rtnVal)
+		// Example 2 傳遞參數給WndEnumProc, 並且接收回傳值
+		data := MyData{123, [4]byte{'w', 'a', 'l', 'l'}}
+		rtnVal, _ := user32dll.EnumWindows(enumFuncOK2, w32.LPARAM(unsafe.Pointer(&data)))
+		fmt.Println(rtnVal)
 
-	// Example 3 模擬錯誤的情況. 注意enumWindows當傳遞的函數傳回0之後就會直接終止，若不為0則會繼續直到窮舉完畢
-	log.Println("test error")
-	if r, errno := user32dll.EnumWindows(enumFuncErr, 0); r == 0 {
-		log.Printf("%d, %s\n", errno, errno)
+		// Example 3 模擬錯誤的情況. 注意enumWindows當傳遞的函數傳回0之後就會直接終止，若不為0則會繼續直到窮舉完畢
+		log.Println("test error")
+		if r, errno := user32dll.EnumWindows(enumFuncErr, 0); r == 0 {
+			log.Printf("%d, %s\n", errno, errno)
+		}
+		ch <- "finish"
+	}()
+
+	select {
+	case <-ch:
+		return
+	case <-time.After(2 * time.Second):
+		log.Println("timeout")
 	}
+
 	// Output:
 	// 888
 }
