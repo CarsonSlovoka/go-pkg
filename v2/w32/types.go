@@ -71,12 +71,6 @@ type (
 type HOOKPROC func(code int32, wParam WPARAM, lParam LPARAM) LRESULT
 type HHOOK HANDLE
 
-/* 這些的定義還是有特別的意思在，如果都把它們混為一談，不太恰當
-type Handle interface {
-	~uintptr // uintptr | HWND | HANDLE //不需要這樣寫，使用~，其表示只要「原型」是如此就算
-}
-
-type Hwnd interface {
-	~uintptr
-}
-*/
+type VARIANTARG VARIANT
+type VarType uint16
+type DOUBLE float64

@@ -1,5 +1,7 @@
 package w32
 
+const NOERROR = 0
+
 /************************************************************************
 *                                                                       *
 *   winerror.h --  error code definitions for the Win32 API functions   *
@@ -13755,4 +13757,19 @@ const (
 	// STORE_ERROR_LICENSE_REVOKED
 	// The license has been revoked for this user.
 	STORE_ERROR_LICENSE_REVOKED = 15864
+)
+
+const (
+	CLASS_E_NOAGGREGATION = 0x80040110
+	REGDB_E_CLASSNOTREG   = 0x80040154
+)
+
+const (
+	CO_E_CLASSSTRING = 0x800401F3 // Invalid class string
+	CO_E_IIDSTRING   = 0x800401F4 // Invalid interface string
+)
+
+const (
+	REGDB_E_READREGDB  = 0x80040150 // Could not read key from registry
+	REGDB_E_WRITEREGDB = 0x80040151 // Could not write key to registry
 )

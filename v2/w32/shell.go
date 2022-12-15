@@ -52,17 +52,6 @@ func (n *NOTIFYICONDATA) SetTimeout(v uint32) {
 	n.union1 = v
 }
 
-// GUID 可以產生隨機一組16個byte的資料餵入，當成識別碼
-// var buf [16]byte
-// *(*GUID)(unsafe.Pointer(&buf[0]))
-// SIZE: 4+2+2+8 = 16
-type GUID struct {
-	Data1 uint32
-	Data2 uint16
-	Data3 uint16
-	Data4 [8]byte
-}
-
 type PNOTIFYICONDATA *NOTIFYICONDATA
 
 // NotifyIcon constants

@@ -1,3 +1,5 @@
+//go:build amd64
+
 package w32
 
 type SIZE_T uint64

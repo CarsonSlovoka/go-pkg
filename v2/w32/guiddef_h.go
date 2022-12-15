@@ -34,4 +34,6 @@ var (
 
 	// IID_IProvideClassInfo is for IProvideClassInfo interfaces.
 	IID_IProvideClassInfo = NewGUID("{B196B283-BAB4-101A-B69C-00AA00341D07}")
+
+	IID_IWebBrowser2 = NewGUID("D30C1661-CDAF-11D0-8A3E-00C04FC9E26E")
 )

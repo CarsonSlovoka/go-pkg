@@ -31,6 +31,7 @@ const (
 	PNGetModuleHandle      ProcName = "GetModuleHandleW"
 	PNGetNativeSystemInfo  ProcName = "GetNativeSystemInfo"
 	PNGetThreadDescription ProcName = "GetThreadDescription"
+	PNGetUserDefaultLCID   ProcName = "GetUserDefaultLCID"
 
 	PNGlobalAlloc  ProcName = "GlobalAlloc"
 	PNGlobalFree   ProcName = "GlobalFree"
@@ -88,6 +89,7 @@ func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 			PNGetModuleHandle,
 			PNGetNativeSystemInfo,
 			PNGetThreadDescription,
+			PNGetUserDefaultLCID,
 
 			PNGlobalAlloc,
 			PNGlobalFree,
@@ -312,6 +314,16 @@ func (dll *Kernel32DLL) GetThreadDescription(hThread HANDLE, threadDesc *uint16)
 		uintptr(unsafe.Pointer(threadDesc)),
 	)
 	return HRESULT(r1)
+}
+
+// GetUserDefaultLCID https://learn.microsoft.com/en-us/windows/win32/api/winnls/nf-winnls-getuserdefaultlcid
+// 1033: en-US, 1028: Chinese-Taiwan, ...
+// https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oe376/6c085406-a698-4e12-9d4d-c3b0ee3dbc4a
+// LcID locale identifier
+func (dll *Kernel32DLL) GetUserDefaultLCID() LCID {
+	proc := dll.mustProc(PNGetUserDefaultLCID)
+	r1, _, _ := syscall.SyscallN(proc.Addr())
+	return LCID(r1)
 }
 
 // GlobalAlloc https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-globalalloc

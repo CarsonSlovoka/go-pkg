@@ -9,9 +9,11 @@ type DllName string
 const (
 	DNUser32   DllName = "User32.dll"
 	DNKernel32 DllName = "Kernel32.dll"
-	DNNtdll    DllName = "ntdll.dll"
-	DNGdi32    DllName = "Gdi32.dll"
 	DNShell32  DllName = "Shell32.dll"
+	DNGdi32    DllName = "Gdi32.dll"
+	DNNtdll    DllName = "ntdll.dll"
+	DNOle32    DllName = "Ole32.dll"
+	DNOleAut32 DllName = "OleAut32.dll" // ole auto
 )
 
 type ProcName string

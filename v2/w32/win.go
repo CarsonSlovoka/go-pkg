@@ -25,7 +25,7 @@ const (
 
 type (
 	BOOL    int32
-	HRESULT int32
+	HRESULT int32 // 表示回傳值，如果該回傳值型別為此類型，則該HRESULT的數值0表示沒有錯誤，其他的數值則要參考錯誤代碼
 )
 
 const (

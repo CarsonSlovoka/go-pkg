@@ -1,3 +1,5 @@
+//go:build 386
+
 package w32
 
 type SIZE_T uint32
@@ -13,3 +15,11 @@ const pad3for64_2for32 = 2
 const pad3for64_1for32 = 1
 const pad6for64_3for32 = 3
 const pad6for64_0for32 = 0
+
+type VARIANT struct {
+	VT         VT     //  2
+	wReserved1 uint16 //  4
+	wReserved2 uint16 //  6
+	wReserved3 uint16 //  8
+	Val        int64  // 16
+}
