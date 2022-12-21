@@ -203,7 +203,7 @@ func (dll OleAut32DLL) SafeArrayCreateEx(vt VarType, cDims uint32, bounds *SafeA
 }
 
 // SafeArrayCreateVector https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearraycreatevector
-func (dll OleAut32DLL) SafeArrayCreateVector(vt VarType,
+func (dll OleAut32DLL) SafeArrayCreateVector(vt VT,
 	lBound int32, // The lower bound for the array. This parameter can be negative.
 	cElements uint32, // The number of elements in the array.
 ) (*SafeArray, syscall.Errno) {
@@ -340,7 +340,7 @@ func (dll OleAut32DLL) SafeArrayGetUBound(safeArray *SafeArray, nDim uint32) (up
 
 // SafeArrayGetVarType https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearraygetvartype
 // Gets the VarType stored in the specified safe array.
-func (dll OleAut32DLL) SafeArrayGetVarType(safeArray *SafeArray) (vt VarType, errno syscall.Errno) {
+func (dll OleAut32DLL) SafeArrayGetVarType(safeArray *SafeArray) (vt VT, errno syscall.Errno) {
 	proc := dll.mustProc(PNSafeArrayGetVarType)
 	hr, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(unsafe.Pointer(safeArray)),

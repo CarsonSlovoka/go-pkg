@@ -4,7 +4,7 @@ package w32
 
 // VARIANT https://learn.microsoft.com/en-us/windows/win32/api/oaidl/ns-oaidl-variant?source=recommendations
 type VARIANT struct {
-	VT         VarType //  2
+	VT         VT      //  2
 	wReserved1 uint16  //  4
 	wReserved2 uint16  //  6
 	wReserved3 uint16  //  8

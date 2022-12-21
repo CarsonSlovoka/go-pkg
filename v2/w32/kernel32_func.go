@@ -320,6 +320,7 @@ func (dll *Kernel32DLL) GetThreadDescription(hThread HANDLE, threadDesc *uint16)
 // 1033: en-US, 1028: Chinese-Taiwan, ...
 // https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oe376/6c085406-a698-4e12-9d4d-c3b0ee3dbc4a
 // LcID locale identifier
+// LOCALE_SYSTEM_DEFAULT
 func (dll *Kernel32DLL) GetUserDefaultLCID() LCID {
 	proc := dll.mustProc(PNGetUserDefaultLCID)
 	r1, _, _ := syscall.SyscallN(proc.Addr())

@@ -5,7 +5,7 @@ package w32
 // https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.ole.interop.clsctx?view=visualstudiosdk-2022#--
 const (
 	CLSCTX_INPROC_SERVER  = 1 // The code that creates and manages objects of this class is a DLL that runs in the same process as the caller of the function specifying the class context.
-	CLSCTX_INPROC_HANDLER = 2 // Indicates a handler dll, which runs on the same process as the caller.
+	CLSCTX_INPROC_HANDLER = 2 // Indicates a handler dll, which runs on the same process as the caller. // 要先註冊才有辦法用
 	CLSCTX_LOCAL_SERVER   = 4 // Indicates a server executable, which runs on the same machine but on a different process than the caller.
 
 	// Deprecated: Use CLSCTX_REMOTE_SERVER instead.

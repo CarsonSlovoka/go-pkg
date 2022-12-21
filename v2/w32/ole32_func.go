@@ -12,6 +12,7 @@ const (
 	PNCLSIDFromString  ProcName = "CLSIDFromString"
 	PNCoCreateInstance ProcName = "CoCreateInstance"
 	PNCoInitialize     ProcName = "CoInitialize"
+	PNCoInitializeEx   ProcName = "CoInitializeEx"
 	PNCoUnInitialize   ProcName = "CoUninitialize"
 )
 
@@ -29,6 +30,7 @@ func NewOle32DLL(procList ...ProcName) *Ole32DLL {
 			PNCLSIDFromString,
 			PNCoCreateInstance,
 			PNCoInitialize,
+			PNCoInitializeEx,
 			PNCoUnInitialize,
 		}
 	}
@@ -89,6 +91,20 @@ func (dll *Ole32DLL) CoInitialize(pvReserved LPVOID) HRESULT {
 	proc := dll.mustProc(PNCoInitialize)
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(pvReserved),
+	)
+	return HRESULT(r1)
+}
+
+// CoInitializeEx https://learn.microsoft.com/en-us/windows/win32/api/combaseapi/nf-combaseapi-coinitializeex
+// dwCoInit: COINIT_MULTITHREADED, ...
+func (dll *Ole32DLL) CoInitializeEx(
+	pvReserved LPVOID, // This parameter is reserved and must be NULL.
+	dwCoInit uint32,
+) HRESULT {
+	proc := dll.mustProc(PNCoInitializeEx)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(0),
+		uintptr(dwCoInit),
 	)
 	return HRESULT(r1)
 }

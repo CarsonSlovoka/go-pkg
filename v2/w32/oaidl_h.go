@@ -4,17 +4,17 @@ import "unsafe"
 
 // DispParams https://learn.microsoft.com/en-us/windows/win32/api/oaidl/ns-oaidl-dispparams
 type DispParams struct {
-	RgVArg            uintptr // *VARIANT
-	RgdispidNamedArgs uintptr // *DISPID
-	CArgs             uint32
-	CNamedArgs        uint32
+	VArgs      uintptr // *VARIANT
+	NamedArgs  uintptr // *DISPID
+	CArgs      uint32
+	CNamedArgs uint32
 }
 
 func (d DispParams) Variants() []*VARIANT {
 	var i uint32
 	vs := make([]*VARIANT, d.CArgs)
 	for i = 0; i < d.CArgs; i++ {
-		vs[i] = (*VARIANT)(unsafe.Pointer(d.RgVArg + (uintptr(i) * unsafe.Sizeof(vs[0]))))
+		vs[i] = (*VARIANT)(unsafe.Pointer(d.VArgs + (uintptr(i) * unsafe.Sizeof(vs[0]))))
 	}
 	return vs
 }
@@ -23,7 +23,7 @@ func (d DispParams) DispID() []*DISPID {
 	var i uint32
 	vs := make([]*DISPID, d.CNamedArgs)
 	for i = 0; i < d.CNamedArgs; i++ {
-		vs[i] = (*DISPID)(unsafe.Pointer(d.RgdispidNamedArgs + (uintptr(i) * unsafe.Sizeof(vs[0]))))
+		vs[i] = (*DISPID)(unsafe.Pointer(d.NamedArgs + (uintptr(i) * unsafe.Sizeof(vs[0]))))
 	}
 	return vs
 }

@@ -5,7 +5,7 @@ import (
 )
 
 // NewVariant returns new variant based on type and value.
-func NewVariant(vt VarType, val int64) VARIANT {
+func NewVariant(vt VT, val int64) VARIANT {
 	return VARIANT{VT: vt, Val: val}
 }
 
@@ -32,7 +32,7 @@ func (v *VARIANT) ToArray() *SafeArrayConversion {
 			return nil
 		}
 	}
-	var safeArray *SafeArray = (*SafeArray)(unsafe.Pointer(uintptr(v.Val)))
+	var safeArray = (*SafeArray)(unsafe.Pointer(uintptr(v.Val)))
 	return &SafeArrayConversion{safeArray}
 }
 

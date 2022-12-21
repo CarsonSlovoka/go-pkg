@@ -100,7 +100,7 @@ func (sac *SafeArrayConversion) ToValueArray() (values []interface{}) {
 	return
 }
 
-func (sac *SafeArrayConversion) GetType() (varType VarType, err error) {
+func (sac *SafeArrayConversion) GetType() (varType VT, err error) {
 	return OleAutDll.SafeArrayGetVarType(sac.Array)
 }
 
