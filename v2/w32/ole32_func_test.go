@@ -322,8 +322,24 @@ func Test_excel(t *testing.T) {
 
 	// range
 	{
+		// 只能橫著一列一列寫
+		rg := worksheet.MustPropertyGet("Range", "A10:C10").ToIDispatch()
+		rg.MustPropertyPut("Value", []string{"aa", "2", "c"})
+
+		/* 直的寫入會有問題
+		rg2 := worksheet.MustPropertyGet("Range", "E10:F12").ToIDispatch()
+		rg2.MustPropertyPut("Value", []string{"a", "b", "c", "d"})
+		// output:
+		// a b
+		// a b
+
 		rg := worksheet.MustPropertyGet("Range", "C10:C12").ToIDispatch()
 		rg.MustPropertyPut("Value", []string{"1", "2", "c"})
+		output:
+		// 1
+		// 1
+		// 1
+		*/
 	}
 
 	_, _ = workbook.PropertyPut("Saved", true) // 儲存異動結果(非存檔)
