@@ -4,24 +4,13 @@ package w32_test
 import (
 	"fmt"
 	"github.com/CarsonSlovoka/go-pkg/v2/w32"
+	"github.com/CarsonSlovoka/go-pkg/v2/wgo"
 	"log"
 	"sync"
 	"testing"
 	"time"
 	"unsafe"
 )
-
-var (
-	ole    *w32.Ole32DLL
-	kernel *w32.Kernel32DLL
-	oleAut *w32.OleAut32DLL
-)
-
-func init() {
-	ole = w32.NewOle32DLL()
-	kernel = w32.NewKernel32DLL()
-	oleAut = w32.OleAutDll
-}
 
 func ExampleGUID_String() {
 	var guid *w32.GUID
@@ -39,9 +28,9 @@ func Test_openIE(t *testing.T) {
 	go func() { // Avoid: all goroutines are asleep - deadlock!
 		defer wg.Done()
 
-		log.Println(ole.CoInitializeEx(0, w32.COINIT_MULTITHREADED))
-		defer ole.CoUnInitialize()
-		unknown, errno := w32.NewIUnknownInstance(ole, w32.CLSID_InternetExplorer, w32.CLSCTX_SERVER)
+		log.Println(oleDll.CoInitializeEx(0, w32.COINIT_MULTITHREADED))
+		defer oleDll.CoUnInitialize()
+		unknown, errno := w32.NewIUnknownInstance(oleDll, w32.CLSID_InternetExplorer, w32.CLSCTX_SERVER)
 		if errno != 0 {
 			log.Printf("%s\n", errno)
 			return
@@ -73,25 +62,24 @@ func Test_openIE(t *testing.T) {
 		wg.Done()
 	}()
 	wg.Wait()
-
 }
 
 // 開啟IE瀏覽器，找到搜尋欄位，鍵入golang
 // 此範例不使用封裝的方法所實現，會顯得囉嗦很多
 func Test_openIE2(t *testing.T) {
-	ole.CoInitialize(0)
-	defer ole.CoUnInitialize()
+	oleDll.CoInitialize(0)
+	defer oleDll.CoUnInitialize()
 
 	var clsID w32.GUID
 	// https://learn.microsoft.com/en-us/previous-versions/windows/internet-explorer/ie-developer/platform-apis/aa752084(v=vs.85)
-	if errno := ole.CLSIDFromProgID("InternetExplorer.Application", &clsID); errno != 0 {
+	if errno := oleDll.CLSIDFromProgID("InternetExplorer.Application", &clsID); errno != 0 {
 		log.Printf("%s\n", errno)
 		return
 	}
 	// {0002DF01-0000-0000-C000-000000000046}
 	log.Printf("%s\n", clsID.String())
 
-	unknown, errno := ole.CoCreateInstance(
+	unknown, errno := oleDll.CoCreateInstance(
 		&clsID,            // w32.CLSID_InternetExplorer,
 		w32.CLSCTX_SERVER, // w32.CLSCTX_INPROC_HANDLER, 這個要註冊class才有辦法使用
 		w32.IID_IUnknown,
@@ -104,7 +92,7 @@ func Test_openIE2(t *testing.T) {
 	if errno2 != 0 {
 		log.Printf("%s\n", errno2)
 	}
-	lcid := kernel.GetUserDefaultLCID()
+	lcid := kernelDll.GetUserDefaultLCID()
 
 	dispIDs := make([]w32.DISPID, 4)
 	for i, name := range []string{
@@ -137,7 +125,7 @@ func Test_openIE2(t *testing.T) {
 		}
 		params := []any{true} // 方法(這裡的method指的是Visible)所用到的參數
 		vargs := make([]w32.VARIANT, len(params))
-		oleAut.VariantInit(&vargs[0])
+		oleAutDll.VariantInit(&vargs[0])
 		vargs[0] = w32.NewVariant(w32.VT_BOOL, 0xffff /* true */)
 		dispParams.CArgs = uint32(len(params))
 		dispParams.VArgs = uintptr(unsafe.Pointer(&vargs[0]))
@@ -157,13 +145,13 @@ func Test_openIE2(t *testing.T) {
 	params := []any{"http://www.google.com"}
 	dispParams.CArgs = uint32(len(params))
 	vargs := make([]w32.VARIANT, len(params))
-	oleAut.VariantInit(&vargs[0])
-	vargs[0] = w32.NewVariant(w32.VT_BSTR, int64(uintptr(unsafe.Pointer(oleAut.SysAllocStringLen(params[0].(string))))))
+	oleAutDll.VariantInit(&vargs[0])
+	vargs[0] = w32.NewVariant(w32.VT_BSTR, int64(uintptr(unsafe.Pointer(oleAutDll.SysAllocStringLen(params[0].(string))))))
 	dispParams.VArgs = uintptr(unsafe.Pointer(&vargs[0]))
 	if _, errno := dispatchIE.Invoke(dispIDNavigate, w32.IID_NULL, lcid, w32.DISPATCH_METHOD, dispParams, &exceptInfo, nil); errno != 0 {
 		log.Printf("%s\n", errno)
 	}
-	oleAut.SysFreeString((*uint16)(unsafe.Pointer(uintptr(vargs[0].Val))))
+	oleAutDll.SysFreeString((*uint16)(unsafe.Pointer(uintptr(vargs[0].Val))))
 
 	dispIDBusy := dispIDs[2]
 	nameArgs = [1]w32.DISPID{}
@@ -189,7 +177,7 @@ func Test_openIE2(t *testing.T) {
 	dispIDDocument := dispIDs[3]
 	dispParams = &w32.DispParams{} // 都沒有數值需要填還是需要指向一個空內容，不然會錯
 	var document *w32.VARIANT
-	oleAut.VariantInit(document)
+	oleAutDll.VariantInit(document)
 	if document, errno = dispatchIE.Invoke(dispIDDocument, w32.IID_NULL, lcid, w32.DISPATCH_PROPERTYGET, dispParams, &exceptInfo, nil); errno != 0 {
 		log.Printf("%s\n", errno)
 		return
@@ -202,8 +190,8 @@ func Test_openIE2(t *testing.T) {
 	dispParams = &w32.DispParams{}
 	dispParams.CArgs = uint32(len(params))
 	vargs = make([]w32.VARIANT, len(params))
-	oleAut.VariantInit(&vargs[0])
-	vargs[0] = w32.NewVariant(w32.VT_BSTR, int64(uintptr(unsafe.Pointer(oleAut.SysAllocStringLen(params[0].(string))))))
+	oleAutDll.VariantInit(&vargs[0])
+	vargs[0] = w32.NewVariant(w32.VT_BSTR, int64(uintptr(unsafe.Pointer(oleAutDll.SysAllocStringLen(params[0].(string))))))
 	dispParams.VArgs = uintptr(unsafe.Pointer(&vargs[0]))
 
 	var htmlElem *w32.VARIANT
@@ -218,7 +206,7 @@ func Test_openIE2(t *testing.T) {
 	params = []any{0} // query
 	dispParams = &w32.DispParams{}
 	vargs = make([]w32.VARIANT, len(params))
-	oleAut.VariantInit(&vargs[0])
+	oleAutDll.VariantInit(&vargs[0])
 	vargs[0] = w32.NewVariant(w32.VT_I4, int64(params[0].(int)))
 	dispParams.CArgs = uint32(len(params))
 	dispParams.VArgs = uintptr(unsafe.Pointer(&vargs[0]))
@@ -240,13 +228,104 @@ func Test_openIE2(t *testing.T) {
 	}
 	dispParams.CArgs = uint32(len(params))
 	vargs = make([]w32.VARIANT, len(params))
-	oleAut.VariantInit(&vargs[0])
-	vargs[0] = w32.NewVariant(w32.VT_BSTR, int64(uintptr(unsafe.Pointer(oleAut.SysAllocStringLen(params[0].(string)))))) // 字串都要透過SpyFreeString來釋放記憶體
+	oleAutDll.VariantInit(&vargs[0])
+	vargs[0] = w32.NewVariant(w32.VT_BSTR, int64(uintptr(unsafe.Pointer(oleAutDll.SysAllocStringLen(params[0].(string)))))) // 字串都要透過SpyFreeString來釋放記憶體
 	dispParams.VArgs = uintptr(unsafe.Pointer(&vargs[0]))
 
 	if _, errno := dispatchQuery.Invoke(dispIDValue, w32.IID_NULL, lcid, w32.DISPATCH_PROPERTYPUT, dispParams, &exceptInfo, nil); errno != 0 {
 		log.Printf("%s\n", errno)
 		return
 	}
-	oleAut.SysFreeString((*uint16)(unsafe.Pointer(uintptr(vargs[0].Val))))
+	oleAutDll.SysFreeString((*uint16)(unsafe.Pointer(uintptr(vargs[0].Val))))
+}
+
+func Test_excel(t *testing.T) {
+	oleDll.CoInitialize(0)
+	defer oleDll.CoUnInitialize()
+
+	orgOpenExcelEntrySlice, _ := wgo.GetProcessEntryByName(kernelDll, "EXCEL.EXE")
+
+	unknown, errno := w32.NewIUnknownInstance(oleDll, "Excel.Application", w32.CLSCTX_SERVER)
+	if errno != 0 {
+		log.Printf("%s", errno)
+		return
+	}
+	excel, _ := unknown.QueryInterface(w32.IID_IDispatch)
+
+	// 刪除退出之後還沒有被關掉的EXCEL程序
+	defer func() {
+		excelSlices, _ := wgo.GetProcessEntryByName(kernelDll, "EXCEL.EXE")
+		var needDeleteExcels []w32.PROCESSENTRY32W
+		for _, entry := range excelSlices {
+			for _, orgEntry := range orgOpenExcelEntrySlice {
+				if entry.Th32ProcessID != orgEntry.Th32ProcessID { // 表示這個excel程序是使用者主動開啟的，不需要關閉
+					if needDeleteExcels == nil {
+						needDeleteExcels = make([]w32.PROCESSENTRY32W, 0)
+					}
+					needDeleteExcels = append(needDeleteExcels, entry)
+					break
+				}
+			}
+		}
+		if len(needDeleteExcels) > 0 {
+			_ = wgo.KillProcess(kernelDll, needDeleteExcels, func(deleteEntry *w32.PROCESSENTRY32W) {
+				log.Printf("[excel] delete processID: %d", deleteEntry.Th32ProcessID)
+			})
+		}
+	}()
+
+	defer excel.Release()
+	_, _ = excel.PropertyPut("Visible", false) // 這種狀態還是能用，只是在背景執行
+	workbooks := excel.MustPropertyGet("Workbooks").ToIDispatch()
+	workbook := workbooks.MustMethod("Add", nil).ToIDispatch()
+
+	// https://learn.microsoft.com/en-us/office/vba/api/excel.worksheet
+	worksheet := workbook.MustPropertyGet("Worksheets", 1).ToIDispatch() // 表示最左邊的工作表
+
+	pageSetup := worksheet.MustPropertyGet("PageSetup").ToIDispatch()
+	pageSetup.MustPropertyPut("FitToPagesWide", 5)
+
+	var (
+		vCell *w32.VARIANT
+		i, j  int
+	)
+	for i = 1; i < 10; i++ {
+		for j = 1; j < 10; j++ {
+			// https://learn.microsoft.com/en-us/office/vba/api/excel.worksheet.cells
+			vCell, errno = worksheet.PropertyGet("Cells", i, j) // 注意下標是1開始，給0會報錯
+			if i == 1 {
+				// range.Property_Font.Property_Size = 38
+				// vCell.ToIDispatch().MustPropertyGet("Font").ToIDispatch().MustPropertyPut("Size", 38) // 如果只要設定大小，可以一次寫完
+
+				// Font: https://learn.microsoft.com/en-us/office/vba/api/excel.font(object)
+				// Color https://learn.microsoft.com/en-us/office/vba/api/excel.font.color
+				//  	從color連結可以訪問: https://learn.microsoft.com/en-us/office/vba/language/reference/user-interface-help/rgb-function
+				// 		會得知RGB函數要的是一個LONG的型別: Returns a Long whole number representing an RGB color value.
+				// Data type summary: https://learn.microsoft.com/en-us/office/vba/language/reference/user-interface-help/data-type-summary
+				// 可以得知LONG是一個4byte範圍從-2,147,483,648 to 2,147,483,647
+				font := vCell.ToIDispatch().MustPropertyGet("Font").ToIDispatch()
+				font.MustPropertyPut("Size", 38)
+
+				font.MustPropertyPut("Color", int32(w32.RGB(0xff, 0xff, 0x00))) // yellow
+				// font.MustPropertyPut("Color", int32((0x00<<16)|(0xff<<8)|0xff)) // 同上, bgr
+			}
+			if errno != 0 {
+				log.Printf("%s", errno)
+				return
+			}
+			vCell.ToIDispatch().MustPropertyPut("Value", i*j)
+		}
+	}
+
+	// range
+	{
+		rg := worksheet.MustPropertyGet("Range", "C10:C12").ToIDispatch()
+		rg.MustPropertyPut("Value", []string{"1", "2", "c"})
+	}
+
+	_, _ = workbook.PropertyPut("Saved", true) // 儲存異動結果(非存檔)
+	// workbook.MustMethod("SaveAs", "C:\\myDir\\out.xlsx") // 注意！是用\\而不是/
+	workbook.MustMethod("SaveAs", "C:\\Users\\Carson\\go\\1.16\\src\\github.com\\CarsonSlovoka\\go-set\\repos\\go-pkg\\v2\\w32\\test.xlsx") // 注意！是用\\而不是/
+	_, _ = workbook.Method("Closed", false)
+	excel.MustMethod("Quit")
 }

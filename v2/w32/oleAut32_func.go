@@ -355,7 +355,7 @@ func (dll *OleAut32DLL) SafeArrayPutElement(safeArray *SafeArray, index int32, e
 	proc := dll.mustProc(PNSafeArrayPutElement)
 	hr, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(unsafe.Pointer(safeArray)),
-		uintptr(index),
+		uintptr(unsafe.Pointer(&index)), // 這個參數是要傳index的位址，所以不能是uintptr(index)
 		element,
 	)
 	return syscall.Errno(hr)
