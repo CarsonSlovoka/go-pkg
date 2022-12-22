@@ -115,7 +115,7 @@ func init() {
 }
 
 // SafeArrayAccessData https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearrayaccessdata
-func (dll OleAut32DLL) SafeArrayAccessData(safeArray *SafeArray) (uintptr, syscall.Errno) {
+func (dll *OleAut32DLL) SafeArrayAccessData(safeArray *SafeArray) (uintptr, syscall.Errno) {
 	proc := dll.mustProc(PNSafeArrayAccessData)
 	var element uintptr
 	hr, _, _ := syscall.SyscallN(proc.Addr(),
@@ -126,7 +126,7 @@ func (dll OleAut32DLL) SafeArrayAccessData(safeArray *SafeArray) (uintptr, sysca
 }
 
 // SafeArrayAllocData https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearrayallocdata
-func (dll OleAut32DLL) SafeArrayAllocData(safeArray *SafeArray) syscall.Errno {
+func (dll *OleAut32DLL) SafeArrayAllocData(safeArray *SafeArray) syscall.Errno {
 	proc := dll.mustProc(PNSafeArrayAllocData)
 	hr, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(unsafe.Pointer(safeArray)),
@@ -135,7 +135,7 @@ func (dll OleAut32DLL) SafeArrayAllocData(safeArray *SafeArray) syscall.Errno {
 }
 
 // SafeArrayAllocDescriptor https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearrayallocdescriptor
-func (dll OleAut32DLL) SafeArrayAllocDescriptor(cDims uint32) (*SafeArray, syscall.Errno) {
+func (dll *OleAut32DLL) SafeArrayAllocDescriptor(cDims uint32) (*SafeArray, syscall.Errno) {
 	proc := dll.mustProc(PNSafeArrayAllocDescriptor)
 	var safeArray *SafeArray
 	hr, _, _ := syscall.SyscallN(proc.Addr(),
@@ -146,7 +146,7 @@ func (dll OleAut32DLL) SafeArrayAllocDescriptor(cDims uint32) (*SafeArray, sysca
 }
 
 // SafeArrayAllocDescriptorEx https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearrayallocdescriptorex
-func (dll OleAut32DLL) SafeArrayAllocDescriptorEx(vt VarType, cDims uint32) (*SafeArray, syscall.Errno) {
+func (dll *OleAut32DLL) SafeArrayAllocDescriptorEx(vt VarType, cDims uint32) (*SafeArray, syscall.Errno) {
 	proc := dll.mustProc(PNSafeArrayAllocDescriptorEx)
 	var safeArray *SafeArray
 	hr, _, _ := syscall.SyscallN(proc.Addr(),
@@ -158,7 +158,7 @@ func (dll OleAut32DLL) SafeArrayAllocDescriptorEx(vt VarType, cDims uint32) (*Sa
 }
 
 // SafeArrayCopy https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearraycopy
-func (dll OleAut32DLL) SafeArrayCopy(original *SafeArray) (*SafeArray, syscall.Errno) {
+func (dll *OleAut32DLL) SafeArrayCopy(original *SafeArray) (*SafeArray, syscall.Errno) {
 	proc := dll.mustProc(PNSafeArrayCopy)
 	var out *SafeArray
 	hr, _, _ := syscall.SyscallN(proc.Addr(),
@@ -169,7 +169,7 @@ func (dll OleAut32DLL) SafeArrayCopy(original *SafeArray) (*SafeArray, syscall.E
 }
 
 // SafeArrayCopyData https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearraycopydata
-func (dll OleAut32DLL) SafeArrayCopyData(original *SafeArray, duplicate *SafeArray) syscall.Errno {
+func (dll *OleAut32DLL) SafeArrayCopyData(original *SafeArray, duplicate *SafeArray) syscall.Errno {
 	proc := dll.mustProc(PNSafeArrayCopyData)
 	hr, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(unsafe.Pointer(original)),
@@ -180,7 +180,7 @@ func (dll OleAut32DLL) SafeArrayCopyData(original *SafeArray, duplicate *SafeArr
 
 // SafeArrayCreate https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearraycreate
 // Return value: A safe array descriptor, or null if the array could not be created.
-func (dll OleAut32DLL) SafeArrayCreate(vt VarType, cDims uint32, bounds *SafeArrayBound) (*SafeArray, syscall.Errno) {
+func (dll *OleAut32DLL) SafeArrayCreate(vt VarType, cDims uint32, bounds *SafeArrayBound) (*SafeArray, syscall.Errno) {
 	proc := dll.mustProc(PNSafeArrayCreate)
 	r, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(vt),
@@ -191,7 +191,7 @@ func (dll OleAut32DLL) SafeArrayCreate(vt VarType, cDims uint32, bounds *SafeArr
 }
 
 // SafeArrayCreateEx https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearraycreateex
-func (dll OleAut32DLL) SafeArrayCreateEx(vt VarType, cDims uint32, bounds *SafeArrayBound, pvExtra uintptr) (*SafeArray, syscall.Errno) {
+func (dll *OleAut32DLL) SafeArrayCreateEx(vt VarType, cDims uint32, bounds *SafeArrayBound, pvExtra uintptr) (*SafeArray, syscall.Errno) {
 	proc := dll.mustProc(PNSafeArrayCreateEx)
 	r, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(vt),
@@ -203,7 +203,7 @@ func (dll OleAut32DLL) SafeArrayCreateEx(vt VarType, cDims uint32, bounds *SafeA
 }
 
 // SafeArrayCreateVector https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearraycreatevector
-func (dll OleAut32DLL) SafeArrayCreateVector(vt VT,
+func (dll *OleAut32DLL) SafeArrayCreateVector(vt VT,
 	lBound int32, // The lower bound for the array. This parameter can be negative.
 	cElements uint32, // The number of elements in the array.
 ) (*SafeArray, syscall.Errno) {
@@ -217,7 +217,7 @@ func (dll OleAut32DLL) SafeArrayCreateVector(vt VT,
 }
 
 // SafeArrayCreateVectorEx https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearraycreatevectorex
-func (dll OleAut32DLL) SafeArrayCreateVectorEx(vt VarType,
+func (dll *OleAut32DLL) SafeArrayCreateVectorEx(vt VarType,
 	lBound int32, // The lower bound for the array. This parameter can be negative.
 	cElements uint32, // The number of elements in the array.
 	extra uintptr,
@@ -233,7 +233,7 @@ func (dll OleAut32DLL) SafeArrayCreateVectorEx(vt VarType,
 }
 
 // SafeArrayDestroy https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearraydestroy
-func (dll OleAut32DLL) SafeArrayDestroy(pSA *SafeArray) syscall.Errno {
+func (dll *OleAut32DLL) SafeArrayDestroy(pSA *SafeArray) syscall.Errno {
 	proc := dll.mustProc(PNSafeArrayDestroy)
 	hr, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(unsafe.Pointer(pSA)),
@@ -242,7 +242,7 @@ func (dll OleAut32DLL) SafeArrayDestroy(pSA *SafeArray) syscall.Errno {
 }
 
 // SafeArrayDestroyData https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearraydestroydata
-func (dll OleAut32DLL) SafeArrayDestroyData(pSA *SafeArray) syscall.Errno {
+func (dll *OleAut32DLL) SafeArrayDestroyData(pSA *SafeArray) syscall.Errno {
 	proc := dll.mustProc(PNSafeArrayDestroyData)
 	hr, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(unsafe.Pointer(pSA)),
@@ -251,7 +251,7 @@ func (dll OleAut32DLL) SafeArrayDestroyData(pSA *SafeArray) syscall.Errno {
 }
 
 // SafeArrayDestroyDescriptor https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearraydestroydescriptor
-func (dll OleAut32DLL) SafeArrayDestroyDescriptor(pSA *SafeArray) syscall.Errno {
+func (dll *OleAut32DLL) SafeArrayDestroyDescriptor(pSA *SafeArray) syscall.Errno {
 	proc := dll.mustProc(PNSafeArrayDestroyDescriptor)
 	hr, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(unsafe.Pointer(pSA)),
@@ -261,7 +261,7 @@ func (dll OleAut32DLL) SafeArrayDestroyDescriptor(pSA *SafeArray) syscall.Errno 
 
 // SafeArrayGetDim https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearraygetdim
 // The number of dimensions in the array.
-func (dll OleAut32DLL) SafeArrayGetDim(pSA *SafeArray) uint32 {
+func (dll *OleAut32DLL) SafeArrayGetDim(pSA *SafeArray) uint32 {
 	proc := dll.mustProc(PNSafeArrayGetDim)
 	r, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(unsafe.Pointer(pSA)),
@@ -270,7 +270,7 @@ func (dll OleAut32DLL) SafeArrayGetDim(pSA *SafeArray) uint32 {
 }
 
 // SafeArrayGetElement https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearraygetelement
-func (dll OleAut32DLL) SafeArrayGetElement(safeArray *SafeArray, index int32,
+func (dll *OleAut32DLL) SafeArrayGetElement(safeArray *SafeArray, index int32,
 	pvData uintptr, // [out]
 ) syscall.Errno {
 	proc := dll.mustProc(PNSafeArrayGetElement)
@@ -284,7 +284,7 @@ func (dll OleAut32DLL) SafeArrayGetElement(safeArray *SafeArray, index int32,
 
 // SafeArrayGetElemSize https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearraygetelemsize
 // The size of an element in a safe array, in bytes.
-func (dll OleAut32DLL) SafeArrayGetElemSize(safeArray *SafeArray) uint32 {
+func (dll *OleAut32DLL) SafeArrayGetElemSize(safeArray *SafeArray) uint32 {
 	proc := dll.mustProc(PNSafeArrayGetElemSize)
 	r, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(unsafe.Pointer(safeArray)),
@@ -294,7 +294,7 @@ func (dll OleAut32DLL) SafeArrayGetElemSize(safeArray *SafeArray) uint32 {
 
 // SafeArrayGetIID https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearraygetiid
 // The size of an element in a safe array, in bytes.
-func (dll OleAut32DLL) SafeArrayGetIID(safeArray *SafeArray) (*GUID, syscall.Errno) {
+func (dll *OleAut32DLL) SafeArrayGetIID(safeArray *SafeArray) (*GUID, syscall.Errno) {
 	proc := dll.mustProc(PNSafeArrayGetIID)
 	var guid *GUID
 	hr, _, _ := syscall.SyscallN(proc.Addr(),
@@ -306,7 +306,7 @@ func (dll OleAut32DLL) SafeArrayGetIID(safeArray *SafeArray) (*GUID, syscall.Err
 
 // SafeArrayGetLBound https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearraygetlbound
 // Gets the lower bound for any dimension of the specified safe array.
-func (dll OleAut32DLL) SafeArrayGetLBound(safeArray *SafeArray, nDim uint32) (lowerBound int32, errno syscall.Errno) {
+func (dll *OleAut32DLL) SafeArrayGetLBound(safeArray *SafeArray, nDim uint32) (lowerBound int32, errno syscall.Errno) {
 	proc := dll.mustProc(PNSafeArrayGetLBound)
 	hr, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(unsafe.Pointer(safeArray)),
@@ -317,7 +317,7 @@ func (dll OleAut32DLL) SafeArrayGetLBound(safeArray *SafeArray, nDim uint32) (lo
 }
 
 // SafeArrayGetRecordInfo https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearraygetrecordinfo
-func (dll OleAut32DLL) SafeArrayGetRecordInfo(safeArray *SafeArray, nDim uint32) (recordInfo any, errno syscall.Errno) {
+func (dll *OleAut32DLL) SafeArrayGetRecordInfo(safeArray *SafeArray, nDim uint32) (recordInfo any, errno syscall.Errno) {
 	proc := dll.mustProc(PNSafeArrayGetRecordInfo)
 	hr, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(unsafe.Pointer(safeArray)),
@@ -328,7 +328,7 @@ func (dll OleAut32DLL) SafeArrayGetRecordInfo(safeArray *SafeArray, nDim uint32)
 
 // SafeArrayGetUBound https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearraygetubound
 // Gets the upper bound for any dimension of the specified safe array.
-func (dll OleAut32DLL) SafeArrayGetUBound(safeArray *SafeArray, nDim uint32) (upperBound int32, errno syscall.Errno) {
+func (dll *OleAut32DLL) SafeArrayGetUBound(safeArray *SafeArray, nDim uint32) (upperBound int32, errno syscall.Errno) {
 	proc := dll.mustProc(PNSafeArrayGetUBound)
 	hr, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(unsafe.Pointer(safeArray)),
@@ -340,7 +340,7 @@ func (dll OleAut32DLL) SafeArrayGetUBound(safeArray *SafeArray, nDim uint32) (up
 
 // SafeArrayGetVarType https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearraygetvartype
 // Gets the VarType stored in the specified safe array.
-func (dll OleAut32DLL) SafeArrayGetVarType(safeArray *SafeArray) (vt VT, errno syscall.Errno) {
+func (dll *OleAut32DLL) SafeArrayGetVarType(safeArray *SafeArray) (vt VT, errno syscall.Errno) {
 	proc := dll.mustProc(PNSafeArrayGetVarType)
 	hr, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(unsafe.Pointer(safeArray)),
@@ -351,7 +351,7 @@ func (dll OleAut32DLL) SafeArrayGetVarType(safeArray *SafeArray) (vt VT, errno s
 
 // SafeArrayPutElement https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearrayputelement
 // Gets the VarType stored in the specified safe array.
-func (dll OleAut32DLL) SafeArrayPutElement(safeArray *SafeArray, index int32, element uintptr) syscall.Errno {
+func (dll *OleAut32DLL) SafeArrayPutElement(safeArray *SafeArray, index int32, element uintptr) syscall.Errno {
 	proc := dll.mustProc(PNSafeArrayPutElement)
 	hr, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(unsafe.Pointer(safeArray)),
@@ -362,7 +362,7 @@ func (dll OleAut32DLL) SafeArrayPutElement(safeArray *SafeArray, index int32, el
 }
 
 // SafeArrayUnAccessData https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearrayunaccessdata
-func (dll OleAut32DLL) SafeArrayUnAccessData(safeArray *SafeArray) syscall.Errno {
+func (dll *OleAut32DLL) SafeArrayUnAccessData(safeArray *SafeArray) syscall.Errno {
 	proc := dll.mustProc(PNSafeArrayUnAccessData)
 	hr, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(unsafe.Pointer(safeArray)),
@@ -372,7 +372,7 @@ func (dll OleAut32DLL) SafeArrayUnAccessData(safeArray *SafeArray) syscall.Errno
 
 // SafeArrayUnlock https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearrayunaccessdata
 // Decrements the lock count of an array so it can be freed or resized.
-func (dll OleAut32DLL) SafeArrayUnlock(safeArray *SafeArray) syscall.Errno {
+func (dll *OleAut32DLL) SafeArrayUnlock(safeArray *SafeArray) syscall.Errno {
 	proc := dll.mustProc(PNSafeArrayUnlock)
 	hr, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(unsafe.Pointer(safeArray)),
@@ -382,7 +382,7 @@ func (dll OleAut32DLL) SafeArrayUnlock(safeArray *SafeArray) syscall.Errno {
 
 // SafeArraySetRecordInfo https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-safearraysetrecordinfo
 // Sets the record info in the specified safe array.
-func (dll OleAut32DLL) SafeArraySetRecordInfo(safeArray *SafeArray,
+func (dll *OleAut32DLL) SafeArraySetRecordInfo(safeArray *SafeArray,
 	recordInfo any, // [out]
 ) syscall.Errno {
 	proc := dll.mustProc(PNSafeArraySetRecordInfo)
@@ -395,7 +395,7 @@ func (dll OleAut32DLL) SafeArraySetRecordInfo(safeArray *SafeArray,
 
 // SysAllocStringLen  https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-sysallocstringlen
 // Deallocates a string allocated previously by SysAllocString, SysAllocStringByteLen, SysReAllocString, SysAllocStringLen, or SysReAllocStringLen
-func (dll OleAut32DLL) SysAllocStringLen(utf8Str string) *uint16 {
+func (dll *OleAut32DLL) SysAllocStringLen(utf8Str string) *uint16 {
 	proc := dll.mustProc(PNSysAllocStringLen)
 	// UintptrFromStr(str) // 可以直接用這個取，但是長度會不知道
 	utf16Str := utf16.Encode([]rune(utf8Str + "\x00"))
@@ -408,7 +408,7 @@ func (dll OleAut32DLL) SysAllocStringLen(utf8Str string) *uint16 {
 
 // SysFreeString https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-sysfreestring
 // Deallocates a string allocated previously by SysAllocString, SysAllocStringByteLen, SysReAllocString, SysAllocStringLen, or SysReAllocStringLen
-func (dll OleAut32DLL) SysFreeString(bStrString *uint16) {
+func (dll *OleAut32DLL) SysFreeString(bStrString *uint16) {
 	proc := dll.mustProc(PNSysFreeString)
 	_, _, _ = syscall.SyscallN(proc.Addr(),
 		uintptr(unsafe.Pointer(bStrString)),
@@ -416,7 +416,7 @@ func (dll OleAut32DLL) SysFreeString(bStrString *uint16) {
 }
 
 // SysStringLen  https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-sysstringlen
-func (dll OleAut32DLL) SysStringLen(bStrString *uint16) uint32 {
+func (dll *OleAut32DLL) SysStringLen(bStrString *uint16) uint32 {
 	proc := dll.mustProc(PNSysStringLen)
 	numberOfChar, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(unsafe.Pointer(bStrString)),
@@ -425,7 +425,7 @@ func (dll OleAut32DLL) SysStringLen(bStrString *uint16) uint32 {
 }
 
 // VariantClear https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-variantclear
-func (dll OleAut32DLL) VariantClear(v *VARIANT) syscall.Errno {
+func (dll *OleAut32DLL) VariantClear(v *VARIANT) syscall.Errno {
 	proc := dll.mustProc(PNVariantClear)
 	hr, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(unsafe.Pointer(&v)),
@@ -434,7 +434,7 @@ func (dll OleAut32DLL) VariantClear(v *VARIANT) syscall.Errno {
 }
 
 // VariantInit https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-variantinit
-func (dll OleAut32DLL) VariantInit(v *VARIANT) {
+func (dll *OleAut32DLL) VariantInit(v *VARIANT) {
 	proc := dll.mustProc(PNVariantInit)
 	_, _, _ = syscall.SyscallN(proc.Addr(),
 		uintptr(unsafe.Pointer(&v)),
