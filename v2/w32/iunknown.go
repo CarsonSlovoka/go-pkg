@@ -61,13 +61,13 @@ func (unk *IUnknown) QueryInterface(
 
 // AddRef https://learn.microsoft.com/en-us/windows/win32/api/unknwn/nf-unknwn-iunknown-addref
 func (unk *IUnknown) AddRef() int32 {
-	r, _, _ := syscall.SyscallN(unk.VTable().AddRef, uintptr(unsafe.Pointer(&unk)))
+	r, _, _ := syscall.SyscallN(unk.VTable().AddRef, uintptr(unsafe.Pointer(unk)))
 	return int32(r)
 }
 
 // Release https://learn.microsoft.com/en-us/windows/win32/api/unknwn/nf-unknwn-iunknown-release
 // return value: The method returns the new reference count. This value is intended to be used only for test purposes.
 func (unk *IUnknown) Release() uint32 {
-	r, _, _ := syscall.SyscallN(unk.VTable().AddRef, uintptr(unsafe.Pointer(&unk)))
+	r, _, _ := syscall.SyscallN(unk.VTable().Release, uintptr(unsafe.Pointer(unk)))
 	return uint32(r)
 }
