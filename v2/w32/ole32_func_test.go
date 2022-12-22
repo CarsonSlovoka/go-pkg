@@ -35,6 +35,7 @@ func Test_openIE(t *testing.T) {
 			log.Printf("%s\n", errno)
 			return
 		}
+		defer unknown.Release()
 
 		var dispatchIE *w32.IDispatch
 		dispatchIE, errno = unknown.QueryInterface(w32.IID_IDispatch)
@@ -59,7 +60,6 @@ func Test_openIE(t *testing.T) {
 		htmlElems := document.MustMethod("getElementsByName", "q").ToIDispatch()
 		htmlInputElem := htmlElems.MustMethod("item", 0).ToIDispatch()
 		htmlInputElem.MustPropertyPut("value", "golang")
-		wg.Done()
 	}()
 	wg.Wait()
 }
@@ -87,6 +87,7 @@ func Test_openIE2(t *testing.T) {
 	if errno != 0 {
 		log.Fatalf("%s\n", errno)
 	}
+	defer unknown.Release()
 
 	dispatchIE, errno2 := unknown.QueryInterface(w32.IID_IDispatch)
 	if errno2 != 0 {
@@ -250,6 +251,8 @@ func Test_excel(t *testing.T) {
 		log.Printf("%s", errno)
 		return
 	}
+	defer unknown.Release()
+
 	excel, _ := unknown.QueryInterface(w32.IID_IDispatch)
 
 	// 刪除退出之後還沒有被關掉的EXCEL程序
@@ -328,4 +331,57 @@ func Test_excel(t *testing.T) {
 	workbook.MustMethod("SaveAs", "C:\\Users\\Carson\\go\\1.16\\src\\github.com\\CarsonSlovoka\\go-set\\repos\\go-pkg\\v2\\w32\\test.xlsx") // 注意！是用\\而不是/
 	_, _ = workbook.Method("Closed", false)
 	excel.MustMethod("Quit")
+}
+
+// https://learn.microsoft.com/en-us/windows/win32/wmisdk/scripting-api-for-wmi
+// Powershell:
+//
+//	Get-WmiObject -Class Win32_NetworkAdapterConfiguration  | Format-Table
+//	Get-WmiObject -Class Win32_NetworkAdapterConfiguration -Filter IPEnabled=TRUE | Format-Table
+//	Get-WmiObject -Class Win32_NetworkAdapterConfiguration -Filter IPEnabled=TRUE | Format-Table -Property IPAddress
+func Test_wmi(t *testing.T) {
+	oleDll.CoInitialize(0)
+	defer oleDll.CoUnInitialize()
+
+	// https://learn.microsoft.com/en-us/windows/win32/wmisdk/document-conventions-for-the-scripting-api
+	unknown, errno := w32.NewIUnknownInstance(oleDll, "WbemScripting.SWbemLocator", w32.CLSCTX_SERVER)
+	if errno != 0 {
+		return
+	}
+	defer unknown.Release()
+
+	wmi, _ := unknown.QueryInterface(w32.IID_IDispatch)
+
+	// https://learn.microsoft.com/en-us/windows/win32/wmisdk/swbemlocator#methods
+	// return: https://learn.microsoft.com/en-us/windows/win32/wmisdk/swbemlocator-connectserver#return-value
+	service := wmi.MustMethod("ConnectServer").ToIDispatch()
+	defer service.Release()
+
+	// https://learn.microsoft.com/en-us/windows/win32/wmisdk/swbemservices
+	// https://learn.microsoft.com/en-us/windows/win32/wmisdk/swbemservices-execquery
+	sWbemObjectSet := service.MustMethod("ExecQuery", "SELECT * FROM Win32_NetworkAdapterConfiguration").ToIDispatch()
+	defer sWbemObjectSet.Release()
+
+	// https://learn.microsoft.com/en-us/windows/win32/wmisdk/swbemobjectset#properties
+	countVar := sWbemObjectSet.MustPropertyGet("Count")
+	count := int(countVar.Val)
+	fmt.Println(count)
+	for i := 0; i < count; i++ {
+		// item is a SWbemObject, but really a Win32_Process
+		// https://learn.microsoft.com/en-us/windows/win32/wmisdk/swbemobjectset-itemindex
+		item := sWbemObjectSet.MustMethod("ItemIndex", i).ToIDispatch()
+
+		// https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-networkadapterconfiguration#syntax
+		addr, errno := item.PropertyGet("IPAddress")
+		if errno != 0 {
+			log.Println(errno.Error())
+		} else {
+			arr := addr.ToArray()
+			if arr != nil {
+				// fmt.Println(arr.ToStringArray()) // TODO
+			}
+		}
+		fmt.Println(item.MustPropertyGet("Description").ToString())
+		item.Release()
+	}
 }

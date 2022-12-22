@@ -415,7 +415,7 @@ func (dll *OleAut32DLL) SysFreeString(bStrString *uint16) {
 	)
 }
 
-// SysStringLen  https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-sysstringlen
+// SysStringLen https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-sysstringlen
 func (dll *OleAut32DLL) SysStringLen(bStrString *uint16) uint32 {
 	proc := dll.mustProc(PNSysStringLen)
 	numberOfChar, _, _ := syscall.SyscallN(proc.Addr(),

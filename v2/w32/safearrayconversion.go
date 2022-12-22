@@ -11,6 +11,8 @@ type SafeArrayConversion struct {
 	Array *SafeArray
 }
 
+// TODO
+/*
 func (sac *SafeArrayConversion) ToStringArray() (strings []string) {
 	totalElements, _ := sac.TotalElements(0)
 	strings = make([]string, totalElements)
@@ -21,6 +23,7 @@ func (sac *SafeArrayConversion) ToStringArray() (strings []string) {
 
 	return
 }
+*/
 
 func (sac *SafeArrayConversion) ToByteArray() (bytes []byte) {
 	totalElements, _ := sac.TotalElements(0)
@@ -84,9 +87,12 @@ func (sac *SafeArrayConversion) ToValueArray() (values []interface{}) {
 			var v float64
 			_ = OleAutDll.SafeArrayGetElement(sac.Array, i, uintptr(unsafe.Pointer(&v)))
 			values[i] = v
-		case VT_BSTR:
-			v, _ := safeArrayGetElementString(sac.Array, i)
-			values[i] = v
+
+			/* TODO
+			case VT_BSTR:
+				v, _ := safeArrayGetElementString(sac.Array, i)
+				values[i] = v
+			*/
 		case VT_VARIANT:
 			var v VARIANT
 			_ = OleAutDll.SafeArrayGetElement(sac.Array, i, uintptr(unsafe.Pointer(&v)))
