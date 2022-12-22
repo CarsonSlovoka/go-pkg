@@ -99,16 +99,17 @@ func ExampleKernel32DLL_CreateToolHelp32Snapshot() {
 
 	ok, errno = kernel32dll.Process32First(handleSnapshot, entry)
 	if ok == 0 {
-		if ok == w32.ERROR_NO_MORE_FILES {
+		if errno == w32.ERROR_NO_MORE_FILES {
 			log.Println(errno)
 		}
+		return
 	}
 
 	var numProcess = 0
 	for {
 		ok, errno = kernel32dll.Process32Next(handleSnapshot, entry)
 		if ok == 0 {
-			if ok == w32.ERROR_NO_MORE_FILES {
+			if errno == w32.ERROR_NO_MORE_FILES {
 				log.Println(errno)
 			}
 			break

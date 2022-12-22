@@ -52,6 +52,10 @@ const (
 
 	PNSizeofResource ProcName = "SizeofResource"
 
+	PNOpenProcess ProcName = "OpenProcess"
+
+	PNTerminateProcess ProcName = "TerminateProcess"
+
 	PNUpdateResource ProcName = "UpdateResourceW"
 
 	PNWriteFile ProcName = "WriteFile"
@@ -109,6 +113,10 @@ func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 			PNSetThreadDescription,
 
 			PNSizeofResource,
+
+			PNOpenProcess,
+
+			PNTerminateProcess,
 
 			PNUpdateResource,
 
@@ -475,6 +483,28 @@ func (dll *Kernel32DLL) SizeofResource(hModule HMODULE, hResInfo HRSRC) (uint32,
 		uintptr(hResInfo),
 	)
 	return uint32(ret), errno
+}
+
+// OpenProcess https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-openprocess
+// If the function fails, the return value is NULL.
+func (dll *Kernel32DLL) OpenProcess(desiredAccess uint32, isInheritHandle bool, processID uint32) (HANDLE, syscall.Errno) {
+	proc := dll.mustProc(PNOpenProcess)
+	r, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(desiredAccess),
+		UintptrFromBool(isInheritHandle),
+		uintptr(processID),
+	)
+	return HANDLE(r), errno
+}
+
+// TerminateProcess https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminateprocess
+func (dll *Kernel32DLL) TerminateProcess(handle HANDLE, exitCode uint32) (bool, syscall.Errno) {
+	proc := dll.mustProc(PNTerminateProcess)
+	r, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(handle),
+		uintptr(exitCode),
+	)
+	return r != 0, errno
 }
 
 func (dll *Kernel32DLL) MustSizeofResource(hModule HMODULE, hResInfo HRSRC) uint32 {
