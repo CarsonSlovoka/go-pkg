@@ -130,6 +130,31 @@ func ExampleKernel32DLL_CreateToolHelp32Snapshot() {
 	// Output:
 }
 
+// https://learn.microsoft.com/en-us/windows/win32/procthread/creating-processes
+func ExampleKernel32DLL_CreateProcess() {
+	var (
+		si w32.STARTUPINFO
+		pi w32.PROCESS_INFORMATION
+	)
+
+	if errno := kernelDll.CreateProcess("", // No module name (use command line)
+		filepath.Join(os.Getenv("windir"), "system32/cmd.exe")+" /C echo hello world",
+		nil,   // Process handle not inheritable
+		nil,   // Thread handle not inheritable
+		false, // Set handle inheritance to FALSE
+		0,     // No creation flags
+		0,     // Use parent's environment block
+		"",    // Use parent's starting directory
+		&si,   // Pointer to STARTUPINFO structure
+		&pi,   // Pointer to PROCESS_INFORMATION structure
+	); errno != 0 {
+		log.Println(errno)
+	}
+	_, _ = kernelDll.CloseHandle(pi.HProcess)
+	_, _ = kernelDll.CloseHandle(pi.HThread)
+	// Output:
+}
+
 func ExampleKernel32DLL_GetNativeSystemInfo() {
 	kernel32dll := w32.NewKernel32DLL(w32.PNGetNativeSystemInfo)
 	info := kernel32dll.GetNativeSystemInfo()

@@ -63,6 +63,7 @@ type (
 	WPARAM  uintptr
 	LPARAM  uintptr
 	LPSTR   *CHAR
+	LPBYTE  *byte
 	LPCSTR  *byte
 	LPCWSTR *uint16
 	LPWSTR  *uint16
