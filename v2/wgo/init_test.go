@@ -1,11 +1,15 @@
 package wgo_test
 
-import "github.com/CarsonSlovoka/go-pkg/v2/w32"
+import (
+	"github.com/CarsonSlovoka/go-pkg/v2/w32"
+	"github.com/CarsonSlovoka/go-pkg/v2/wgo"
+)
 
 var (
-	kernelDll *w32.Kernel32DLL
+	wGo *wgo.WGO
 )
 
 func init() {
-	kernelDll = w32.NewKernel32DLL()
+	kernel32dll := w32.NewKernel32DLL()
+	wGo = wgo.NewWGO(kernel32dll)
 }

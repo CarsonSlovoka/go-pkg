@@ -7,6 +7,7 @@ import (
 	"github.com/CarsonSlovoka/go-pkg/v2/wgo"
 	"log"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 	"unsafe"
@@ -244,7 +245,12 @@ func Test_excel(t *testing.T) {
 	oleDll.CoInitialize(0)
 	defer oleDll.CoUnInitialize()
 
-	orgOpenExcelEntrySlice, _ := wgo.GetProcessEntryByName(kernelDll, "EXCEL.EXE")
+	wGo := wgo.NewWGO(kernelDll)
+
+	// 紀錄已經開啟的excel程序
+	orgOpenExcelEntrySlice, _ := wGo.GetProcessEntry(func(entry *w32.PROCESSENTRY32W) bool {
+		return entry.ExeFileName() == "EXCEL.EXE"
+	})
 
 	unknown, errno := w32.NewIUnknownInstance(oleDll, "Excel.Application", w32.CLSCTX_SERVER)
 	if errno != 0 {
@@ -257,22 +263,24 @@ func Test_excel(t *testing.T) {
 
 	// 刪除退出之後還沒有被關掉的EXCEL程序
 	defer func() {
-		excelSlices, _ := wgo.GetProcessEntryByName(kernelDll, "EXCEL.EXE")
-		var needDeleteExcels []w32.PROCESSENTRY32W
-		for _, entry := range excelSlices {
+		needDeleteExcels, _ := wGo.GetProcessEntry(func(entry *w32.PROCESSENTRY32W) bool {
+			if entry.ExeFileName() != "EXCEL.EXE" {
+				return false
+			}
+			curPID := entry.Th32ProcessID
 			for _, orgEntry := range orgOpenExcelEntrySlice {
-				if entry.Th32ProcessID != orgEntry.Th32ProcessID { // 表示這個excel程序是使用者主動開啟的，不需要關閉
-					if needDeleteExcels == nil {
-						needDeleteExcels = make([]w32.PROCESSENTRY32W, 0)
-					}
-					needDeleteExcels = append(needDeleteExcels, entry)
-					break
+				if orgEntry.Th32ProcessID == curPID {
+					return false
 				}
 			}
-		}
+			return true
+		})
+
 		if len(needDeleteExcels) > 0 {
-			_ = wgo.KillProcess(kernelDll, needDeleteExcels, func(deleteEntry *w32.PROCESSENTRY32W) {
-				log.Printf("[excel] delete processID: %d", deleteEntry.Th32ProcessID)
+			wGo.KillProcess(needDeleteExcels, func(entry *w32.PROCESSENTRY32W, errno syscall.Errno) {
+				if errno != 0 {
+					log.Printf("[Kill Process Error--Excel] processID: %d", entry.Th32ProcessID)
+				}
 			})
 		}
 	}()

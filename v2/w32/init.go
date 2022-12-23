@@ -24,6 +24,15 @@ type dLL struct {
 	mustProc func(name ProcName) *syscall.LazyProc
 }
 
+func (d *dLL) Name() string {
+	return string(d.name)
+}
+
+func (d *dLL) Call(name string, args ...uintptr) (r1, r2 uintptr, err syscall.Errno) {
+	proc := d.mustProc(ProcName(name))
+	return syscall.SyscallN(proc.Addr(), args...)
+}
+
 // defaultMustProc 當您從dll中呼叫任何的Proc程序，該程序名稱必須事前申明需要用到
 func defaultMustProc(dll dLL, name ProcName) *syscall.LazyProc {
 	proc, exists := dll.procMap[name]
