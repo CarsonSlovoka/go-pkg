@@ -147,12 +147,11 @@ func (dll *Kernel32DLL) BeginUpdateResource(filePath string, bDeleteExistingReso
 
 // CloseHandle Closes an open object handle.
 // https://docs.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-closehandle?redirectedfrom=MSDN
-// Returns TRUE if successful or FALSE otherwise.
-func (dll *Kernel32DLL) CloseHandle(handle HANDLE) (bool, syscall.Errno) {
+func (dll *Kernel32DLL) CloseHandle(handle HANDLE) syscall.Errno {
 	proc := dll.mustProc(PNCloseHandle)
 	// r1, _, err := proc.Call(handle) // 其為syscall.SyscallN的封裝(多了檢查的動作)，如果已經確定，可以直接用syscall.SyscallN會更有效率
-	r1, _, errno := syscall.SyscallN(proc.Addr(), uintptr(handle))
-	return r1 != 0, errno
+	_, _, errno := syscall.SyscallN(proc.Addr(), uintptr(handle)) // Returns TRUE if successful or FALSE otherwise. 不需要特別管回傳值，如果成功errno會是0
+	return errno
 }
 
 // CopyFile https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-copyfilew
@@ -161,14 +160,14 @@ func (dll *Kernel32DLL) CloseHandle(handle HANDLE) (bool, syscall.Errno) {
 // If this parameter is FALSE and the new file already exists, the function overwrites the existing file and succeeds.
 //
 // Returns TRUE if successful or FALSE otherwise.
-func (dll *Kernel32DLL) CopyFile(existingFileName string, newFileName string, bFailIfExists bool) bool {
+func (dll *Kernel32DLL) CopyFile(existingFileName string, newFileName string, bFailIfExists bool) syscall.Errno {
 	proc := dll.mustProc(PNCopyFile)
-	r1, _, _ := syscall.SyscallN(proc.Addr(),
+	_, _, errno := syscall.SyscallN(proc.Addr(),
 		UintptrFromStr(existingFileName),
 		UintptrFromStr(newFileName),
 		UintptrFromBool(bFailIfExists),
 	)
-	return r1 != 0
+	return errno
 }
 
 // CreateFile https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew
@@ -293,10 +292,10 @@ func (dll *Kernel32DLL) FindResource(hModule HMODULE, lpName, lpType *uint16) (H
 }
 
 // FreeLibrary https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-freelibrary
-func (dll *Kernel32DLL) FreeLibrary(hLibModule HMODULE) bool {
+func (dll *Kernel32DLL) FreeLibrary(hLibModule HMODULE) syscall.Errno {
 	proc := dll.mustProc(PNFreeLibrary)
-	r1, _, _ := syscall.SyscallN(proc.Addr(), uintptr(hLibModule))
-	return r1 != 0
+	_, _, errno := syscall.SyscallN(proc.Addr(), uintptr(hLibModule))
+	return errno
 }
 
 // GetCurrentThread https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getcurrentthread
@@ -396,13 +395,16 @@ func (dll *Kernel32DLL) GlobalLock(hMem HGLOBAL) (LPVOID, syscall.Errno) {
 }
 
 // GlobalUnlock https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-globalunlock
-// If the function fails, the return value is zero
-func (dll *Kernel32DLL) GlobalUnlock(hMem HGLOBAL) bool {
+// If the memory object is still locked after decrementing the lock count
+// If the memory object is unlocked after decrementing the lock count, the function returns zero. and GetLastError returns NO_ERROR. 0也有可能是成功
+// If the function fails, the return value is zero and GetLastError returns a value other than NO_ERROR.
+// 所以要檢查是否有錯誤，用Errno!=0為主
+func (dll *Kernel32DLL) GlobalUnlock(hMem HGLOBAL) (int32, syscall.Errno) {
 	proc := dll.mustProc(PNGlobalUnlock)
-	r1, _, _ := syscall.SyscallN(proc.Addr(),
+	r, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hMem),
 	)
-	return r1 != 0
+	return int32(r), errno
 }
 
 // LoadLibrary https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryw
@@ -471,9 +473,9 @@ func (dll *Kernel32DLL) ReadDirectoryChanges(hDirectory HANDLE,
 	dwNotifyFilter uint32,
 	lpBytesReturned *uint32, // [out]
 	lpOverlapped *OVERLAPPED, lpCompletionRoutine uintptr,
-) (bool, syscall.Errno) {
+) syscall.Errno {
 	proc := dll.mustProc(PNReadDirectoryChanges)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
+	_, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hDirectory),
 		lpBuffer,
 		uintptr(nBufferLength),
@@ -483,7 +485,7 @@ func (dll *Kernel32DLL) ReadDirectoryChanges(hDirectory HANDLE,
 		uintptr(unsafe.Pointer(lpOverlapped)),
 		lpCompletionRoutine,
 	)
-	return r1 != 0, errno
+	return errno
 }
 
 // SetLastError https://learn.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-setlasterror
@@ -526,13 +528,13 @@ func (dll *Kernel32DLL) OpenProcess(desiredAccess uint32, isInheritHandle bool, 
 }
 
 // TerminateProcess https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminateprocess
-func (dll *Kernel32DLL) TerminateProcess(handle HANDLE, exitCode uint32) (bool, syscall.Errno) {
+func (dll *Kernel32DLL) TerminateProcess(handle HANDLE, exitCode uint32) syscall.Errno {
 	proc := dll.mustProc(PNTerminateProcess)
-	r, _, errno := syscall.SyscallN(proc.Addr(),
+	_, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(handle),
 		uintptr(exitCode),
 	)
-	return r != 0, errno
+	return errno
 }
 
 func (dll *Kernel32DLL) MustSizeofResource(hModule HMODULE, hResInfo HRSRC) uint32 {
@@ -572,14 +574,14 @@ func (dll *Kernel32DLL) WriteFile(hFile HANDLE,
 	nNumberOfBytesToWrite uint32,
 	lpNumberOfBytesWritten *uint32, // out
 	lpOverlapped *OVERLAPPED,
-) (bool, syscall.Errno) {
+) syscall.Errno {
 	proc := dll.mustProc(PNWriteFile)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
+	_, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hFile),
 		lpBuffer,
 		uintptr(nNumberOfBytesToWrite),
 		uintptr(unsafe.Pointer(lpNumberOfBytesWritten)),
 		uintptr(unsafe.Pointer(lpOverlapped)),
 	)
-	return r1 != 0, errno
+	return errno
 }

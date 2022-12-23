@@ -314,8 +314,8 @@ func ExampleGdi32DLL_CreateCompatibleBitmap() {
 	// DIP HEADER 不行用以下的方法寫，會有endian的問題
 	// _, _ = kernel32dll.WriteFile(hFile, uintptr(unsafe.Pointer(&bitmapInfoHeader)), uint32(unsafe.Sizeof(bitmapInfoHeader)), &dwBytesWritten, nil)
 	// DATA
-	_, _ = kernel32dll.WriteFile(hFile, uintptr(lpBitmap), sizeofDIB, &dwBytesWritten, nil)
-	_, _ = kernel32dll.CloseHandle(hFile)
+	_ = kernel32dll.WriteFile(hFile, uintptr(lpBitmap), sizeofDIB, &dwBytesWritten, nil)
+	_ = kernel32dll.CloseHandle(hFile)
 
 	fmt.Println("ok")
 

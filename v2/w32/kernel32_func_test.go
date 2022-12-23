@@ -30,11 +30,12 @@ func TestCreateMutex(t *testing.T) {
 		t.Fatal("not as expected")
 	}
 
-	if ok, err := kernel32dll.CloseHandle(handle1); !ok {
-		t.Fatal(err)
+	if errno := kernel32dll.CloseHandle(handle1); errno != 0 {
+		t.Fatal(errno)
 	}
-	if ok, err := kernel32dll.CloseHandle(handle2); !ok { // 如果我們省略了這個closeHandle之後再嘗試創建一次，會報ERROR_ALREADY_EXISTS的錯誤
-		t.Fatal(err)
+
+	if errno := kernel32dll.CloseHandle(handle2); errno != 0 { // 如果我們省略了這個closeHandle之後再嘗試創建一次，會報ERROR_ALREADY_EXISTS的錯誤
+		t.Fatal(errno)
 	}
 
 	// We can create again since we have closed (close ALL)
@@ -42,8 +43,8 @@ func TestCreateMutex(t *testing.T) {
 	if err != w32.NO_ERROR {
 		t.Fatal(err)
 	}
-	if ok, err := kernel32dll.CloseHandle(handle3); !ok {
-		t.Fatal(err)
+	if errno := kernel32dll.CloseHandle(handle3); errno != 0 {
+		t.Fatal(errno)
 	}
 }
 
@@ -57,7 +58,7 @@ func ExampleKernel32DLL_CreateMutex() {
 		return
 	}
 
-	if ok, err := kernel32dll.CloseHandle(handle); !ok {
+	if err = kernel32dll.CloseHandle(handle); err != 0 {
 		fmt.Println(err)
 		return
 	}
@@ -67,7 +68,7 @@ func ExampleKernel32DLL_CreateMutex() {
 	if err != w32.NO_ERROR {
 		return
 	}
-	if ok, _ := kernel32dll.CloseHandle(handle); !ok {
+	if kernel32dll.CloseHandle(handle) != 0 {
 		return
 	}
 	fmt.Println("ok")
@@ -89,7 +90,7 @@ func ExampleKernel32DLL_CreateToolHelp32Snapshot() {
 	}
 
 	defer func() {
-		if ok, errno2 := kernel32dll.CloseHandle(handleSnapshot); !ok {
+		if errno2 := kernel32dll.CloseHandle(handleSnapshot); errno2 != 0 {
 			fmt.Printf("%s", errno2)
 		}
 	}()
@@ -150,8 +151,8 @@ func ExampleKernel32DLL_CreateProcess() {
 	); errno != 0 {
 		log.Println(errno)
 	}
-	_, _ = kernelDll.CloseHandle(pi.HProcess)
-	_, _ = kernelDll.CloseHandle(pi.HThread)
+	_ = kernelDll.CloseHandle(pi.HProcess)
+	_ = kernelDll.CloseHandle(pi.HThread)
 	// Output:
 }
 
@@ -180,7 +181,7 @@ func ExampleKernel32DLL_CreateFile() {
 	if errno != 0 { // w32.NO_ERROR
 		return
 	}
-	if ok, _ := kernel32dll.CloseHandle(hFile); !ok {
+	if kernel32dll.CloseHandle(hFile) != 0 {
 		return
 	}
 	defer func() {
@@ -194,7 +195,7 @@ func ExampleKernel32DLL_CreateFile() {
 		w32.FILE_ATTRIBUTE_NORMAL,
 		0,
 	)
-	if ok, _ := kernel32dll.CloseHandle(hFile); !ok {
+	if kernel32dll.CloseHandle(hFile) != 0 {
 		return
 	}
 	if errno != w32.ERROR_ALREADY_EXISTS {
@@ -232,7 +233,7 @@ func ExampleKernel32DLL_CopyFile() {
 		fmt.Println("Could not create file.") // 有可能是目錄路徑不存在
 		return
 	}
-	if ok, _ := kernel32dll.CloseHandle(hFile); !ok {
+	if kernel32dll.CloseHandle(hFile) != 0 {
 		fmt.Println("error: CloseHandle")
 		return
 	}
@@ -242,7 +243,7 @@ func ExampleKernel32DLL_CopyFile() {
 	// test copy file
 	{
 		copyFilepath := "testdata/temp-copy.txt"
-		if !kernel32dll.CopyFile(targetPath, copyFilepath, false) {
+		if kernel32dll.CopyFile(targetPath, copyFilepath, false) != 0 {
 			fmt.Println("error: copy file")
 			return
 		}
@@ -287,7 +288,7 @@ func ExampleKernel32DLL_GetModuleHandle() {
 
 		defer func(hModule w32.HMODULE) {
 			// 注意freeLibrary的對象不要使用GetModuleHandle出來的handle，有可能會出問題！ 要使用LoadLibrary的handle
-			if ok := kernel32dll.FreeLibrary(hModule); !ok {
+			if kernel32dll.FreeLibrary(hModule) != 0 {
 				log.Fatal("FreeLibrary")
 			}
 		}(hExe)
@@ -359,11 +360,11 @@ func ExampleKernel32DLL_UpdateResource() {
 
 		defer func() {
 			e := recover()
-			if !kernel32dll.FreeLibrary(hExe) {
+			if kernel32dll.FreeLibrary(hExe) != 0 {
 				log.Fatal("Could not free executable.")
 			}
 			if e != nil {
-				panic("should panic")
+				panic(e)
 			}
 		}()
 
@@ -570,8 +571,8 @@ func TestKernel32DLL_ReadDirectoryChanges(t *testing.T) {
 			return
 		}
 		defer func() {
-			if ok, err := kernel32dll.CloseHandle(hDir); !ok {
-				fmt.Printf("%s", err)
+			if errno = kernel32dll.CloseHandle(hDir); errno != 0 {
+				fmt.Println(errno)
 			}
 		}()
 
@@ -608,7 +609,7 @@ func TestKernel32DLL_ReadDirectoryChanges(t *testing.T) {
 			}
 
 			// 這個函數必須要不斷調用，才能做到持續監測的效果
-			if ok, err := kernel32dll.ReadDirectoryChanges(hDir,
+			if errno = kernel32dll.ReadDirectoryChanges(hDir,
 				uintptr(unsafe.Pointer(&buffer[0])),
 				maxBufferSize,
 				true, // 是否連子目錄也要監測
@@ -616,8 +617,8 @@ func TestKernel32DLL_ReadDirectoryChanges(t *testing.T) {
 				&dwBytes,
 				nil,
 				0,
-			); !ok {
-				fmt.Printf("%s\n", err)
+			); errno != 0 {
+				fmt.Println(errno)
 				return
 			}
 

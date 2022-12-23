@@ -16,9 +16,9 @@ func (w *WGO) GetProcessEntry(filter func(entry *w32.PROCESSENTRY32W) bool) (ent
 
 	defer func() {
 		if errno == 0 {
-			_, errno = w.kernel.CloseHandle(handleSnapshot)
+			errno = w.kernel.CloseHandle(handleSnapshot)
 		} else {
-			_, _ = w.kernel.CloseHandle(handleSnapshot) // 使用之前的錯誤代碼
+			_ = w.kernel.CloseHandle(handleSnapshot) // 使用之前的錯誤代碼
 		}
 	}()
 
@@ -68,8 +68,8 @@ func (w *WGO) KillProcess(
 		if handle == 0 {
 			continue
 		}
-		_, errno1 = w.kernel.TerminateProcess(handle, 0)
-		_, errno2 = w.kernel.CloseHandle(handle)
+		errno1 = w.kernel.TerminateProcess(handle, 0)
+		errno2 = w.kernel.CloseHandle(handle)
 		if callback != nil {
 			if errno1 == 0 && errno2 == 0 {
 				callback(&entry, 0)
