@@ -483,7 +483,7 @@ func ExampleKernel32DLL_FindResource() {
 	}
 
 	// Draw the icon in the client area.
-	if ok, errno := user32dll.DrawIcon(hdc, 10, 20, hIcon1); !ok {
+	if errno := user32dll.DrawIcon(hdc, 10, 20, hIcon1); errno != 0 {
 		log.Fatalf("%s", errno)
 	}
 	// Output:
@@ -536,7 +536,7 @@ func ExampleKernel32DLL_FindResource_icon() {
 	}
 
 	// Draw the icon in the client area.
-	if ok, errno := user32dll.DrawIcon(hdc, 10, 20, hIcon); !ok {
+	if errno := user32dll.DrawIcon(hdc, 10, 20, hIcon); errno != 0 {
 		log.Fatalf("%s", errno)
 	}
 	// Output:

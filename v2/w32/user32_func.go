@@ -205,15 +205,15 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 
 // AppendMenu https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-appendmenuw
 // If the function succeeds, the return value is nonzero.
-func (dll *User32DLL) AppendMenu(hMenu HMENU, uFlags uint32, uIDNewItem UINT_PTR, lpNewItem string) (bool, syscall.Errno) {
+func (dll *User32DLL) AppendMenu(hMenu HMENU, uFlags uint32, uIDNewItem UINT_PTR, lpNewItem string) syscall.Errno {
 	proc := dll.mustProc(PNAppendMenu)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
+	_, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hMenu),
 		uintptr(uFlags),
 		uintptr(uIDNewItem),
 		UintptrFromStr(lpNewItem),
 	)
-	return r1 != 0, errno
+	return errno
 }
 
 // BeginPaint https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-beginpaint
@@ -247,12 +247,12 @@ func (dll *User32DLL) CallNextHookEx(hhk HHOOK, nCode int32, wParam WPARAM, lPar
 // CloseWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-closewindow
 // Minimizes (but does not destroy) the specified window.
 // If the function fails, the return value is zero.
-func (dll *User32DLL) CloseWindow(hWnd HWND) (bool, syscall.Errno) {
+func (dll *User32DLL) CloseWindow(hWnd HWND) syscall.Errno {
 	proc := dll.mustProc(PNCloseWindow)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
+	_, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hWnd),
 	)
-	return r1 != 0, errno
+	return errno
 }
 
 // CopyImage Creates a new image (icon, cursor, or bitmap)
@@ -345,22 +345,22 @@ func (dll *User32DLL) CreateWindowEx(
 
 // DestroyMenu https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-destroymenu
 // If the function succeeds, the return value is nonzero.
-func (dll *User32DLL) DestroyMenu(hMenu HMENU) (bool, syscall.Errno) {
+func (dll *User32DLL) DestroyMenu(hMenu HMENU) syscall.Errno {
 	proc := dll.mustProc(PNDestroyMenu)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
+	_, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hMenu),
 	)
-	return r1 != 0, errno
+	return errno
 }
 
 // DestroyWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-destroywindow
 // If the function fails, the return value is zero.
-func (dll *User32DLL) DestroyWindow(hWnd HWND) (bool, syscall.Errno) {
+func (dll *User32DLL) DestroyWindow(hWnd HWND) syscall.Errno {
 	proc := dll.mustProc(PNDestroyWindow)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
+	_, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hWnd),
 	)
-	return r1 != 0, errno
+	return errno
 }
 
 // DefWindowProc https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-defwindowprocw
@@ -386,16 +386,16 @@ func (dll *User32DLL) DispatchMessage(lpMsg /*const*/ *MSG) LRESULT {
 
 // DrawIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-drawicon
 // If the function succeeds, the return value is nonzero.
-func (dll *User32DLL) DrawIcon(hdc HDC, x, y int, hIcon HICON) (bool, syscall.Errno) {
+func (dll *User32DLL) DrawIcon(hdc HDC, x, y int, hIcon HICON) syscall.Errno {
 	proc := dll.mustProc(PNDrawIcon)
-	hwnd, _, errno := syscall.SyscallN(proc.Addr(),
+	_, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hdc),
 		uintptr(x),
 		uintptr(y),
 		uintptr(hIcon),
 	)
 
-	return hwnd != 0, errno
+	return errno
 }
 
 // DrawIconEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-drawiconex
@@ -407,9 +407,9 @@ func (dll *User32DLL) DrawIconEx(hdc HDC,
 	istepIfAniCur uint32,
 	hbrFlickerFreeDraw HBRUSH,
 	diFlags uint32, // DI_COMPAT, DI_DEFAULTSIZE, DI_IMAGE, ...
-) (bool, syscall.Errno) {
+) syscall.Errno {
 	proc := dll.mustProc(PNDrawIconEx)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
+	_, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hdc),
 		uintptr(xLeft),
 		uintptr(yTop),
@@ -419,7 +419,7 @@ func (dll *User32DLL) DrawIconEx(hdc HDC,
 		uintptr(istepIfAniCur),
 		uintptr(hbrFlickerFreeDraw),
 		uintptr(diFlags))
-	return r1 != 0, errno
+	return errno
 }
 
 // DrawText https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-drawtextw
@@ -441,13 +441,12 @@ func (dll *User32DLL) DrawText(hdc HDC, text string,
 // EndPaint https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-endpaint
 // If the caret was hidden by BeginPaint, EndPaint restores the caret to the screen.
 // The return value is always nonzero.
-func (dll *User32DLL) EndPaint(hWnd HWND, lpPaint *PAINTSTRUCT) bool {
+func (dll *User32DLL) EndPaint(hWnd HWND, lpPaint *PAINTSTRUCT) {
 	proc := dll.mustProc(PNEndPaint)
-	r1, _, _ := syscall.SyscallN(proc.Addr(),
+	_, _, _ = syscall.SyscallN(proc.Addr(),
 		uintptr(hWnd),
 		uintptr(unsafe.Pointer(lpPaint)),
 	)
-	return r1 != 0
 }
 
 // EnumWindows https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-enumwindows
@@ -545,25 +544,25 @@ func (dll *User32DLL) GetClassName(hwnd HWND) (name string, err error) {
 
 // GetClientRect https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getclientrect
 // the coordinates of the upper-left corner are (0,0).
-func (dll *User32DLL) GetClientRect(hwnd HWND, lpRect *RECT /* out */) (bool, syscall.Errno) {
+func (dll *User32DLL) GetClientRect(hwnd HWND, lpRect *RECT /* out */) syscall.Errno {
 	proc := dll.mustProc(PNGetClientRect)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
+	_, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hwnd),
 		uintptr(unsafe.Pointer(lpRect)),
 	)
-	return r1 != 0, errno
+	return errno
 }
 
 // GetCursorPos https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getcursorpos
 // Returns nonzero if successful or zero otherwise.
 func (dll *User32DLL) GetCursorPos(
 	lpPoint *POINT, // [out]
-) (bool, syscall.Errno) {
+) syscall.Errno {
 	proc := dll.mustProc(PNGetCursorPos)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
+	_, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(unsafe.Pointer(lpPoint)),
 	)
-	return r1 != 0, errno
+	return errno
 }
 
 // GetDC LoadIcon https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getdc
@@ -596,14 +595,15 @@ func (dll *User32DLL) GetForegroundWindow() HWND {
 }
 
 // GetIconInfo https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-geticoninfo
-// Returns TRUE if successful or FALSE otherwise.
-func (dll *User32DLL) GetIconInfo(hIcon HICON, pIconInfo *ICONINFO) bool {
+// If the function succeeds, the return value is nonzero and the function fills in the members of the specified ICONINFO structure.
+// If the function fails, the return value is zero.
+func (dll *User32DLL) GetIconInfo(hIcon HICON, pIconInfo *ICONINFO) syscall.Errno {
 	proc := dll.mustProc(PNGetIconInfo)
-	r1, _, _ := syscall.SyscallN(proc.Addr(),
+	_, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hIcon),
 		uintptr(unsafe.Pointer(pIconInfo)),
 	)
-	return r1 != 0
+	return errno
 }
 
 // GetMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getmessagew
@@ -670,13 +670,13 @@ func (dll *User32DLL) GetWindowLongPtr(hWnd HWND, nIndex int32) (uintptr, syscal
 // If the function fails, the return value is zero.
 func (dll *User32DLL) GetWindowRect(hWnd HWND,
 	lpRect *RECT, // [out]
-) (bool, syscall.Errno) {
+) syscall.Errno {
 	proc := dll.mustProc(PNGetWindowRect)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
+	_, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hWnd),
 		uintptr(unsafe.Pointer(lpRect)),
 	)
-	return r1 != 0, errno
+	return errno
 }
 
 // GetWindowText
@@ -838,10 +838,10 @@ func (dll *User32DLL) MessageBox(hwnd HWND, text, caption string, btnFlag uint32
 
 // PostMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-postmessagew
 // If the function succeeds, the return value is nonzero.
-func (dll *User32DLL) PostMessage(hwnd HWND, wmMsgID uint32, wParam, lParam uintptr) (bool, syscall.Errno) {
+func (dll *User32DLL) PostMessage(hwnd HWND, wmMsgID uint32, wParam, lParam uintptr) syscall.Errno {
 	proc := dll.mustProc(PNPostMessage)
-	r1, _, errno := syscall.SyscallN(proc.Addr(), uintptr(hwnd), uintptr(wmMsgID), wParam, lParam)
-	return r1 != 0, errno
+	_, _, errno := syscall.SyscallN(proc.Addr(), uintptr(hwnd), uintptr(wmMsgID), wParam, lParam)
+	return errno
 }
 
 // PostQuitMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-postquitmessage
@@ -874,15 +874,15 @@ func (dll *User32DLL) RegisterClass(lpWndClass /* const */ *WNDCLASS) (ATOM, sys
 }
 
 // RegisterHotKey https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerhotkey?redirectedfrom=MSDN
-func (dll *User32DLL) RegisterHotKey(hWnd HWND, id int32, fsModifiers uint32, vk uint32) (bool, syscall.Errno) {
+func (dll *User32DLL) RegisterHotKey(hWnd HWND, id int32, fsModifiers uint32, vk uint32) syscall.Errno {
 	proc := dll.mustProc(PNRegisterHotKey)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
+	_, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hWnd),
 		uintptr(id),
 		uintptr(fsModifiers),
 		uintptr(vk),
 	)
-	return r1 != 0, errno
+	return errno
 }
 
 // ReleaseDC https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-releasedc
@@ -919,15 +919,15 @@ func (dll *User32DLL) SetForegroundWindow(hWnd HWND) bool {
 
 // SetMenuItemInfo https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setmenuiteminfow
 // If the function succeeds, the return value is nonzero.
-func (dll *User32DLL) SetMenuItemInfo(hmenu HMENU, item UINT, fByPosition bool, lpmii /*const*/ *MENUITEMINFO) (bool, syscall.Errno) {
+func (dll *User32DLL) SetMenuItemInfo(hmenu HMENU, item UINT, fByPosition bool, lpmii /*const*/ *MENUITEMINFO) syscall.Errno {
 	proc := dll.mustProc(PNSetMenuItemInfo)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
+	_, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hmenu),
 		uintptr(item),
 		UintptrFromBool(fByPosition),
 		uintptr(unsafe.Pointer(lpmii)),
 	)
-	return r1 != 0, errno
+	return errno
 }
 
 // SetRect https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setrect
@@ -1038,31 +1038,31 @@ func (dll *User32DLL) TranslateMessage(lpMsg /*const*/ *MSG) bool {
 
 // UnhookWindowsHookEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-unhookwindowshookex
 // If the function fails, the return value is zero.
-func (dll *User32DLL) UnhookWindowsHookEx(hhk HHOOK) (bool, syscall.Errno) {
+func (dll *User32DLL) UnhookWindowsHookEx(hhk HHOOK) syscall.Errno {
 	proc := dll.mustProc(PNUnhookWindowsHookEx)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
+	_, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hhk),
 	)
-	return r1 != 0, errno
+	return errno
 }
 
 // UnregisterClass https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-unregisterclassw
 // If the function succeeds, the return value is nonzero.
-func (dll *User32DLL) UnregisterClass(lpClassName string, hInstance HINSTANCE) (bool, syscall.Errno) {
+func (dll *User32DLL) UnregisterClass(lpClassName string, hInstance HINSTANCE) syscall.Errno {
 	proc := dll.mustProc(PNUnregisterClass)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
+	_, _, errno := syscall.SyscallN(proc.Addr(),
 		UintptrFromStr(lpClassName),
 		uintptr(hInstance),
 	)
-	return r1 != 0, errno
+	return errno
 }
 
 // UnregisterHotKey https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-unregisterhotkey
-func (dll *User32DLL) UnregisterHotKey(hWnd HWND, id int32) (bool, syscall.Errno) {
+func (dll *User32DLL) UnregisterHotKey(hWnd HWND, id int32) syscall.Errno {
 	proc := dll.mustProc(PNUnregisterHotKey)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
+	_, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hWnd),
 		uintptr(id),
 	)
-	return r1 != 0, errno
+	return errno
 }

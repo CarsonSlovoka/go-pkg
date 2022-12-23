@@ -216,7 +216,7 @@ func (dll *Gdi32DLL) AddFontResource(fontPath string) int {
 // If the function succeeds, the return value specifies the number of fonts added.
 // If the function fails, the return value is zero. No extended error information is available.
 func (dll *Gdi32DLL) AddFontResourceEx(fontPath string,
-	flag uint32,      // 可以是FR_PRIVATE或FR_NOT_ENUM,又或者為0，用0與沒有Ex效果相同
+	flag uint32, // 可以是FR_PRIVATE或FR_NOT_ENUM,又或者為0，用0與沒有Ex效果相同
 	reserved uintptr, // Reserved. Must be zero.
 ) int {
 	proc := dll.mustProc(PNAddFontResourceEx)
@@ -236,9 +236,9 @@ func (dll *Gdi32DLL) BitBlt(
 	srcHDC HDC,
 	srcX int32, srcY int32,
 	rasterOperation DWORD, // SRCCOPY, BLACKNESS, ...
-) (bool, syscall.Errno) {
+) syscall.Errno {
 	proc := dll.mustProc(PNBitBlt)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
+	_, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(dstHDC),
 		uintptr(dstX),
 		uintptr(dstY),
@@ -249,7 +249,7 @@ func (dll *Gdi32DLL) BitBlt(
 		uintptr(srcY),
 		uintptr(rasterOperation),
 	)
-	return r1 != 0, errno
+	return errno
 }
 
 // CreateCompatibleBitmap https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createcompatiblebitmap

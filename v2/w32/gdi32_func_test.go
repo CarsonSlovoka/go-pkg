@@ -38,8 +38,8 @@ func ExampleGdi32DLL_AddFontResource() {
 		}
 	}()
 
-	ok, errno := user32dll.PostMessage(w32.HWND_BROADCAST, w32.WM_FONTCHANGE, 0, 0)
-	if !ok {
+	errno := user32dll.PostMessage(w32.HWND_BROADCAST, w32.WM_FONTCHANGE, 0, 0)
+	if errno != 0 {
 		log.Fatal(fmt.Sprintf("%s", errno))
 	}
 
@@ -88,8 +88,7 @@ func ExampleGdi32DLL_AddFontResourceEx() {
 		}
 	}()
 
-	ok, errno := user32dll.PostMessage(w32.HWND_BROADCAST, w32.WM_FONTCHANGE, 0, 0)
-	if !ok {
+	if errno := user32dll.PostMessage(w32.HWND_BROADCAST, w32.WM_FONTCHANGE, 0, 0); errno != 0 {
 		log.Fatal(fmt.Sprintf("%s", errno))
 	}
 
@@ -149,8 +148,8 @@ func ExampleGdi32DLL_CreateCompatibleBitmap() {
 
 	// Get the client area for size calculation.
 	var rcClient w32.RECT
-	if ok, errno := user32dll.GetClientRect(hwndNotepad, &rcClient); !ok {
-		log.Fatalf("GetClientRect errno:%d\n", errno)
+	if en := user32dll.GetClientRect(hwndNotepad, &rcClient); en != 0 {
+		log.Fatalf("GetClientRect errno:%d\n", en)
 	}
 
 	// 把screen的圖畫在notepad上
@@ -195,13 +194,13 @@ func ExampleGdi32DLL_CreateCompatibleBitmap() {
 		gdi32dll.SelectObject(hdcMemNotepad, w32.HGDIOBJ(hbmNotepad))
 
 		// Bit block transfer into our compatible memory DC.
-		if ok, errno := gdi32dll.BitBlt(hdcMemNotepad,
+		if en := gdi32dll.BitBlt(hdcMemNotepad,
 			0, 0,
 			rcClient.Right-rcClient.Left, rcClient.Bottom-rcClient.Top,
 			hdcNotepad,
 			0, 0,
-			w32.SRCCOPY); !ok {
-			log.Fatalf("Bit-block has failed. errno: %s\n", errno) // errno有個好處，它有處理字串，所以不需要用%d，不然還要再去查數字的意思反而麻煩。
+			w32.SRCCOPY); en != 0 {
+			log.Fatalf("Bit-block has failed. errno: %s\n", en) // errno有個好處，它有處理字串，所以不需要用%d，不然還要再去查數字的意思反而麻煩。
 		}
 	}
 
@@ -359,7 +358,7 @@ func Example_saveFileIconAsBitmap() {
 
 	var iInfo w32.ICONINFO
 	{
-		if !user32dll.GetIconInfo(hIcon, &iInfo) {
+		if user32dll.GetIconInfo(hIcon, &iInfo) != 0 {
 			return
 		}
 		// Remember to release when you are not using the HBITMAP.
@@ -553,7 +552,7 @@ func ExampleGdi32DLL_CreateFont() {
 
 	var rect w32.RECT
 	gdi32dll.SelectObject(hdc, w32.HGDIOBJ(hFontArial))
-	_, _ = user32dll.GetClientRect(hwnd, &rect)
+	_ = user32dll.GetClientRect(hwnd, &rect)
 	user32dll.DrawText(hdc, "Hello World 您好 世界", -1, &rect, w32.DT_NOCLIP)
 
 	gdi32dll.SelectObject(hdc, w32.HGDIOBJ(hFontSystem))
@@ -597,7 +596,7 @@ func ExampleGdi32DLL_GetPixel() {
 			}
 		}()
 		var rect w32.RECT
-		if ok, errno := user32dll.GetWindowRect(hwnd, &rect); !ok {
+		if errno := user32dll.GetWindowRect(hwnd, &rect); errno != 0 {
 			fmt.Printf("%s\n", errno)
 			return
 		}
@@ -614,7 +613,7 @@ func ExampleGdi32DLL_GetPixel() {
 
 		hObjOld := gdi32dll.SelectObject(hMemDC, w32.HGDIOBJ(hBitmapMem))
 		// 開始傳輸，當BitBlt完成之後hBitmapMem的數據才會有資料
-		if ok, errno := gdi32dll.BitBlt(hMemDC, 0, 0, width, height, hdc, 0, 0, w32.SRCCOPY); !ok {
+		if errno := gdi32dll.BitBlt(hMemDC, 0, 0, width, height, hdc, 0, 0, w32.SRCCOPY); errno != 0 {
 			return 0, fmt.Errorf("%s", errno)
 		}
 
@@ -648,7 +647,7 @@ func ExampleGdi32DLL_GetPixel() {
 				switch mouseMsgID {
 				case w32.WM_LBUTTONDOWN:
 					var pos w32.POINT
-					if ok, errno := user32dll.GetCursorPos(&pos); !ok {
+					if errno := user32dll.GetCursorPos(&pos); errno != 0 {
 						fmt.Printf("GetCursorPos %s", errno)
 					}
 					log.Println(pos.X, pos.Y)
@@ -674,7 +673,7 @@ func ExampleGdi32DLL_GetPixel() {
 		}
 
 		defer func() {
-			if ok, _ := user32dll.UnhookWindowsHookEx(hLLMouseHook); ok {
+			if user32dll.UnhookWindowsHookEx(hLLMouseHook) != 0 {
 				log.Printf("UnhookWindowsHookEx OK")
 			}
 			close(chQuit)
@@ -748,7 +747,7 @@ func ExampleGdi32DLL_BitBlt() {
 		hdcS = user32dll.GetWindowDC(hwndS)
 		defer user32dll.ReleaseDC(hwndS, hdcS)
 
-		if ok, errno := user32dll.GetClientRect(hwndS, &rectS); !ok {
+		if errno := user32dll.GetClientRect(hwndS, &rectS); errno != 0 {
 			log.Printf("%s\n", errno)
 			return
 		}
@@ -765,13 +764,13 @@ func ExampleGdi32DLL_BitBlt() {
 	// 注意這種方法如果投影的不是GetDesktopWindow的對象，會得到黑畫面(即時用了SRCCOPY|CAPTUREBLT也是一樣)
 	{
 		// 方法一: 直接投射
-		_, _ = gdi32dll.BitBlt(hdcN,
+		_ = gdi32dll.BitBlt(hdcN,
 			0, 0, rectS.Width(), rectS.Height(), // dst
 			hdcS, 0, 0,
 			w32.SRCCOPY,
 		)
 
-		_, _ = gdi32dll.BitBlt(hdcN,
+		_ = gdi32dll.BitBlt(hdcN,
 			0, 0, rectS.Width(), rectS.Height(), // dst
 			hdcS, 100, 200, // 可以想成先0,0之後100, 200以上的部分都會被截掉
 			w32.SRCCOPY,
@@ -797,7 +796,7 @@ func ExampleGdi32DLL_BitBlt() {
 	gdi32dll.SelectObject(hdcMemN, w32.HGDIOBJ(hbitmapMemN))
 
 	// 此動作完成之後hdcMemN.hbitmapN該資料區就會被寫入
-	_, _ = gdi32dll.BitBlt(hdcMemN,
+	_ = gdi32dll.BitBlt(hdcMemN,
 		0, 0, rectS.Width(), rectS.Height(),
 		hdcS, 0, 0,
 		w32.SRCCOPY,
@@ -805,7 +804,7 @@ func ExampleGdi32DLL_BitBlt() {
 
 	// 為了印證該記憶體的圖資料已經被寫入，我們把來源改由記憶體，再重新用兩種畫法畫在notepad上
 	{
-		_, _ = gdi32dll.BitBlt(hdcN, 0, 0, rectS.Width(), rectS.Height(), // dst
+		_ = gdi32dll.BitBlt(hdcN, 0, 0, rectS.Width(), rectS.Height(), // dst
 			hdcMemN, 0, 0,
 			w32.SRCCOPY,
 		)

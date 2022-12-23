@@ -175,7 +175,7 @@ func ExampleUser32DLL_DrawIcon() {
 			{50, 200, hIconQuestion},
 			{50, 300, hIconChrome},
 		} {
-			if ok, errno := user32dll.DrawIcon(curHDC, d.x, d.y, d.hIcon); !ok {
+			if errno := user32dll.DrawIcon(curHDC, d.x, d.y, d.hIcon); errno != 0 {
 				log.Fatalf("%s", errno)
 			}
 		}
@@ -199,7 +199,7 @@ func ExampleUser32DLL_DrawIconEx() {
 			defer user32dll.ReleaseDC(hwndNotepad, hdcScreen)
 		}
 	}
-	_, _ = user32dll.DrawIconEx(hdcScreen, 10, 20, hIcon, 0, 0, 0, 0, w32.DI_NORMAL)
+	_ = user32dll.DrawIconEx(hdcScreen, 10, 20, hIcon, 0, 0, 0, 0, w32.DI_NORMAL)
 
 	var xLeft int32 = 40
 	for i, d := range []struct {
@@ -217,7 +217,7 @@ func ExampleUser32DLL_DrawIconEx() {
 		{0, 0, w32.DI_NORMAL}, // 他會用IMAGE和MASK做運算，結果的圖形會只有Mask的部分會呈現出來
 	} {
 		var yTop = 100 * (int32(i) + 1)
-		_, _ = user32dll.DrawIconEx(hdcScreen, xLeft, yTop, hIcon, d.width, d.height, 0, 0, d.diFlag)
+		_ = user32dll.DrawIconEx(hdcScreen, xLeft, yTop, hIcon, d.width, d.height, 0, 0, d.diFlag)
 	}
 	// Output:
 }
@@ -238,7 +238,7 @@ func ExampleUser32DLL_GetIconInfo() {
 	}
 
 	var iInfo w32.ICONINFO
-	if !user32dll.GetIconInfo(hIconQuestion, &iInfo) {
+	if user32dll.GetIconInfo(hIconQuestion, &iInfo) != 0 {
 		return
 	}
 	// Remember to release when you are not using the HBITMAP.
@@ -363,7 +363,7 @@ func ExampleUser32DLL_PostMessage() {
 	user32dll := w32.NewUser32DLL(
 		w32.PNPostMessage,
 	)
-	if ok, errno := user32dll.PostMessage(w32.HWND_BROADCAST, w32.WM_FONTCHANGE, 0, 0); !ok {
+	if errno := user32dll.PostMessage(w32.HWND_BROADCAST, w32.WM_FONTCHANGE, 0, 0); errno != 0 {
 		panic(fmt.Sprintf("%s", errno))
 	}
 }
@@ -420,15 +420,15 @@ func ExampleUser32DLL_PostMessage_SC_MONITORPOWER() {
 	// ...
 
 	log.Println("screenOff")
-	_, _ = user32dll.PostMessage(w32.HWND_BROADCAST, w32.WM_SYSCOMMAND, w32.SC_MONITORPOWER, 2)
+	_ = user32dll.PostMessage(w32.HWND_BROADCAST, w32.WM_SYSCOMMAND, w32.SC_MONITORPOWER, 2)
 	time.Sleep(2 * time.Second)
 
 	log.Println("screenOn")
-	_, _ = user32dll.PostMessage(w32.HWND_BROADCAST, w32.WM_SYSCOMMAND, w32.SC_MONITORPOWER, ^uintptr(0)) // -1
+	_ = user32dll.PostMessage(w32.HWND_BROADCAST, w32.WM_SYSCOMMAND, w32.SC_MONITORPOWER, ^uintptr(0)) // -1
 	time.Sleep(2 * time.Second)
 
 	log.Println("screenLowPower")
-	_, _ = user32dll.PostMessage(w32.HWND_BROADCAST, w32.WM_SYSCOMMAND, w32.SC_MONITORPOWER, 1)
+	_ = user32dll.PostMessage(w32.HWND_BROADCAST, w32.WM_SYSCOMMAND, w32.SC_MONITORPOWER, 1)
 }
 
 func ExampleUser32DLL_LoadImage() {
@@ -486,7 +486,7 @@ func ExampleUser32DLL_CreatePopupMenu() {
 			w32.LR_LOADFROMFILE|w32.LR_DEFAULTSIZE|w32.LR_SHARED,
 		))
 
-		if !user32dll.GetIconInfo(hIcon, &iInfo) {
+		if user32dll.GetIconInfo(hIcon, &iInfo) != 0 {
 			return
 		}
 
@@ -501,7 +501,7 @@ func ExampleUser32DLL_CreatePopupMenu() {
 	var hMenu w32.HMENU
 	{
 		hMenu = user32dll.CreatePopupMenu()
-		_, _ = user32dll.AppendMenu(hMenu, w32.MF_STRING, 1023, "Open")
+		_ = user32dll.AppendMenu(hMenu, w32.MF_STRING, 1023, "Open")
 
 		// 設定含有icon的Menu
 		// _, _ = user32dll.AppendMenu(hMenu, w32.MF_STRING, 1024, "Hello") // 可以先指定string，再用SetMenuItemInfo添加icon或者直接在SetMenuItemInfo添加string或icon都可以
@@ -519,12 +519,12 @@ func ExampleUser32DLL_CreatePopupMenu() {
 			DwTypeData: pMsg,
 			HbmpItem:   iInfo.HbmColor,
 		}
-		_, _ = user32dll.SetMenuItemInfo(hMenu, 1024, false, &menuItemInfo)
+		_ = user32dll.SetMenuItemInfo(hMenu, 1024, false, &menuItemInfo)
 
-		_, _ = user32dll.AppendMenu(hMenu, w32.MF_STRING, 1025, "Exit program")
+		_ = user32dll.AppendMenu(hMenu, w32.MF_STRING, 1025, "Exit program")
 
 		defer func() {
-			if ok, errno := user32dll.DestroyMenu(hMenu); !ok {
+			if errno := user32dll.DestroyMenu(hMenu); errno != 0 {
 				log.Printf("%s\n", errno)
 			}
 		}()
@@ -545,7 +545,7 @@ func ExampleUser32DLL_CreatePopupMenu() {
 				// hwnd = user32dll.GetForegroundWindow() // 如果當前所在的窗口非自己所建，在TrackPopupMenu可能會遇到The parameter is incorrect.的問題
 				user32dll.SetForegroundWindow(hwnd)
 				var pos w32.POINT
-				if ok, errno := user32dll.GetCursorPos(&pos); !ok {
+				if errno := user32dll.GetCursorPos(&pos); errno != 0 {
 					fmt.Printf("GetCursorPos %s", errno)
 				}
 				if wParam != 123 {
@@ -569,7 +569,7 @@ func ExampleUser32DLL_CreatePopupMenu() {
 					log.Println("hello")
 				case 1025:
 					log.Println("1025")
-					_, _ = user32dll.PostMessage(hwnd, w32.WM_DESTROY, 0, 0)
+					_ = user32dll.PostMessage(hwnd, w32.WM_DESTROY, 0, 0)
 				}
 			}
 			return user32dll.DefWindowProc(hwnd, uMsg, wParam, lParam)
@@ -614,7 +614,7 @@ func ExampleUser32DLL_CreatePopupMenu() {
 
 		if hwnd == 0 {
 			fmt.Printf("%s\n", errno)
-			if ok, errno2 := user32dll.UnregisterClass(wndClassName, hInstance); !ok {
+			if errno2 := user32dll.UnregisterClass(wndClassName, hInstance); errno2 != 0 {
 				fmt.Printf("Error UnregisterClass: %s", errno2)
 			}
 			chanWin <- hwnd
@@ -623,7 +623,7 @@ func ExampleUser32DLL_CreatePopupMenu() {
 
 		// Make sure it can be unregistered when exiting.
 		defer func() {
-			if ok, errno2 := user32dll.UnregisterClass(wndClassName, hInstance); !ok {
+			if errno2 := user32dll.UnregisterClass(wndClassName, hInstance); errno2 != 0 {
 				log.Printf("Error UnregisterClass: %s", errno2)
 			} else {
 				log.Println("OK UnregisterClass")
@@ -647,8 +647,8 @@ func ExampleUser32DLL_CreatePopupMenu() {
 	hwnd := <-ch
 	user32dll.ShowWindow(hwnd, w32.SW_SHOW) // 如果沒有顯示，對於不使用TPM_RETURNCMD的選單，不會觸發WM_COMMAND，也就是雖然選單會出來，但選中的項目沒有任何意義，但對有設計TPM_RETURNCMD則不影響，選中的行為仍有效
 
-	_, _ = user32dll.PostMessage(hwnd, w32.WM_RBUTTONDOWN, 0, 0)   // 選單測試
-	_, _ = user32dll.PostMessage(hwnd, w32.WM_RBUTTONDOWN, 123, 0) // with TPM_RETURNCMD
+	_ = user32dll.PostMessage(hwnd, w32.WM_RBUTTONDOWN, 0, 0)   // 選單測試
+	_ = user32dll.PostMessage(hwnd, w32.WM_RBUTTONDOWN, 123, 0) // with TPM_RETURNCMD
 
 	// 🕹️ 如果您要手動嘗試，請把以下的SendMessage.WM_CLOSE註解掉，避免自動關閉
 	_, _, _ = user32dll.SendMessage(hwnd, w32.WM_CLOSE, 0, 0)
@@ -720,7 +720,7 @@ func ExampleUser32DLL_CreateWindowEx() {
 			case w32.WM_CLOSE: // Pressed Close Button (X) / Alt+F4 / "Close" in context menu // 在這之後它會調用WM_DESTROY
 				log.Println("WM_CLOSE")
 				// https://learn.microsoft.com/en-us/windows/win32/winmsg/wm-close
-				if ok, errno := user32dll.DestroyWindow(hwnd); !ok {
+				if errno := user32dll.DestroyWindow(hwnd); errno != 0 {
 					fmt.Printf("[DestroyWindow] %s\n", errno)
 				}
 			case w32.WM_DESTROY:
@@ -757,7 +757,7 @@ func ExampleUser32DLL_CreateWindowEx() {
 		}
 
 		// 確保沒有殘留的資料
-		if ok, errno := user32dll.UnregisterClass(className, hInstance); ok {
+		if errno := user32dll.UnregisterClass(className, hInstance); errno != 0 {
 			log.Println("clear previous RegisterClass")
 		} else {
 			log.Printf("%s", errno) // Class does not exist.
@@ -773,11 +773,10 @@ func ExampleUser32DLL_CreateWindowEx() {
 		var (
 			hwnd  w32.HWND
 			errno syscall.Errno
-			ok    bool
 		)
 
 		defer func() {
-			if ok, errno = user32dll.UnregisterClass(className, hInstance); !ok {
+			if errno = user32dll.UnregisterClass(className, hInstance); errno != 0 {
 				log.Printf("[UnregisterClass] %s\n", errno)
 			}
 			close(channel)
@@ -840,8 +839,8 @@ func ExampleUser32DLL_CreateWindowEx() {
 			fmt.Println("ShowWindow")
 			user32dll.ShowWindow(hwnd, w32.SW_MAXIMIZE)
 
-			fmt.Println("CloseWindow")                         // 僅是縮小視窗
-			if ok, errno := user32dll.CloseWindow(hwnd); !ok { // close只是把它縮小並沒有真正關閉
+			fmt.Println("CloseWindow")                            // 僅是縮小視窗
+			if errno := user32dll.CloseWindow(hwnd); errno != 0 { // close只是把它縮小並沒有真正關閉
 				fmt.Printf("[CloseWindow] %s\n", errno)
 			}
 		}
@@ -1131,8 +1130,8 @@ func ExampleUser32DLL_SetWindowsHookEx() {
 					if d.HHOOK == 0 {
 						continue
 					}
-					if ok, errno := user32dll.UnhookWindowsHookEx(d.HHOOK); !ok {
-						fmt.Printf("%s", errno)
+					if en := user32dll.UnhookWindowsHookEx(d.HHOOK); en != 0 {
+						fmt.Printf("%s", en)
 						continue
 					}
 					log.Printf("Unhook: %s\n", d.Msg)
@@ -1306,8 +1305,8 @@ isXButton2Done:%t
 
 		// 確保程式結束之後能解除註冊名稱
 		defer func() {
-			if ok, errno2 := user32dll.UnregisterClass(wndClassName, hInstance); !ok {
-				log.Printf("Error UnregisterClass: %s", errno2)
+			if en2 := user32dll.UnregisterClass(wndClassName, hInstance); en2 != 0 {
+				log.Printf("Error UnregisterClass: %s", en2)
 			} else {
 				log.Println("OK UnregisterClass")
 			}
@@ -1378,18 +1377,18 @@ func ExampleUser32DLL_RegisterHotKey() {
 			case w32.WM_DESTROY:
 				log.Println("WM_DESTROY")
 				for _, hotkeyID := range []int32{HokeyIDHello, HokeyIDBye} {
-					if ok, errno := user32dll.UnregisterHotKey(hwnd, hotkeyID); !ok {
-						log.Printf("Error [UnregisterHotKey] %s", errno)
+					if en := user32dll.UnregisterHotKey(hwnd, hotkeyID); en != 0 {
+						log.Printf("Error [UnregisterHotKey] %s", en)
 					}
 				}
 				user32dll.PostQuitMessage(0)
 				return 0
 			case w32.WM_CREATE:
-				if ok, errno := user32dll.RegisterHotKey(hwnd, HokeyIDHello, w32.MOD_CONTROL|w32.MOD_ALT, w32.VK_F1); !ok {
-					log.Printf("%s\n", errno)
+				if en := user32dll.RegisterHotKey(hwnd, HokeyIDHello, w32.MOD_CONTROL|w32.MOD_ALT, w32.VK_F1); en != 0 {
+					log.Println(en)
 				}
-				if ok, errno := user32dll.RegisterHotKey(hwnd, HokeyIDBye, w32.MOD_ALT, 65 /* A */); !ok {
-					log.Printf("%s\n", errno)
+				if en := user32dll.RegisterHotKey(hwnd, HokeyIDBye, w32.MOD_ALT, 65 /* A */); en != 0 {
+					log.Println(en)
 				}
 
 			case w32.WM_HOTKEY:
@@ -1401,7 +1400,7 @@ func ExampleUser32DLL_RegisterHotKey() {
 					}
 				case HokeyIDBye:
 					log.Println("bye~")
-					_, _ = user32dll.PostMessage(hwnd, w32.WM_CLOSE, 0, 0)
+					_ = user32dll.PostMessage(hwnd, w32.WM_CLOSE, 0, 0)
 				}
 			}
 			return user32dll.DefWindowProc(hwnd, uMsg, wParam, lParam) // default window proc
@@ -1421,8 +1420,8 @@ func ExampleUser32DLL_RegisterHotKey() {
 		}
 
 		defer func() {
-			if ok, errno := user32dll.UnregisterClass(className, hInstance); !ok {
-				fmt.Printf("[UnregisterClass] %s\n", errno)
+			if en := user32dll.UnregisterClass(className, hInstance); en != 0 {
+				fmt.Printf("[UnregisterClass] %s\n", en)
 			}
 			close(channel)
 		}()
@@ -1490,7 +1489,7 @@ func ExampleUser32DLL_BeginPaint() {
 				}()
 
 				var rect w32.RECT
-				_, _ = user32dll.GetClientRect(hwnd, &rect)
+				_ = user32dll.GetClientRect(hwnd, &rect)
 
 				// Background Color
 				hRgnBackground := gdi32dll.CreateRectRgnIndirect(&rect)
@@ -1523,8 +1522,8 @@ func ExampleUser32DLL_BeginPaint() {
 		}
 
 		defer func() {
-			if ok, errno := user32dll.UnregisterClass(className, hInstance); !ok {
-				fmt.Printf("[UnregisterClass] %s\n", errno)
+			if en := user32dll.UnregisterClass(className, hInstance); en != 0 {
+				fmt.Printf("[UnregisterClass] %s\n", en)
 			}
 			close(channel)
 		}()
@@ -1786,7 +1785,7 @@ func StartLowLevelHook(user32dll *w32.User32DLL, chQuit chan<- bool, wg *sync.Wa
 
 	defer func() {
 		for _, h := range hookDatas {
-			if ok, _ := user32dll.UnhookWindowsHookEx(*h.HHOOK); ok {
+			if user32dll.UnhookWindowsHookEx(*h.HHOOK) != 0 {
 				log.Printf("UnhookWindowsHookEx OK")
 			}
 		}
@@ -1856,16 +1855,16 @@ func Test_captureWindowByHotkey(t *testing.T) {
 						user32dll.ShowWindow(hwndC, w32.SW_NORMAL)
 					}
 
-					if ok, errno := user32dll.GetWindowRect(hwndC, &rectTarget); !ok {
-						log.Printf("%s", errno)
+					if errno := user32dll.GetWindowRect(hwndC, &rectTarget); errno != 0 {
+						log.Println(errno)
 						return user32dll.CallNextHookEx(hLLKeyboardHook, nCode, wParam, lParam)
 					}
 
-					if ok, errno := gdi32dll.BitBlt(
+					if errno := gdi32dll.BitBlt(
 						hdcDst, 0, 0, rectTarget.Width(), rectTarget.Height(),
 						hdcScreen, rectTarget.Left, rectTarget.Top, w32.SRCCOPY,
-					); !ok {
-						log.Printf("%s", errno)
+					); errno != 0 {
+						log.Println(errno)
 					}
 				}
 			}
@@ -1932,10 +1931,10 @@ func Test_captureWindow(t *testing.T) {
 			default:
 				time.Sleep(100 * time.Millisecond)
 			}
-			if ok, _ := user32dll.GetWindowRect(hwndDst, &rectNotepad); !ok {
+			if user32dll.GetWindowRect(hwndDst, &rectNotepad) != 0 {
 				continue
 			}
-			if ok, _ := user32dll.GetWindowRect(hwndC, &rectC); !ok {
+			if user32dll.GetWindowRect(hwndC, &rectC) != 0 {
 				continue
 			}
 
