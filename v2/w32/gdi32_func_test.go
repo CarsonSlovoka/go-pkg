@@ -600,7 +600,10 @@ func ExampleGdi32DLL_GetPixel() {
 			fmt.Printf("%s\n", errno)
 			return
 		}
-		hBitmapMem = gdi32dll.CreateCompatibleBitmap(hdc, rect.Width(), rect.Height())
+		// hBitmapMem = gdi32dll.CreateCompatibleBitmap(hdc, rect.Width(), rect.Height()) // 需要初始化width, height, 這兩個屬性，此範例是全域變數，沒有設定在GetPixel之中會都是0，導致抓不到東西
+		width = rect.Width()
+		height = rect.Height()
+		hBitmapMem = gdi32dll.CreateCompatibleBitmap(hdc, width, height)
 		defer func() {
 			if gdi32dll.DeleteObject(w32.HGDIOBJ(hBitmapMem)) {
 				log.Println("Delete hBitmapMem OK")
