@@ -150,6 +150,7 @@ func ExampleKernel32DLL_CreateProcess() {
 		&pi,   // Pointer to PROCESS_INFORMATION structure
 	); errno != 0 {
 		log.Println(errno)
+		return
 	}
 	_ = kernelDll.CloseHandle(pi.HProcess)
 	_ = kernelDll.CloseHandle(pi.HThread)

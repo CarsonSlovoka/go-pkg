@@ -6,10 +6,11 @@ import (
 )
 
 var (
-	wGo *wgo.WGO
+	wGo       *wgo.WGO
+	kernelDll *w32.Kernel32DLL
 )
 
 func init() {
-	kernel32dll := w32.NewKernel32DLL()
-	wGo = wgo.NewWGO(kernel32dll)
+	kernelDll = w32.NewKernel32DLL()
+	wGo = wgo.NewWGO(kernelDll)
 }
