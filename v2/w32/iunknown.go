@@ -38,6 +38,7 @@ func (unk *IUnknown) VTable() *IUnknownVTable {
 }
 
 // IUnknownVTable https://learn.microsoft.com/en-us/windows/win32/api/unknwn/nn-unknwn-iunknown#methods
+// V(F)T: Virtual (Function) Tables
 type IUnknownVTable struct {
 	QueryInterface uintptr
 	AddRef         uintptr

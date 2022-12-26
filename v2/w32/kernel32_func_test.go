@@ -702,3 +702,11 @@ func ExampleKernel32DLL_GetLastError() {
 	kernel32dll.GetLastError()
 	// Output:
 }
+
+func ExampleKernel32DLL_GetModuleFileName() {
+	curExePath := make([]uint16, w32.MAX_PATH)
+	if _, eno := kernelDll.GetModuleFileName(0, &curExePath[0], w32.MAX_PATH); eno == 0 {
+		log.Println(syscall.UTF16ToString(curExePath))
+	}
+	// Output:
+}

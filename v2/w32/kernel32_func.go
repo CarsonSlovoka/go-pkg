@@ -29,6 +29,7 @@ const (
 	PNGetCurrentThread     ProcName = "GetCurrentThread"
 	PNGetCurrentThreadId   ProcName = "GetCurrentThreadId"
 	PNGetLastError         ProcName = "GetLastError"
+	PNGetModuleFileName    ProcName = "GetModuleFileNameW"
 	PNGetModuleHandle      ProcName = "GetModuleHandleW"
 	PNGetNativeSystemInfo  ProcName = "GetNativeSystemInfo"
 	PNGetThreadDescription ProcName = "GetThreadDescription"
@@ -92,6 +93,7 @@ func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 			PNGetCurrentThread,
 			PNGetCurrentThreadId,
 			PNGetLastError,
+			PNGetModuleFileName,
 			PNGetModuleHandle,
 			PNGetNativeSystemInfo,
 			PNGetThreadDescription,
@@ -316,6 +318,18 @@ func (dll *Kernel32DLL) GetLastError() uint32 {
 	proc := dll.mustProc(PNGetLastError)
 	ret, _, _ := syscall.SyscallN(proc.Addr())
 	return uint32(ret)
+}
+
+// GetModuleFileName https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-getmodulefilenamew
+// If the function succeeds, the return value is the length of the string that is copied to the buffer, in characters, not including the terminating null character.
+func (dll *Kernel32DLL) GetModuleFileName(hModule HMODULE, filename *uint16 /* out */, nSize uint32) (uint32, syscall.Errno) {
+	proc := dll.mustProc(PNGetModuleFileName)
+	r, _, eno := syscall.SyscallN(proc.Addr(),
+		uintptr(hModule),
+		uintptr(unsafe.Pointer(filename)),
+		uintptr(nSize),
+	)
+	return uint32(r), eno
 }
 
 // GetModuleHandle https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-getmodulehandlew
