@@ -532,8 +532,8 @@ func ExampleUser32DLL_CreatePopupMenu() {
 
 	ch := make(chan w32.HWND)
 	go func(chanWin chan<- w32.HWND) {
-		// define WNDPROC
-		wndProcFuncPtr := syscall.NewCallback(w32.WNDPROC(func(hwnd w32.HWND, uMsg w32.UINT, wParam w32.WPARAM, lParam w32.LPARAM) w32.LRESULT {
+		// define WndProc
+		wndProcFuncPtr := syscall.NewCallback(w32.WndProc(func(hwnd w32.HWND, uMsg w32.UINT, wParam w32.WPARAM, lParam w32.LPARAM) w32.LRESULT {
 			switch uMsg {
 			case w32.WM_DESTROY:
 				log.Println("WM_DESTROY")
@@ -587,10 +587,10 @@ func ExampleUser32DLL_CreatePopupMenu() {
 		if atom, errno := user32dll.RegisterClass(&w32.WNDCLASS{
 			Style:         w32.CS_HREDRAW | w32.CS_HREDRAW,
 			HbrBackground: w32.COLOR_WINDOW,
-			LpfnWndProc:   wndProcFuncPtr,
+			WndProc:       wndProcFuncPtr,
 			HInstance:     hInstance,
 			HIcon:         hIcon,
-			LpszClassName: pUTF16ClassName,
+			ClassName:     pUTF16ClassName,
 		}); atom == 0 {
 			fmt.Printf("%s", errno)
 			chanWin <- 0
@@ -693,7 +693,7 @@ func ExampleUser32DLL_CreateWindowEx() {
 		wg.Add(1)
 
 		// define ProcFunc // https://learn.microsoft.com/en-us/windows/win32/learnwin32/writing-the-window-procedure
-		wndProcFuncPtr := syscall.NewCallback(w32.WNDPROC(func(hwnd w32.HWND, uMsg w32.UINT, wParam w32.WPARAM, lParam w32.LPARAM) w32.LRESULT {
+		wndProcFuncPtr := syscall.NewCallback(w32.WndProc(func(hwnd w32.HWND, uMsg w32.UINT, wParam w32.WPARAM, lParam w32.LPARAM) w32.LRESULT {
 			// log.Printf("uMsg:%d\n", uMsg)
 			switch uMsg {
 			case w32.WM_GETMINMAXINFO: // 首次使用CreateWindowEx會先觸發此msg // https://learn.microsoft.com/en-us/windows/win32/winmsg/wm-getminmaxinfo
@@ -745,7 +745,7 @@ func ExampleUser32DLL_CreateWindowEx() {
 		pUTF16ClassName, _ := syscall.UTF16PtrFromString(className)
 		wc := w32.WNDCLASS{
 			// Style:       0, // 可以不給，或者w32.CS_NOCLOSE禁用右上角的關閉按鈕) // CS_指的是class的style
-			LpfnWndProc: wndProcFuncPtr, // 每次有消息，就會送通知到此函數
+			WndProc: wndProcFuncPtr, // 每次有消息，就會送通知到此函數
 			// CbClsExtra:    0,
 			// CbWndExtra:    0,
 			HInstance: hInstance,
@@ -753,7 +753,7 @@ func ExampleUser32DLL_CreateWindowEx() {
 			HCursor:   user32dll.MustLoadCursor(0, w32.MakeIntResource(w32.IDC_CROSS /* w32.IDC_ARROW */)),    // 可以不給, 用預設0 會是: IDC_ARROW
 			// HbrBackground: 0,
 			// LpszMenuName:  nil,
-			LpszClassName: pUTF16ClassName,
+			ClassName: pUTF16ClassName,
 		}
 
 		// 確保沒有殘留的資料
@@ -1114,7 +1114,7 @@ func ExampleUser32DLL_SetWindowsHookEx() {
 	ch := make(chan w32.HWND)
 	go func(chanWin chan<- w32.HWND) {
 		// 定義處理視窗訊息的函數
-		wndProcFuncPtr := syscall.NewCallback(w32.WNDPROC(func(hwnd w32.HWND, uMsg w32.UINT, wParam w32.WPARAM, lParam w32.LPARAM) w32.LRESULT {
+		wndProcFuncPtr := syscall.NewCallback(w32.WndProc(func(hwnd w32.HWND, uMsg w32.UINT, wParam w32.WPARAM, lParam w32.LPARAM) w32.LRESULT {
 			switch uMsg {
 			case w32.WM_DESTROY:
 				log.Println("WM_DESTROY")
@@ -1294,9 +1294,9 @@ isXButton2Done:%t
 		if atom, errno := user32dll.RegisterClass(&w32.WNDCLASS{
 			Style:         w32.CS_HREDRAW | w32.CS_HREDRAW,
 			HbrBackground: w32.COLOR_WINDOW,
-			LpfnWndProc:   wndProcFuncPtr,
+			WndProc:       wndProcFuncPtr,
 			HInstance:     hInstance,
-			LpszClassName: pUTF16ClassName,
+			ClassName:     pUTF16ClassName,
 		}); atom == 0 {
 			fmt.Printf("%s", errno)
 			chanWin <- 0
@@ -1372,7 +1372,7 @@ func ExampleUser32DLL_RegisterHotKey() {
 
 	ch := make(chan w32.HWND)
 	go func(className, windowName string, channel chan<- w32.HWND) {
-		wndProcFuncPtr := syscall.NewCallback(w32.WNDPROC(func(hwnd w32.HWND, uMsg w32.UINT, wParam w32.WPARAM, lParam w32.LPARAM) w32.LRESULT {
+		wndProcFuncPtr := syscall.NewCallback(w32.WndProc(func(hwnd w32.HWND, uMsg w32.UINT, wParam w32.WPARAM, lParam w32.LPARAM) w32.LRESULT {
 			switch uMsg {
 			case w32.WM_DESTROY:
 				log.Println("WM_DESTROY")
@@ -1409,9 +1409,9 @@ func ExampleUser32DLL_RegisterHotKey() {
 		hInstance := w32.HINSTANCE(kernel32dll.GetModuleHandle(""))
 		pUTF16ClassName, _ := syscall.UTF16PtrFromString(className)
 		wc := w32.WNDCLASS{
-			LpfnWndProc:   wndProcFuncPtr,
-			HInstance:     hInstance,
-			LpszClassName: pUTF16ClassName,
+			WndProc:   wndProcFuncPtr,
+			HInstance: hInstance,
+			ClassName: pUTF16ClassName,
 		}
 
 		if atom, errno := user32dll.RegisterClass(&wc); atom == 0 {
@@ -1471,7 +1471,7 @@ func ExampleUser32DLL_BeginPaint() {
 
 	ch := make(chan w32.HWND)
 	go func(className, windowName string, channel chan<- w32.HWND) {
-		wndProcFuncPtr := syscall.NewCallback(w32.WNDPROC(func(hwnd w32.HWND, uMsg w32.UINT, wParam w32.WPARAM, lParam w32.LPARAM) w32.LRESULT {
+		wndProcFuncPtr := syscall.NewCallback(w32.WndProc(func(hwnd w32.HWND, uMsg w32.UINT, wParam w32.WPARAM, lParam w32.LPARAM) w32.LRESULT {
 			switch uMsg {
 			case w32.WM_DESTROY:
 				user32dll.PostQuitMessage(0)
@@ -1511,9 +1511,9 @@ func ExampleUser32DLL_BeginPaint() {
 		hInstance := w32.HINSTANCE(kernel32dll.GetModuleHandle(""))
 		pUTF16ClassName, _ := syscall.UTF16PtrFromString(className)
 		wc := w32.WNDCLASS{
-			LpfnWndProc:   wndProcFuncPtr,
-			HInstance:     hInstance,
-			LpszClassName: pUTF16ClassName,
+			WndProc:   wndProcFuncPtr,
+			HInstance: hInstance,
+			ClassName: pUTF16ClassName,
 		}
 
 		if atom, errno := user32dll.RegisterClass(&wc); atom == 0 {
@@ -1654,7 +1654,7 @@ func TestUser32DLL_EnumWindows(t *testing.T) {
 	user32dll := w32.NewUser32DLL()
 	kernel32dll := w32.NewKernel32DLL()
 
-	enumFuncOK := w32.WNDENUMPROC(func(hwnd w32.HWND, lParam w32.LPARAM) w32.BOOL {
+	enumFuncOK := w32.WndEnumProc(func(hwnd w32.HWND, lParam w32.LPARAM) w32.BOOL {
 
 		if user32dll.IsWindowVisible(hwnd) {
 			var err error
@@ -1676,7 +1676,7 @@ func TestUser32DLL_EnumWindows(t *testing.T) {
 		tag [4]byte
 	}
 
-	enumFuncOK2 := w32.WNDENUMPROC(func(hwnd w32.HWND, lParam w32.LPARAM) w32.BOOL {
+	enumFuncOK2 := w32.WndEnumProc(func(hwnd w32.HWND, lParam w32.LPARAM) w32.BOOL {
 		d := *(*MyData)(unsafe.Pointer(lParam))
 		if d.id == 666 {
 			log.Println(string(d.tag[:])) // 123, wall
@@ -1684,7 +1684,7 @@ func TestUser32DLL_EnumWindows(t *testing.T) {
 		return 888
 	})
 
-	enumFuncErr := w32.WNDENUMPROC(func(hwnd w32.HWND, lParam w32.LPARAM) w32.BOOL {
+	enumFuncErr := w32.WndEnumProc(func(hwnd w32.HWND, lParam w32.LPARAM) w32.BOOL {
 		if user32dll.IsWindowVisible(hwnd) {
 			if windowName, err := user32dll.GetWindowText(hwnd); err != nil {
 				kernel32dll.SetLastError(w32.ERROR_INVALID_DATA) // 自定義錯誤訊息

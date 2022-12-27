@@ -55,10 +55,10 @@ const (
 	CW_USEDEFAULT int32 = -2147483648
 )
 
-type WNDENUMPROC func(hWnd HWND, lParam LPARAM) BOOL
+type WndEnumProc func(hWnd HWND, lParam LPARAM) BOOL
 
-// WNDPROC https://learn.microsoft.com/en-us/windows/win32/api/winuser/nc-winuser-wndproc
-type WNDPROC func(unnamed0 HWND, unnamed1 UINT, unnamed2 WPARAM, unnamed3 LPARAM) LRESULT
+// WndProc https://learn.microsoft.com/en-us/windows/win32/api/winuser/nc-winuser-wndproc
+type WndProc func(unnamed0 HWND, unnamed1 UINT, unnamed2 WPARAM, unnamed3 LPARAM) LRESULT
 
 // MENUITEMINFO https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-menuiteminfow
 type MENUITEMINFO struct {

@@ -65,6 +65,7 @@ type (
 	LPSTR   *CHAR
 	LPBYTE  *byte
 	LPCSTR  *byte
+	PCWSTR  *uint16
 	LPCWSTR *uint16
 	LPWSTR  *uint16
 )

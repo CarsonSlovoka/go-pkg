@@ -202,7 +202,7 @@ func ExampleShellDLL_ShellNotifyIcon() {
 	// Create a window https://github.com/CarsonSlovoka/go-pkg/blob/efe1c50fa40229c299232fe3b236135b1046ef35/v2/w32/user32_func_test.go#L457-L659
 	go func(wndClassName, wndWindowName string, ch chan<- w32.HWND) {
 		// 定義訊息處理函數
-		wndProcFuncPtr := syscall.NewCallback(w32.WNDPROC(func(hwnd w32.HWND, uMsg w32.UINT, wParam w32.WPARAM, lParam w32.LPARAM) w32.LRESULT {
+		wndProcFuncPtr := syscall.NewCallback(w32.WndProc(func(hwnd w32.HWND, uMsg w32.UINT, wParam w32.WPARAM, lParam w32.LPARAM) w32.LRESULT {
 			switch uMsg {
 			case w32.WM_CLOSE:
 				if wParam != 123 {
@@ -291,10 +291,10 @@ func ExampleShellDLL_ShellNotifyIcon() {
 		if atom, errno := user32dll.RegisterClass(&w32.WNDCLASS{
 			Style:         w32.CS_HREDRAW | w32.CS_HREDRAW,
 			HbrBackground: w32.COLOR_WINDOW,
-			LpfnWndProc:   wndProcFuncPtr,
+			WndProc:       wndProcFuncPtr,
 			HInstance:     hInstance,
 			HIcon:         myHICON,
-			LpszClassName: pUTF16ClassName,
+			ClassName:     pUTF16ClassName,
 		}); atom == 0 {
 			fmt.Printf("%s", errno)
 			close(ch)

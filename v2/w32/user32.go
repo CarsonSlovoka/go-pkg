@@ -1596,29 +1596,29 @@ type CHANGEFILTERSTRUCT struct {
 // WNDCLASS https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-wndclassa
 type WNDCLASS struct {
 	Style         uint32  // https://learn.microsoft.com/en-us/windows/win32/winmsg/window-class-styles // CS_SAVEBITS | CS_DROPSHADOW, ...
-	LpfnWndProc   uintptr // WNDPROC
+	WndProc       uintptr // WndProc
 	CbClsExtra    int32
 	CbWndExtra    int32
 	HInstance     HINSTANCE
 	HIcon         HICON
 	HCursor       HCURSOR
 	HbrBackground HBRUSH
-	LpszMenuName  *uint16 // LPCWSTR
-	LpszClassName *uint16 // LPCWSTR
+	MenuName      *uint16 // LPCWSTR
+	ClassName     *uint16 // LPCWSTR
 }
 
 type WNDCLASSEX struct {
 	CbSize        uint32
 	Style         uint32
-	LpfnWndProc   uintptr
+	WndProc       uintptr
 	CbClsExtra    int32
 	CbWndExtra    int32
 	HInstance     HINSTANCE
 	HIcon         HICON
 	HCursor       HCURSOR
 	HbrBackground HBRUSH
-	LpszMenuName  *uint16
-	LpszClassName *uint16
+	MenuName      *uint16
+	ClassName     *uint16
 	HIconSm       HICON
 }
 

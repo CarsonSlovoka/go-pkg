@@ -452,7 +452,7 @@ func (dll *User32DLL) EndPaint(hWnd HWND, lpPaint *PAINTSTRUCT) {
 // EnumWindows https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-enumwindows
 // If the function succeeds, the return value is nonzero.
 func (dll *User32DLL) EnumWindows(
-	lpEnumFunc WNDENUMPROC, // 1. 當傳遞的函數傳回0之後就會直接終止，若不為0則會繼續直到窮舉完畢 // 2. If EnumWindowsProc returns zero, the return value is also zero. In this case, the callback function should call SetLastError to obtain a meaningful error code to be returned to the caller of EnumWindows.
+	lpEnumFunc WndEnumProc, // 1. 當傳遞的函數傳回0之後就會直接終止，若不為0則會繼續直到窮舉完畢 // 2. If EnumWindowsProc returns zero, the return value is also zero. In this case, the callback function should call SetLastError to obtain a meaningful error code to be returned to the caller of EnumWindows.
 	lParam LPARAM, // An application-defined value to be passed to the callback function.
 ) (BOOL, syscall.Errno) {
 	lpEnumFuncCallback := syscall.NewCallback(func(hWndRawArg HWND, lParamRawArg LPARAM) uintptr {
