@@ -704,9 +704,8 @@ func ExampleKernel32DLL_GetLastError() {
 }
 
 func ExampleKernel32DLL_GetModuleFileName() {
-	curExePath := make([]uint16, w32.MAX_PATH)
-	if _, eno := kernelDll.GetModuleFileName(0, &curExePath[0], w32.MAX_PATH); eno == 0 {
-		log.Println(syscall.UTF16ToString(curExePath))
+	if modPath, eno := kernelDll.GetModuleFileName(0); eno == 0 {
+		log.Println(modPath)
 	}
 	// Output:
 }

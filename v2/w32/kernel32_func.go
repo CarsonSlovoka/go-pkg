@@ -5,6 +5,7 @@ package w32
 import (
 	"fmt"
 	"syscall"
+	"unicode/utf16"
 	"unsafe"
 )
 
@@ -321,15 +322,22 @@ func (dll *Kernel32DLL) GetLastError() uint32 {
 }
 
 // GetModuleFileName https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-getmodulefilenamew
-// If the function succeeds, the return value is the length of the string that is copied to the buffer, in characters, not including the terminating null character.
-func (dll *Kernel32DLL) GetModuleFileName(hModule HMODULE, filename *uint16 /* out */, nSize uint32) (uint32, syscall.Errno) {
+func (dll *Kernel32DLL) GetModuleFileName(hModule HMODULE) (string, syscall.Errno) {
 	proc := dll.mustProc(PNGetModuleFileName)
-	r, _, eno := syscall.SyscallN(proc.Addr(),
+
+	modPath := make([]uint16, MAX_PATH)
+
+	// If the function succeeds, the return value is the length of the string that is copied to the buffer, in characters, not including the terminating null character.
+	n, _, eno := syscall.SyscallN(proc.Addr(),
 		uintptr(hModule),
-		uintptr(unsafe.Pointer(filename)),
-		uintptr(nSize),
+		uintptr(unsafe.Pointer(&modPath[0])),
+		uintptr(MAX_PATH),
 	)
-	return uint32(r), eno
+	if eno != 0 {
+		return "", eno
+	}
+	// return syscall.UTF16ToString(modPath), eno
+	return string(utf16.Decode(modPath[:n])), eno
 }
 
 // GetModuleHandle https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-getmodulehandlew
