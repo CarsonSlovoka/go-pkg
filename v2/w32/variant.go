@@ -91,7 +91,7 @@ func (v *VARIANT) Value() any {
 		return v.ToString()
 	case VT_DATE:
 		// VT_DATE type will either return float64 or time.Time.
-		date, err := GetVariantDate(float64(v.Val))
+		date, err := GetVariantDate(uint64(v.Val)) // 386也要支持，所以從float64(v.Val)改成uint64
 		if err != nil {
 			return float64(v.Val)
 		}

@@ -442,7 +442,7 @@ func (dll *OleAut32DLL) VariantInit(v *VARIANT) {
 }
 
 // VariantTimeToSystemTime https://learn.microsoft.com/en-us/windows/win32/api/oleauto/nf-oleauto-varianttimetosystemtime
-func (dll *OleAut32DLL) VariantTimeToSystemTime(vTime float64,
+func (dll *OleAut32DLL) VariantTimeToSystemTime(vTime uint64, // float64 // 考慮到386, amd64都要支持所以改成uint64
 	st *syscall.Systemtime, // [OUT] 2.0表示1900/1/1, 2.0 1900/1/2, 2.5 1900/1/2 12:00:00
 ) bool {
 	proc := dll.mustProc(PNVariantTimeToSystemTime)

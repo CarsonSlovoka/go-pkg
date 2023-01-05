@@ -1,4 +1,4 @@
-//go:build windows && amd64
+//go:build windows && 386
 
 package w32
 
@@ -6,13 +6,22 @@ import (
 	"errors"
 	"syscall"
 	"time"
+	"unsafe"
 )
 
 // GetVariantDate converts COM Variant Time value to Go time.Time.
 func GetVariantDate(value uint64) (time.Time, error) {
 	var st syscall.Systemtime
-	if OleAutDll.VariantTimeToSystemTime(value, &st) {
+	v1 := uint32(value)
+	v2 := uint32(value >> 32)
+	proc := OleAutDll.mustProc(PNVariantTimeToSystemTime)
+	r, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(v1),
+		uintptr(v2),
+		uintptr(unsafe.Pointer(&st)),
+	)
+	if r != 0 {
 		return time.Date(int(st.Year), time.Month(st.Month), int(st.Day), int(st.Hour), int(st.Minute), int(st.Second), int(st.Milliseconds/1000), time.UTC), nil
 	}
-	return time.Now(), errors.New("could not convert to time, passing current time")
+	return time.Now(), errors.New("Could not convert to time, passing current time.")
 }
