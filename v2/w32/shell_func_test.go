@@ -354,22 +354,19 @@ func ExampleShellDLL_ShellNotifyIcon() {
 	}
 
 	var notifyIconData w32.NOTIFYICONDATA
-	guid := *(*w32.GUID)(unsafe.Pointer(&([]byte("abcdef12345678zr"))[0]))
+	// guid := *(*w32.GUID)(unsafe.Pointer(&([]byte("abcdef12345678zr"))[0]))
 	{
 		notifyIconData = w32.NOTIFYICONDATA{
-			CbSize:   968,
-			HWnd:     hwndTarget,   // 消息會往這個hwnd傳送。在啟用NIF_MESSAGE之後，告知UCallbackMessage的訊息ID，當有屬於NotifyIcon的事件時{NIN_BALLOONUSERCLICK, WM_MOUSEMOVE, ...}，就會傳送該訊息ID
-			UFlags:   w32.NIF_GUID, // NIF_GUID有設定就可以讓GuidItem生效
-			GuidItem: guid,
-			// DwState:  w32.NIS_SHAREDICON | w32.NIS_HIDDEN,
+			CbSize: 968,
+			HWnd:   hwndTarget, // 消息會往這個hwnd傳送。在啟用NIF_MESSAGE之後，告知UCallbackMessage的訊息ID，當有屬於NotifyIcon的事件時{NIN_BALLOONUSERCLICK, WM_MOUSEMOVE, ...}，就會傳送該訊息ID
+
+			// 以下兩個可以都不要設定，即不需要:w32.NIF_GUID以及GuidItem，弄了之後很有可能會遇到在NIM_ADD的時候失敗，最後只能把機瑪砍掉才會正常。但不設定都不會遇到問題。
+			// UFlags:   w32.NIF_GUID, // NIF_GUID有設定就可以讓GuidItem生效
+			// GuidItem: guid,
+			// // DwState:  w32.NIS_SHAREDICON | w32.NIS_HIDDEN,
 		}
 		notifyIconData.SetVersion(w32.NOTIFYICON_VERSION_4)
 		notifyIconDataCopy := notifyIconData // 這個只是用來驗證，刪除的資訊與其他資訊無關，它依照GuidItem的內容去刪
-
-		// 確保沒有殘留的資料, 如果程式有不正常結束，那麼殘留的對象會影響，使的NIM_ADD會一直沒辦法被刪除
-		if shell32dll.ShellNotifyIcon(w32.NIM_DELETE, &notifyIconDataCopy) {
-			log.Println("clear previous data.")
-		}
 
 		defer func() {
 			// 刪除認的是NIF_GUID，所以只要NOTIFYICONDATA中的GuidItem相同，就會被刪掉
