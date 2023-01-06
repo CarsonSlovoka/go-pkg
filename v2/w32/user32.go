@@ -652,6 +652,7 @@ const (
 )
 
 // Window style constants
+// https://learn.microsoft.com/en-us/windows/win32/winmsg/window-styles
 const (
 	WS_OVERLAPPED       = 0x00000000 // 窗口邊框, 標題欄位
 	WS_POPUP            = 0x80000000
@@ -667,8 +668,8 @@ const (
 	WS_DLGFRAME         = 0x00400000
 	WS_VSCROLL          = 0x00200000
 	WS_HSCROLL          = 0x00100000
-	WS_SYSMENU          = 0x00080000 // 有系統選單, 需要包含WS_CAPTION
-	WS_THICKFRAME       = 0x00040000
+	WS_SYSMENU          = 0x00080000 // 標題名稱旁邊的「圖標」、以及在標題列點擊右鍵跑出來的「系統選單」{還原、移動、大小、最小化、最大化}如果沒有啟用，即有設定WS_MINIMIZEBOX, WS_MAXIMIZEBOX以及沒有CS_NOCLOSE，都會看不到這些按鈕
+	WS_THICKFRAME       = 0x00040000 // resizeable 包含調整視窗的大小
 	WS_GROUP            = 0x00020000
 	WS_TABSTOP          = 0x00010000
 	WS_MINIMIZEBOX      = 0x00020000
@@ -1114,6 +1115,7 @@ const (
 )
 
 // Window class styles
+// https://learn.microsoft.com/en-us/windows/win32/winmsg/window-class-styles#constants
 const (
 	CS_VREDRAW         = 0x00000001
 	CS_HREDRAW         = 0x00000002
@@ -1123,7 +1125,7 @@ const (
 	CS_CLASSDC         = 0x00000040
 	CS_PARENTDC        = 0x00000080
 	CS_NOKEYCVT        = 0x00000100
-	CS_NOCLOSE         = 0x00000200 // 禁用右上角的關閉按鈕
+	CS_NOCLOSE         = 0x00000200 // Disables Close on the window menu.
 	CS_SAVEBITS        = 0x00000800
 	CS_BYTEALIGNCLIENT = 0x00001000
 	CS_BYTEALIGNWINDOW = 0x00002000
