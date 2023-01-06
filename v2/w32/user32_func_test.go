@@ -13,6 +13,17 @@ import (
 	"unsafe"
 )
 
+func ExampleUser32DLL_GetWindowLongPtr() {
+	hwnd := getTestHwnd()
+	style, _ := userDll.GetWindowLongPtr(hwnd, w32.GWL_STYLE)
+	style &^= w32.WS_MAXIMIZEBOX | w32.WS_MINIMIZEBOX // Remove the max and min buttons.
+	style ^= w32.WS_THICKFRAME                        // Toggle, resizeable // 如果沒有此屬性就加上，有的話就移除
+	if _, eno := userDll.SetWindowLongPtr(hwnd, w32.GWL_STYLE, style); eno != 0 {
+		log.Println(eno)
+	}
+	// Output:
+}
+
 func ExampleUser32DLL_GetWindowText() {
 	user32dll := w32.NewUser32DLL(
 		w32.PNGetForegroundWindow,

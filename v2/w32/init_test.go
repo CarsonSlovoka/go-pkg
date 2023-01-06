@@ -15,3 +15,11 @@ func init() {
 	oleAutDll = w32.NewOleAut32DLL()
 	userDll = w32.NewUser32DLL()
 }
+
+func getTestHwnd() w32.HWND {
+	hwnd := userDll.FindWindow("Notepad", "")
+	if hwnd == 0 {
+		hwnd = userDll.GetDesktopWindow()
+	}
+	return hwnd
+}

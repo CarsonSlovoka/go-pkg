@@ -257,9 +257,10 @@ const (
 )
 
 // GetWindowLong and GetWindowLongPtr constants
+// https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowlonga#parameters
 const (
 	GWL_EXSTYLE     = -20
-	GWL_STYLE       = -16
+	GWL_STYLE       = -16 // window styles
 	GWL_WNDPROC     = -4
 	GWLP_WNDPROC    = -4
 	GWL_HINSTANCE   = -6
