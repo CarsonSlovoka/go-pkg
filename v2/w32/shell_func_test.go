@@ -358,7 +358,7 @@ func ExampleShellDLL_ShellNotifyIcon() {
 	{
 		notifyIconData = w32.NOTIFYICONDATA{
 			CbSize:   968,
-			HWnd:     hwndTarget,   // 注意！不是用您創建的window的HWND，是要用當前app的hwnd
+			HWnd:     hwndTarget,   // 消息會往這個hwnd傳送。在啟用NIF_MESSAGE之後，告知UCallbackMessage的訊息ID，當有屬於NotifyIcon的事件時{NIN_BALLOONUSERCLICK, WM_MOUSEMOVE, ...}，就會傳送該訊息ID
 			UFlags:   w32.NIF_GUID, // NIF_GUID有設定就可以讓GuidItem生效
 			GuidItem: guid,
 			// DwState:  w32.NIS_SHAREDICON | w32.NIS_HIDDEN,
@@ -380,8 +380,8 @@ func ExampleShellDLL_ShellNotifyIcon() {
 	}
 
 	// 掛勾訊息處理
-	notifyIconData.UFlags |= w32.NIF_MESSAGE // msg有設定UCallbackMessage就會生效 // The uCallbackMessage member is valid.
-	notifyIconData.UCallbackMessage = uint32(WMNotifyIconMsg)
+	notifyIconData.UFlags |= w32.NIF_MESSAGE                  // msg有設定UCallbackMessage就會生效 // The uCallbackMessage member is valid.
+	notifyIconData.UCallbackMessage = uint32(WMNotifyIconMsg) // 設定hwnd的WndProc之中，接收屬於NotifyIcon事件的uMsg識別碼，在此狀況下的LPARAM則是依據觸發條件{NIN_BALLOONUSERCLICK, WM_MOUSEMOVE, ...}來自動設定
 
 	if !shell32dll.ShellNotifyIcon(w32.NIM_ADD, &notifyIconData) {
 		// 關閉所建立的背景視窗
