@@ -903,6 +903,28 @@ func ExampleUser32DLL_GetWindowThreadProcessId() {
 	// Output:
 }
 
+func ExampleUser32DLL_SetWindowPos() {
+	var r w32.RECT
+	r.Right = 1000
+	r.Bottom = 600
+	hwnd := userDll.FindWindow("Notepad", "")
+	if hwnd == 0 {
+		hwnd = userDll.GetDesktopWindow()
+	}
+	if eno := userDll.AdjustWindowRect(&r, w32.WS_OVERLAPPEDWINDOW, false); eno != 0 {
+		fmt.Println(eno)
+	}
+	if eno := userDll.SetWindowPos(hwnd, 0,
+		r.Left, r.Top, r.Width(), r.Height(),
+		w32.SWP_NOZORDER|
+			w32.SWP_NOMOVE, // 忽略x, y即窗口的位置不變，指改變寬度與高度
+	); eno != 0 {
+		fmt.Println(eno)
+	}
+
+	// Output:
+}
+
 // https://learn.microsoft.com/en-us/windows/win32/winmsg/using-hooks
 // https://social.msdn.microsoft.com/Forums/en-US/d5e1ec20-9ff2-4cd4-918a-02560d473845/winapi-hook-procedure-and-reading-message-details?forum=windowsgeneraldevelopmentissues
 func ExampleUser32DLL_SetWindowsHookEx() {

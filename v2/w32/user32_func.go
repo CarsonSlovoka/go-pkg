@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	PNAppendMenu ProcName = "AppendMenuW"
+	PNAdjustWindowRect ProcName = "AdjustWindowRect"
+	PNAppendMenu       ProcName = "AppendMenuW"
 
 	PNBeginPaint ProcName = "BeginPaint"
 
@@ -83,6 +84,7 @@ const (
 	PNSetMenuItemInfo     ProcName = "SetMenuItemInfoW"
 	PNSetRect             ProcName = "SetRect"
 	PNSetWindowLongPtr    ProcName = "SetWindowLongPtrW"
+	PNSetWindowPos        ProcName = "SetWindowPos"
 	PNSetWindowsHookEx    ProcName = "SetWindowsHookExW"
 
 	PNSendInput   ProcName = "SendInput"
@@ -109,6 +111,7 @@ type User32DLL struct {
 func NewUser32DLL(procList ...ProcName) *User32DLL {
 	if len(procList) == 0 {
 		procList = []ProcName{
+			PNAdjustWindowRect,
 			PNAppendMenu,
 
 			PNBeginPaint,
@@ -183,6 +186,7 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 			PNSetMenuItemInfo,
 			PNSetRect,
 			PNSetWindowLongPtr,
+			PNSetWindowPos,
 			PNSetWindowsHookEx,
 
 			PNSendInput,
@@ -201,6 +205,21 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 	}
 	dll := newDll(DNUser32, procList)
 	return &User32DLL{dll}
+}
+
+// AdjustWindowRect https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-adjustwindowrect
+func (dll *User32DLL) AdjustWindowRect(rect *RECT, // [out]
+	winStyles uint32, // WS_OVERLAPPEDWINDOW, ...
+	hasMenu bool,
+) syscall.Errno {
+	proc := dll.mustProc(PNAdjustWindowRect)
+
+	_, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(unsafe.Pointer(rect)),
+		uintptr(winStyles),
+		UintptrFromBool(hasMenu),
+	)
+	return errno
 }
 
 // AppendMenu https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-appendmenuw
@@ -955,6 +974,25 @@ func (dll *User32DLL) SetWindowLongPtr(hWnd HWND, nIndex int32, dwNewLong uintpt
 		dwNewLong,
 	)
 	return r1, errno
+}
+
+// SetWindowPos Changes the size, position, and Z order of a child, pop-up, or top-level window.  https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowpos
+func (dll *User32DLL) SetWindowPos(hWnd,
+	hWndInsertAfter HWND, // HWND_BOTTOM, HWND_NOTOPMOST, HWND_TOP, HWND_TOPMOST
+	x, y, width, height int32,
+	flags uint32, // SWP_NOSIZE, SWP_SHOWWINDOW, ...
+) syscall.Errno {
+	proc := dll.mustProc(PNSetWindowPos)
+	_, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+		uintptr(hWndInsertAfter),
+		uintptr(x),
+		uintptr(y),
+		uintptr(width),
+		uintptr(height),
+		uintptr(flags),
+	)
+	return errno
 }
 
 // SetWindowsHookEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowshookexw
