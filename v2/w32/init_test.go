@@ -7,6 +7,7 @@ var (
 	kernelDll *w32.Kernel32DLL
 	userDll   *w32.User32DLL
 	oleAutDll *w32.OleAut32DLL
+	shellDll  *w32.ShellDLL
 )
 
 func init() {
@@ -14,6 +15,7 @@ func init() {
 	kernelDll = w32.NewKernel32DLL()
 	oleAutDll = w32.NewOleAut32DLL()
 	userDll = w32.NewUser32DLL()
+	shellDll = w32.NewShellDLL()
 }
 
 func getTestHwnd() w32.HWND {

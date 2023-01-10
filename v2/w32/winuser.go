@@ -60,18 +60,31 @@ type WndEnumProc func(hWnd HWND, lParam LPARAM) BOOL
 // WndProc https://learn.microsoft.com/en-us/windows/win32/api/winuser/nc-winuser-wndproc
 type WndProc func(unnamed0 HWND, unnamed1 UINT, unnamed2 WPARAM, unnamed3 LPARAM) LRESULT
 
+// Constants for MENUITEMINFO.fState
+// https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-menuiteminfow
+const (
+	MFS_GRAYED    = 0x00000003
+	MFS_DISABLED  = MFS_GRAYED
+	MFS_CHECKED   = MF_CHECKED
+	MFS_HILITE    = MF_HILITE
+	MFS_ENABLED   = MF_ENABLED
+	MFS_UNCHECKED = MF_UNCHECKED
+	MFS_UNHILITE  = MF_UNHILITE
+	MFS_DEFAULT   = MF_DEFAULT
+)
+
 // MENUITEMINFO https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-menuiteminfow
 type MENUITEMINFO struct {
 	CbSize        uint32
-	FMask         uint32
+	FMask         uint32 // MIIM_BITMAP, MIIM_ID, MIIM_STRING, MIIM_SUBMENU, MIIM_STATE...
 	FType         uint32
-	FState        uint32
-	WID           uint32
+	FState        uint32 // MFS_CHECKED, MFS_DEFAULT, ...
+	WID           uint32 // 當您SetMenuItemInfo是使用Pos的方式時，此時就需要靠WID來辨識真正的ID
 	HSubMenu      HMENU
 	HbmpChecked   HBITMAP
 	HbmpUnchecked HBITMAP
 	DwItemData    uintptr
-	DwTypeData    *uint16 /* LPWSTR */
+	DwTypeData    *uint16 // LPWSTR // &(utf16.Encode([]rune(MyString + "\x00")))[0] 或者 syscall.UTF16PtrFromString("MyString")
 	Cch           uint32
 	HbmpItem      HBITMAP
 }

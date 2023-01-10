@@ -1745,6 +1745,13 @@ type HIGHCONTRAST struct {
 	LpszDefaultScheme *uint16
 }
 
+// https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-modifymenua#parameters
+const (
+	MF_BYCOMMAND  = 0          // Indicates that the uPosition parameter gives the identifier of the menu item. // 根據ID
+	MF_BYPOSITION = 0x00000400 // Indicates that the uPosition parameter gives the zero-based relative position of the new menu item. If uPosition is -1, the new menu item is appended to the end of the menu. // zero-based, 根據位置
+)
+
+// https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getmenustate
 const (
 	MF_BITMAP       uint32 = 0x00000004
 	MF_CHECKED             = 0x00000008
@@ -1758,6 +1765,9 @@ const (
 	MF_SEPARATOR           = 0x00000800
 	MF_STRING              = 0x00000000
 	MF_UNCHECKED           = 0x00000000
+	MF_UNHILITE            = 0x00000000
+	MF_HILITE              = 0x00000080
+	MF_DEFAULT             = 0x00001000
 )
 
 // HOOK https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowshookexw

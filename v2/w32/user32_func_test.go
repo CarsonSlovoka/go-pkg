@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"testing"
 	"time"
+	"unicode/utf16"
 	"unsafe"
 )
 
@@ -442,6 +443,59 @@ func ExampleUser32DLL_PostMessage_SC_MONITORPOWER() {
 	_ = user32dll.PostMessage(w32.HWND_BROADCAST, w32.WM_SYSCOMMAND, w32.SC_MONITORPOWER, 1)
 }
 
+func ExampleUser32DLL_GetMenu() {
+	hwnd := getTestHwnd()
+	menu := userDll.GetMenu(hwnd)
+	if menu == 0 {
+		log.Println("menu not found.")
+		return
+	}
+
+	_ = userDll.AppendMenu(menu, w32.MF_STRING, 1000, "Hello world")
+	menuFile := userDll.GetSubMenu(menu, 0)
+	var menuItemInfo w32.MENUITEMINFO
+	_ = userDll.InsertMenuItem(menuFile, uint32(userDll.MustGetMenuItemCount(menuFile)-1), 1, &w32.MENUITEMINFO{
+		CbSize:     uint32(unsafe.Sizeof(menuItemInfo)),
+		FMask:      w32.MIIM_ID | w32.MIIM_STRING,
+		WID:        500,
+		DwTypeData: &(utf16.Encode([]rune("my Plugin" + "\x00")))[0],
+	})
+
+	// Add separator
+	_ = userDll.InsertMenu(menuFile, uint32(userDll.MustGetMenuItemCount(menuFile)-1), w32.MF_BYPOSITION|w32.MF_SEPARATOR, nil, "")
+
+	// TODO: 如何偵測點擊自訂清單的動作
+	{
+
+	}
+
+	// Output:
+}
+
+// 異動標題欄位按下右鍵，所彈出來的選單{恢復、移動、最大化、最小化、關閉} => {Hello world}
+func ExampleUser32DLL_GetSystemMenu() {
+	hwnd := getTestHwnd()
+	menu := userDll.GetSystemMenu(hwnd, false)
+	if menu == 0 {
+		return
+	}
+	_ = userDll.AppendMenu(menu, w32.MF_STRING, 1000, "Hello world")
+
+	// Delete all the items except the last.
+	for userDll.MustGetMenuItemCount(menu) > 1 {
+		if eno := userDll.DeleteMenu(menu, 0, w32.MF_BYPOSITION); eno != 0 {
+			log.Println(eno)
+		}
+	}
+
+	// Optional 本範例就算不呼叫DrawMenuBar依然可以正常工作
+	if eno := userDll.DrawMenuBar(hwnd); eno != 0 {
+		log.Println(eno)
+	}
+
+	// Output:
+}
+
 func ExampleUser32DLL_LoadImage() {
 	user32dll := w32.NewUser32DLL(w32.PNLoadImage)
 	hicon, errno := user32dll.LoadImage( // returns a HANDLE so we have to cast to HICON
@@ -479,6 +533,7 @@ func ExampleUser32DLL_LoadImage() {
 }
 
 // https://stackoverflow.com/a/68845977/9935654
+// https://learn.microsoft.com/en-us/windows/win32/menurc/using-menus
 func ExampleUser32DLL_CreatePopupMenu() {
 	user32dll := w32.NewUser32DLL()
 	gdi32dll := w32.NewGdi32DLL(w32.PNDeleteObject)
@@ -508,16 +563,16 @@ func ExampleUser32DLL_CreatePopupMenu() {
 		}()
 	}
 
-	// Create Menu
+	// Create Menu (PopupMenu)
 	var hMenu w32.HMENU
 	{
 		hMenu = user32dll.CreatePopupMenu()
 		_ = user32dll.AppendMenu(hMenu, w32.MF_STRING, 1023, "Open")
+		_ = user32dll.AppendMenu(hMenu, w32.MF_STRING, 1024, "TODO")
 
 		// 設定含有icon的Menu
 		// _, _ = user32dll.AppendMenu(hMenu, w32.MF_STRING, 1024, "Hello") // 可以先指定string，再用SetMenuItemInfo添加icon或者直接在SetMenuItemInfo添加string或icon都可以
 		var menuItemInfo w32.MENUITEMINFO
-		pMsg, _ := syscall.UTF16PtrFromString("Hello")
 		menuItemInfo = w32.MENUITEMINFO{
 			CbSize: uint32(unsafe.Sizeof(menuItemInfo)),
 
@@ -525,14 +580,112 @@ func ExampleUser32DLL_CreatePopupMenu() {
 			FMask: w32.MIIM_BITMAP | // sets the hbmpItem member.
 				w32.MIIM_ID | // sets the wID member.
 				w32.MIIM_STRING, // sets the dwTypeData member.
-
+			// w32.MIIM_STATE, // set the FState member.
+			// FState:     w32.MFS_CHECKED, // 圖片可能會檔住勾選的圖示，所以在使用圖示之後，不建議在使用此項目
 			WID:        1024,
-			DwTypeData: pMsg,
+			DwTypeData: &(utf16.Encode([]rune("Hello" + "\x00")))[0], // 修改原有的名稱
 			HbmpItem:   iInfo.HbmColor,
 		}
-		_ = user32dll.SetMenuItemInfo(hMenu, 1024, false, &menuItemInfo)
+		_ = user32dll.SetMenuItemInfo(hMenu, 1024, false, &menuItemInfo) // 將menuItemInfo放到此ID項目去
+		// _ = user32dll.SetMenuItemInfo(hMenu, 1 /*放在第二個項目*/, true, &menuItemInfo) // 同上
 
 		_ = user32dll.AppendMenu(hMenu, w32.MF_STRING, 1025, "Exit program")
+		_ = user32dll.AppendMenu(hMenu, w32.MF_STRING, 1026, "Advanced")
+
+		// SetMenuItemInfo如果該pos已經有其他項目存在，會直接覆蓋
+		// _ = user32dll.SetMenuItemInfo(hMenu, 2, true, &menuItemInfo) // 會覆蓋掉Exit program
+
+		// SEPARATOR
+		{
+			// 在後面一個項目插入分隔線
+			_ = user32dll.AppendMenu(hMenu, w32.MF_STRING,
+				0,  // 當建造的是separate line，此時的uID沒有意義(隨便給都沒差，最後會被當成0)，也不能被SetMenuItemInfo所更改
+				"", // 傳空字串會建立分隔線 separate line
+			)
+
+			// 將第二個項目插入分隔線(也就是原本的第二個項目會變成第三個)
+			_ = userDll.InsertMenu(hMenu, 1 /*下標值從0開始*/, w32.MF_BYPOSITION|w32.MF_SEPARATOR, nil, "")
+
+			// 在最後一個項目插入分隔線
+			countMenuItems, _ := userDll.GetMenuItemCount(hMenu)
+			_ = userDll.InsertMenu(hMenu, uint32(countMenuItems), w32.MF_BYPOSITION|w32.MF_SEPARATOR, nil, "")
+		}
+
+		// 用AppendMenu與SetMenuItemInfo插配來產生新增項目的效果
+		{
+			menuItemInfo2 := menuItemInfo // copy
+			title, _ := syscall.UTF16PtrFromString("insrtMenuTest")
+			menuItemInfo2.DwTypeData = title
+			menuItemInfo2.WID = 1027
+			_ = user32dll.AppendMenu(hMenu, w32.MF_STRING, 1027, "TODO") // 因為SetMenuItemInfo不能創造新的item，所以要在建立一個
+			_ = user32dll.SetMenuItemInfo(hMenu, 1027, false, &menuItemInfo2)
+
+			// 直接用InsertMenuItem來插入新的項目會比較快
+			countMenuItems, _ := userDll.GetMenuItemCount(hMenu)
+			_ = userDll.InsertMenuItem(hMenu, uint32(countMenuItems), 1, &w32.MENUITEMINFO{
+				CbSize: uint32(unsafe.Sizeof(menuItemInfo)),
+				FMask: w32.MIIM_ID | w32.MIIM_STRING |
+					w32.MIIM_STATE,
+				FState:     w32.MFS_CHECKED | w32.MFS_GRAYED,
+				WID:        1028,
+				DwTypeData: &(utf16.Encode([]rune("test State" + "\x00")))[0],
+			})
+		}
+
+		// Submenu
+		{
+			subMenu := userDll.CreateMenu()
+			defer user32dll.DestroyMenu(subMenu)
+			_ = user32dll.AppendMenu(subMenu, w32.MF_STRING, 10001, "submenu item1")
+			_ = user32dll.AppendMenu(subMenu, w32.MF_STRING, 10002, "submenu item2")
+
+			pMsg, _ := syscall.UTF16PtrFromString("sumMenu")
+			_ = userDll.InsertMenuItem(hMenu, 1028, 0, &w32.MENUITEMINFO{
+				CbSize:     uint32(unsafe.Sizeof(menuItemInfo)),
+				FMask:      w32.MIIM_ID | w32.MIIM_STRING | w32.MIIM_SUBMENU,
+				WID:        10000,
+				HSubMenu:   subMenu,
+				DwTypeData: pMsg,
+			})
+			fmt.Println("GetMenuItemCount:", userDll.MustGetMenuItemCount(hMenu)) // 10 // subMenu的指項目不會納入計算
+
+			// DeleteMenu
+			{
+				_ = user32dll.AppendMenu(subMenu, w32.MF_STRING, 10003, "submenu item3")
+				_ = user32dll.AppendMenu(subMenu, w32.MF_STRING, 10004, "submenu item4")
+
+				if eno := userDll.DeleteMenu(subMenu, 2, w32.MF_BYPOSITION); eno != 0 {
+					fmt.Println(eno)
+				}
+
+				if eno := userDll.DeleteMenu(subMenu, 10004, w32.MF_BYCOMMAND); eno != 0 {
+					fmt.Println(eno)
+				}
+			}
+
+			// GetMenuItemID Test
+			{
+				fmt.Println("Menu ID 0:", userDll.GetMenuItemID(hMenu, 0)) // 1023
+				fmt.Println("Menu ID 1:", userDll.GetMenuItemID(hMenu, 1)) // 分隔線的項目回傳的id都是0
+
+				fmt.Println(userDll.GetMenuItemID(hMenu, userDll.MustGetMenuItemCount(hMenu)) == 0xffffffff) // true，因為是zero-based，所以這個項目一定不存在
+
+				fmt.Println("Menu ID second last == 0xffffffff:", userDll.GetMenuItemID(hMenu, userDll.MustGetMenuItemCount(hMenu)-2) == 0xffffffff) // 如果該項目是subMenu，那麼會無法取得到該項目
+
+				fmt.Println("Menu ID last:", userDll.GetMenuItemID(hMenu, userDll.MustGetMenuItemCount(hMenu)-1)) // 1028 // 我們的subMenu是插入在1028的位子，即取代原本1028的位子，原1028會往後移動，所以最後一個還是1028
+
+				mySubMenu := userDll.GetSubMenu(hMenu, userDll.MustGetMenuItemCount(hMenu)-2)
+				fmt.Println("submenu ID 0:", userDll.GetMenuItemID(mySubMenu, 0)) // 10001
+			}
+		}
+
+		// 預設選項設定
+		{
+			// _ = user32dll.SetMenuDefaultItem(hMenu, 1026, false) // 表示ID:1026為預設選項
+			// _ = user32dll.SetMenuDefaultItem(hMenu, 2, true) // 使用第3個選項來當作預設選項(起始index從0開始)
+			// _ = user32dll.SetMenuDefaultItem(hMenu, 0xffffffff, true) // no default item
+			_ = user32dll.SetMenuDefaultItem(hMenu, 0, true) // 設定預設選項為第一個(會加粗顯示)
+		}
 
 		defer func() {
 			if errno := user32dll.DestroyMenu(hMenu); errno != 0 {
@@ -574,6 +727,8 @@ func ExampleUser32DLL_CreatePopupMenu() {
 			case w32.WM_COMMAND:
 				id := w32.LOWORD(wParam)
 				switch id {
+				case 500:
+					log.Println("sys open")
 				case 1023:
 					log.Println("open")
 				case 1024:
@@ -581,6 +736,10 @@ func ExampleUser32DLL_CreatePopupMenu() {
 				case 1025:
 					log.Println("1025")
 					_ = user32dll.PostMessage(hwnd, w32.WM_DESTROY, 0, 0)
+				case 10001:
+					log.Println("submenu-item1")
+				case 10002:
+					log.Println("submenu item2")
 				}
 			}
 			return user32dll.DefWindowProc(hwnd, uMsg, wParam, lParam)
@@ -668,6 +827,13 @@ func ExampleUser32DLL_CreatePopupMenu() {
 	<-ch
 
 	// Output:
+	// GetMenuItemCount: 10
+	// Menu ID 0: 1023
+	// Menu ID 1: 0
+	// true
+	// Menu ID second last == 0xffffffff: true
+	// Menu ID last: 1028
+	// submenu ID 0: 10001
 }
 
 // https://learn.microsoft.com/en-us/windows/win32/learnwin32/creating-a-window

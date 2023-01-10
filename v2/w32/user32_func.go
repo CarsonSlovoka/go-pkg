@@ -21,8 +21,11 @@ const (
 	PNCopyImage ProcName = "CopyImage"
 
 	PNCreateIconFromResourceEx ProcName = "CreateIconFromResourceEx"
+	PNCreateMenu               ProcName = "CreateMenu"
 	PNCreatePopupMenu          ProcName = "CreatePopupMenu"
 	PNCreateWindowEx           ProcName = "CreateWindowExW"
+
+	PNDeleteMenu ProcName = "DeleteMenu"
 
 	PNDestroyMenu   ProcName = "DestroyMenu"
 	PNDestroyWindow ProcName = "DestroyWindow"
@@ -33,7 +36,9 @@ const (
 
 	PNDrawIcon   ProcName = "DrawIcon"
 	PNDrawIconEx ProcName = "DrawIconEx"
-	PNDrawText   ProcName = "DrawTextW"
+
+	PNDrawMenuBar ProcName = "DrawMenuBar"
+	PNDrawText    ProcName = "DrawTextW"
 
 	PNEndPaint    ProcName = "EndPaint"
 	PNEnumWindows ProcName = "EnumWindows"
@@ -50,7 +55,12 @@ const (
 	PNGetForegroundWindow      ProcName = "GetForegroundWindow"
 	PNGetIconInfo              ProcName = "GetIconInfo"
 	PNGetMessage               ProcName = "GetMessageW"
+	PNGetMenu                  ProcName = "GetMenu"
+	PNGetMenuItemCount         ProcName = "GetMenuItemCount"
+	PNGetMenuItemID            ProcName = "GetMenuItemID"
+	PNGetSubMenu               ProcName = "GetSubMenu"
 	PNGetSystemMetrics         ProcName = "GetSystemMetrics"
+	PNGetSystemMenu            ProcName = "GetSystemMenu"
 	PNGetWindowDC              ProcName = "GetWindowDC"
 	PNGetWindowLong            ProcName = "GetWindowLongW"
 	PNGetWindowLongPtr         ProcName = "GetWindowLongPtrW"
@@ -58,12 +68,16 @@ const (
 	PNGetWindowText            ProcName = "GetWindowTextW"
 	PNGetWindowThreadProcessId ProcName = "GetWindowThreadProcessId"
 
+	PNInsertMenu     ProcName = "InsertMenuW"
+	PNInsertMenuItem ProcName = "InsertMenuItemW"
+
 	PNIsIconic        ProcName = "IsIconic"
 	PNIsWindowVisible ProcName = "IsWindowVisible"
 
 	PNLoadCursor ProcName = "LoadCursorW"
 	PNLoadIcon   ProcName = "LoadIconW"
 	PNLoadImage  ProcName = "LoadImageW"
+	// PNLoadMenu   ProcName = "LoadMenuW"
 
 	PNLookupIconIdFromDirectoryEx ProcName = "LookupIconIdFromDirectoryEx"
 
@@ -81,6 +95,7 @@ const (
 
 	PNSetActiveWindow     ProcName = "SetActiveWindow"
 	PNSetForegroundWindow ProcName = "SetForegroundWindow"
+	PNSetMenuDefaultItem  ProcName = "SetMenuDefaultItem"
 	PNSetMenuItemInfo     ProcName = "SetMenuItemInfoW"
 	PNSetRect             ProcName = "SetRect"
 	PNSetWindowLongPtr    ProcName = "SetWindowLongPtrW"
@@ -123,8 +138,11 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 			PNCopyImage,
 
 			PNCreateIconFromResourceEx,
+			PNCreateMenu,
 			PNCreatePopupMenu,
 			PNCreateWindowEx,
+
+			PNDeleteMenu,
 
 			PNDestroyMenu,
 			PNDestroyWindow,
@@ -135,6 +153,8 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 
 			PNDrawIcon,
 			PNDrawIconEx,
+
+			PNDrawMenuBar,
 			PNDrawText,
 
 			PNEndPaint,
@@ -152,7 +172,12 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 			PNGetForegroundWindow,
 			PNGetIconInfo,
 			PNGetMessage,
+			PNGetMenu,
+			PNGetMenuItemCount,
+			PNGetMenuItemID,
+			PNGetSubMenu,
 			PNGetSystemMetrics,
+			PNGetSystemMenu,
 			PNGetWindowDC,
 			PNGetWindowLong,
 			PNGetWindowLongPtr,
@@ -160,12 +185,16 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 			PNGetWindowText,
 			PNGetWindowThreadProcessId,
 
+			PNInsertMenu,
+			PNInsertMenuItem,
+
 			PNIsIconic,
 			PNIsWindowVisible,
 
 			PNLoadCursor,
 			PNLoadIcon,
 			PNLoadImage,
+			// PNLoadMenu,
 
 			PNLookupIconIdFromDirectoryEx,
 
@@ -183,6 +212,7 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 
 			PNSetActiveWindow,
 			PNSetForegroundWindow,
+			PNSetMenuDefaultItem,
 			PNSetMenuItemInfo,
 			PNSetRect,
 			PNSetWindowLongPtr,
@@ -224,7 +254,9 @@ func (dll *User32DLL) AdjustWindowRect(rect *RECT, // [out]
 
 // AppendMenu https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-appendmenuw
 // If the function succeeds, the return value is nonzero.
-func (dll *User32DLL) AppendMenu(hMenu HMENU, uFlags uint32, uIDNewItem UINT_PTR, lpNewItem string) syscall.Errno {
+func (dll *User32DLL) AppendMenu(hMenu HMENU, uFlags uint32, uIDNewItem UINT_PTR,
+	lpNewItem string, // if "" then create the separate line
+) syscall.Errno {
 	proc := dll.mustProc(PNAppendMenu)
 	_, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hMenu),
@@ -323,7 +355,17 @@ func (dll *User32DLL) CreateIconFromResourceEx(
 	return HICON(r1)
 }
 
+// CreateMenu https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-createmenu
+// 🧙 Call DestroyMenu(hMenu) when you are not used.
+// If the function fails, the return value is NULL.
+func (dll *User32DLL) CreateMenu() HMENU {
+	proc := dll.mustProc(PNCreateMenu)
+	r1, _, _ := syscall.SyscallN(proc.Addr())
+	return HMENU(r1)
+}
+
 // CreatePopupMenu https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-createpopupmenu
+// 🧙 Call DestroyMenu(hMenu) when you are not used.
 // If the function fails, the return value is NULL.
 func (dll *User32DLL) CreatePopupMenu() HMENU {
 	proc := dll.mustProc(PNCreatePopupMenu)
@@ -357,9 +399,24 @@ func (dll *User32DLL) CreateWindowEx(
 		uintptr(hWndParent),
 		uintptr(hMenu),
 		uintptr(hInstance),
-		uintptr(lpParam),
+		lpParam,
 	)
 	return HWND(r1), errno
+}
+
+// DeleteMenu https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-deletemenu
+// 🧙 The application must call the DrawMenuBar function whenever a menu changes, whether the menu is in a displayed window.
+// If the function succeeds, the return value is nonzero.
+func (dll *User32DLL) DeleteMenu(hMenu HMENU, position,
+	flags uint32, // MF_BYCOMMAND, MF_BYPOSITION
+) syscall.Errno {
+	proc := dll.mustProc(PNDeleteMenu)
+	_, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hMenu),
+		uintptr(position),
+		uintptr(flags),
+	)
+	return errno
 }
 
 // DestroyMenu https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-destroymenu
@@ -439,6 +496,16 @@ func (dll *User32DLL) DrawIconEx(hdc HDC,
 		uintptr(hbrFlickerFreeDraw),
 		uintptr(diFlags))
 	return errno
+}
+
+// DrawMenuBar https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-drawmenubar
+// Redraws the menu bar of the specified window. If the menu bar changes after the system has created the window, this function must be called to draw the changed menu bar.
+func (dll *User32DLL) DrawMenuBar(hwnd HWND) syscall.Errno {
+	proc := dll.mustProc(PNDrawMenuBar)
+	_, _, eno := syscall.SyscallN(proc.Addr(),
+		uintptr(hwnd),
+	)
+	return eno
 }
 
 // DrawText https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-drawtextw
@@ -640,6 +707,61 @@ func (dll *User32DLL) GetMessage(lpMsg *MSG, hWnd HWND, wMsgFilterMin uint32, wM
 	return int32(r1), errno
 }
 
+// GetMenu https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getmenu
+func (dll *User32DLL) GetMenu(hwnd HWND) HMENU {
+	proc := dll.mustProc(PNGetMenu)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hwnd),
+	)
+	return HMENU(r1)
+}
+
+// GetMenuItemCount https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getmenuitemcount
+// If the function fails, the return value is -1. (0xffffffff)
+func (dll *User32DLL) GetMenuItemCount(hMenu HMENU) (int32, syscall.Errno) {
+	proc := dll.mustProc(PNGetMenuItemCount)
+	r1, _, eno := syscall.SyscallN(proc.Addr(),
+		uintptr(hMenu),
+	)
+	return int32(r1), eno
+}
+
+func (dll *User32DLL) MustGetMenuItemCount(hMenu HMENU) int32 {
+	r, eno := dll.GetMenuItemCount(hMenu)
+	if eno != 0 {
+		panic(eno.Error())
+	}
+	return r
+}
+
+// GetMenuItemID https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getmenuitemid
+// If the menu item identifier is NULL or if the specified item opens a submenu, the return value is -1 (0xffffffff)
+func (dll *User32DLL) GetMenuItemID(hMenu HMENU,
+	nPos int32, // The zero-based relative position of the menu item whose identifier is to be retrieved.
+) uint32 {
+	proc := dll.mustProc(PNGetMenuItemID)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hMenu),
+		uintptr(nPos),
+	)
+	return uint32(r1)
+}
+
+// GetSubMenu Retrieves a handle to the drop-down menu or submenu activated by the specified menu item
+// 🧙 Call DestroyMenu(hMenu) when you are not used.
+// https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getsubmenu
+// If the menu item does not activate a drop-down menu or submenu, the return value is NULL.
+func (dll *User32DLL) GetSubMenu(hMenu HMENU,
+	nPos int32, // The zero-based relative position in the specified menu of an item that activates a drop-down menu or submenu.
+) HMENU {
+	proc := dll.mustProc(PNGetSubMenu)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hMenu),
+		uintptr(nPos),
+	)
+	return HMENU(r1)
+}
+
 // GetSystemMetrics 依據所傳入的參數回傳您所要查詢的數值資料
 // https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getsystemmetrics#parameters
 // If the function fails, the return value is 0
@@ -647,6 +769,19 @@ func (dll *User32DLL) GetSystemMetrics(targetIdx int32) int32 {
 	proc := dll.mustProc(PNGetSystemMetrics)
 	r0, _, _ := syscall.SyscallN(proc.Addr(), uintptr(targetIdx))
 	return int32(r0)
+}
+
+// GetSystemMenu https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getsystemmenu
+// 獲取系統選單{恢復、移動、最大化、最小化、關閉}等按鈕
+// If the bRevert parameter is FALSE, the return value is a handle to a copy of the window menu.
+// If the bRevert parameter is TRUE, the return value is NULL.
+func (dll *User32DLL) GetSystemMenu(hWnd HWND, revert bool) HMENU {
+	proc := dll.mustProc(PNGetSystemMenu)
+	r, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+		UintptrFromBool(revert),
+	)
+	return HMENU(r)
 }
 
 // GetWindowDC https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowdc
@@ -729,6 +864,40 @@ func (dll *User32DLL) GetWindowThreadProcessId(hWnd HWND, lpdwProcessId *uint32)
 	return uint32(r1)
 }
 
+// InsertMenu https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-insertmenuw
+func (dll *User32DLL) InsertMenu(hMenu HMENU,
+	nPosition, // w32.MF_BYPOSITION | w32.MF_SEPARATOR
+	flags uint32, // MF_STRING, MF_BITMAP, MF_POPUP, ...
+	uIDNewItem *uint32, // The identifier of the new menu item or, if the uFlags parameter has the MF_POPUP flag set, a handle to the drop-down menu or submenu.
+	lpNewItem string, // The content of the new menu item.
+) syscall.Errno {
+	proc := dll.mustProc(PNInsertMenu)
+	_, _, eno := syscall.SyscallN(proc.Addr(),
+		uintptr(hMenu),
+		uintptr(nPosition),
+		uintptr(flags),
+		uintptr(unsafe.Pointer(uIDNewItem)),
+		UintptrFromStr(lpNewItem),
+	)
+	return eno
+}
+
+// InsertMenuItem https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-insertmenuitemw
+func (dll *User32DLL) InsertMenuItem(hMenu HMENU,
+	item uint32,
+	byPosition int32,
+	menuItmeInfo *MENUITEMINFO,
+) syscall.Errno {
+	proc := dll.mustProc(PNInsertMenuItem)
+	_, _, eno := syscall.SyscallN(proc.Addr(),
+		uintptr(hMenu),
+		uintptr(item),
+		uintptr(byPosition),
+		uintptr(unsafe.Pointer(menuItmeInfo)),
+	)
+	return eno
+}
+
 // IsIconic https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-isiconic?redirectedfrom=MSDN
 // Determines whether the specified window is minimized (iconic).
 // If the window is iconic, the return value is nonzero.
@@ -802,6 +971,21 @@ func (dll *User32DLL) LoadImage(hInst HINSTANCE, name string, aType uint32, cx i
 	)
 	return HANDLE(r1), errno
 }
+
+/*
+// LoadMenu https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadmenuw
+// 🧙 Call DestroyMenu(hMenu) when you are not used.
+func (dll *User32DLL) LoadMenu(hInst HINSTANCE,
+	menuName *uint16, // Call MakeIntResource or MakeIntResource(UintptrFromStr("IDI_MY_STRING_ID")) to help you.
+) (HMENU, syscall.Errno) {
+	proc := dll.mustProc(PNLoadMenu)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hInst),
+		uintptr(unsafe.Pointer(menuName)),
+	)
+	return HMENU(r1), errno
+}
+*/
 
 func (dll *User32DLL) MustLoadImage(hInst HINSTANCE, name string, aType uint32, cx int32, cy int32, fuLoad uint32) HANDLE {
 	handle, errno := dll.LoadImage(hInst, name, aType, cx, cy, fuLoad)
@@ -936,15 +1120,41 @@ func (dll *User32DLL) SetForegroundWindow(hWnd HWND) bool {
 	return r1 != 0
 }
 
+// SetMenuDefaultItem https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setmenudefaultitem
+// 預設選項會被加粗(bold)顯示
+// SetMenuDefaultItem(hMenu, 1026, false) // 使用id 1026當作預設選項
+// SetMenuDefaultItem(hMenu, 0, true) // 預設項為第1個, 第二個參數1表示以pos當作依據
+// SetMenuDefaultItem(hMenu, 1, true) // 預設項為第2個
+// SetMenuDefaultItem(hMenu, 0xffffffff, true) // no default item
+// 預設沒有使用此函數就不會有預設項目
+// 若設定多個預設項，只會以最後一個設定的為主
+func (dll *User32DLL) SetMenuDefaultItem(hmenu HMENU,
+	item uint32, // The identifier or position(zero-based) of the new default menu item or -1 (0xffffffff) for no default item. The meaning of this parameter depends on the value of fByPos.
+	byPos bool, // The meaning of uItem. If this parameter is FALSE, uItem is a menu item identifier. Otherwise, it is a menu item position.
+) syscall.Errno {
+	proc := dll.mustProc(PNSetMenuDefaultItem)
+	_, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hmenu),
+		uintptr(item),
+		UintptrFromBool(byPos),
+	)
+	return errno
+}
+
 // SetMenuItemInfo https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setmenuiteminfow
+// 可以改變Item的Info也能變更已存在的Item位置
+// 🧙 此方法只能對已存在的內容作異動，沒辦法用來新增項目
 // If the function succeeds, the return value is nonzero.
-func (dll *User32DLL) SetMenuItemInfo(hmenu HMENU, item UINT, fByPosition bool, lpmii /*const*/ *MENUITEMINFO) syscall.Errno {
+func (dll *User32DLL) SetMenuItemInfo(hmenu HMENU,
+	item uint32, // The identifier or position of the menu
+	byPosition bool, // 一個開關, true: item為Pos, false: item為ID
+	menuItemInfo /*const*/ *MENUITEMINFO) syscall.Errno {
 	proc := dll.mustProc(PNSetMenuItemInfo)
 	_, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hmenu),
 		uintptr(item),
-		UintptrFromBool(fByPosition),
-		uintptr(unsafe.Pointer(lpmii)),
+		UintptrFromBool(byPosition),
+		uintptr(unsafe.Pointer(menuItemInfo)),
 	)
 	return errno
 }
@@ -1043,7 +1253,10 @@ func (dll *User32DLL) ShowWindow(hWnd HWND, nCmdShow int32) bool {
 	return r1 != 0
 }
 
-// TrackPopupMenu https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-trackpopupmenu
+// TrackPopupMenu
+// Displays a shortcut menu at the specified location and tracks the selection of items on the menu. The shortcut menu can appear anywhere on the screen.
+// 顯示menu並且可以偵測對menu上做的選擇
+// https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-trackpopupmenu
 // 當TPM_RETURNCMD有設定的時候，且回傳值>0，表示該wParam的識別號，即:
 // cmd := TrackPopupMenu(hMenu, TPM_RETURNCMD, x, y, 0, hwnd, 0)
 // if (cmd) { SendMessage(hwnd, WM_COMMAND, cmd, 0) }
