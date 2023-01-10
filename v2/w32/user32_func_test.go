@@ -482,10 +482,15 @@ func ExampleUser32DLL_GetSystemMenu() {
 	_ = userDll.AppendMenu(menu, w32.MF_STRING, 1000, "Hello world")
 
 	// Delete all the items except the last.
-	for userDll.MustGetMenuItemCount(menu) > 1 {
-		if eno := userDll.DeleteMenu(menu, 0, w32.MF_BYPOSITION); eno != 0 {
-			log.Println(eno)
+	/*
+		for userDll.MustGetMenuItemCount(menu) > 1 {
+			if eno := userDll.DeleteMenu(menu, 0, w32.MF_BYPOSITION); eno != 0 {
+				log.Println(eno)
+			}
 		}
+	*/
+	if eno := userDll.DeleteMenu(menu, 1000, w32.MF_BYCOMMAND); eno != 0 {
+		log.Println(eno)
 	}
 
 	// Optional 本範例就算不呼叫DrawMenuBar依然可以正常工作
