@@ -137,7 +137,7 @@ func ExampleNOTIFYICONDATA_SetTimeout() {
 }
 
 // https://www.programcreek.com/python/?code=IronLanguages%2Fironpython2%2Fironpython2-master%2FSrc%2FStdLib%2FLib%2Fsite-packages%2Fwin32%2FDemos%2Fwin32gui_taskbar.py
-//
+// https://stackoverflow.com/a/75067164/9935654
 // 如果因為不正常結束而有殘留的ShellNotifyIcon存在，可以用以下方式刪掉
 // 1. HKEY_CURRENT_USER\SOFTWARE\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\TrayNotify
 // 2. (備份整個TrayNotify資料夾，以防萬一)
