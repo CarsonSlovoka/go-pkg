@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"testing"
 	"time"
+	"unicode/utf16"
 	"unsafe"
 )
 
@@ -199,6 +200,7 @@ func ExampleShellDLL_ShellNotifyIcon() {
 
 	hInstance := w32.HINSTANCE(kernel32dll.GetModuleHandle(""))
 	const WMNotifyIconMsg = w32.WM_APP + 123 // 定義notifyIcon會觸發的訊息ID
+	const WMNotifyIconMsg2 = w32.WM_APP + 124
 	// Create a window https://github.com/CarsonSlovoka/go-pkg/blob/efe1c50fa40229c299232fe3b236135b1046ef35/v2/w32/user32_func_test.go#L457-L659
 	go func(wndClassName, wndWindowName string, ch chan<- w32.HWND) {
 		// 定義訊息處理函數
@@ -216,7 +218,10 @@ func ExampleShellDLL_ShellNotifyIcon() {
 				return 0
 			case w32.WM_CREATE:
 				ch <- hwnd
+			case WMNotifyIconMsg2:
+				log.Println("NOTIFYICONDATA.UID", wParam) // 如果此訊息的觸發是由系統發送(即非透過SendMessage、PosstMessage)，那麼wParam表示UID
 			case WMNotifyIconMsg:
+				log.Println("NOTIFYICONDATA.UID", wParam)
 				switch lParam {
 				case w32.WM_MOUSEMOVE: // 當滑鼠在shellNotifyIcon附近移動的時候，也會觸發此命令
 					log.Println("WMNotifyIconMsg WM_MOUSEMOVE")
@@ -244,6 +249,7 @@ func ExampleShellDLL_ShellNotifyIcon() {
 					log.Println("WMNotifyIconMsg->WM_RBUTTONUP")
 					hMenu := user32dll.CreatePopupMenu()
 					_ = user32dll.AppendMenu(hMenu, w32.MF_STRING, 1023, "Display Dialog")
+					_ = user32dll.SetMenuDefaultItem(hMenu, 0, true) // highlight第一個項目(加粗)
 					_ = user32dll.AppendMenu(hMenu, w32.MF_STRING, 1024, "Say Hello 哈囉！")
 					var menuItemInfo w32.MENUITEMINFO
 					menuItemInfo.CbSize = uint32(unsafe.Sizeof(menuItemInfo))
@@ -359,7 +365,7 @@ func ExampleShellDLL_ShellNotifyIcon() {
 		notifyIconData = w32.NOTIFYICONDATA{
 			CbSize: 968,
 			HWnd:   hwndTarget, // 消息會往這個hwnd傳送。在啟用NIF_MESSAGE之後，告知UCallbackMessage的訊息ID，當有屬於NotifyIcon的事件時{NIN_BALLOONUSERCLICK, WM_MOUSEMOVE, ...}，就會傳送該訊息ID
-
+			UID:    888,        // WndProc收到來自於此NotifyIcon的事件，其wParam就會設定為此UID
 			// 以下兩個可以都不要設定，即不需要:w32.NIF_GUID以及GuidItem，弄了之後很有可能會遇到在NIM_ADD的時候失敗，最後只能把機瑪砍掉才會正常。但不設定都不會遇到問題。
 			// UFlags:   w32.NIF_GUID, // NIF_GUID有設定就可以讓GuidItem生效
 			// GuidItem: guid,
@@ -417,9 +423,9 @@ func ExampleShellDLL_ShellNotifyIcon() {
 			// 所以建議把hIcon與hBalloonIcon都設定就不用擔心是XP還是新版本的問題
 
 			// 氣球圖標
-			hIconQuestion, _ := user32dll.LoadIcon(0, w32.MakeIntResource(w32.IDI_EXCLAMATION))
-			notifyIconData.HIcon = hIconQuestion // myHICON 也可以用應用程式圖標，但建議可以用系統圖標來區分訊息的種類(question, warning, error, ...)
-			notifyIconData.HBalloonIcon = hIconQuestion
+			hIconExclamation, _ := user32dll.LoadIcon(0, w32.MakeIntResource(w32.IDI_EXCLAMATION))
+			notifyIconData.HIcon = hIconExclamation // myHICON 也可以用應用程式圖標，但建議可以用系統圖標來區分訊息的種類(question, warning, error, ...)
+			notifyIconData.HBalloonIcon = hIconExclamation
 		}
 	}
 
@@ -439,6 +445,42 @@ func ExampleShellDLL_ShellNotifyIcon() {
 		_, _, _ = user32dll.SendMessage(hwndTarget, w32.WM_DESTROY, 0, 0)
 		<-chanWin
 		log.Fatalf("NIM_MODIFY ERROR")
+	}
+
+	// 再新增一個NOTIFYICONDATA來驗證UID
+	// 如果兩個UID相同，後面所新增的會NIM_ADD失敗
+	// UID可以讓一個HWND同時擁有多個NotifyIcon
+	{
+
+		notifyIconData2 := w32.NOTIFYICONDATA{
+			CbSize: 968,
+			HWnd:   hwndTarget,
+			// UID:    888, // 錯誤，這個已經在前面創建使用過了
+			UID: 889,
+			UFlags: 0 | // 使用的NIF開頭(NotifyIcon Flag)
+				w32.NIF_ICON | // HIcon // main Icon
+				w32.NIF_INFO | // SzInfo, SzInfoTitle
+				w32.NIF_TIP | // SzTip
+				w32.NIF_MESSAGE, // UCallbackMessage
+			DwInfoFlags: 0 | // 使用的是NIIF開頭(NotifyIcon Info Flag)
+				w32.NIIF_USER | w32.NIIF_LARGE_ICON | // HBalloonIcon
+				w32.NIIF_NOSOUND, // 不要有彈出音效
+			HIcon:            userDll.MustLoadIcon(0, w32.MakeIntResource(w32.IDI_EXCLAMATION)),
+			HBalloonIcon:     userDll.MustLoadIcon(0, w32.MakeIntResource(w32.IDI_QUESTION)),
+			UCallbackMessage: WMNotifyIconMsg2,
+		}
+
+		copy(notifyIconData2.SzInfo[:], utf16.Encode([]rune("SzInfo2 內文"+"\x00")))
+		copy(notifyIconData2.SzInfoTitle[:], utf16.Encode([]rune("SzInfoTitle2 標題"+"\x00")))
+		copy(notifyIconData2.SzTip[:], utf16.Encode([]rune("Hover message"+"\x00")))
+		if !shell32dll.ShellNotifyIcon(w32.NIM_ADD, &notifyIconData2) {
+			log.Println("NIM_ADD ERROR notifyIconData2")
+		}
+		defer func() {
+			if !shell32dll.ShellNotifyIcon(w32.NIM_DELETE, &notifyIconData2) {
+				log.Println("NIM_DELETE ERROR")
+			}
+		}()
 	}
 
 	// 傳送自定義的訊息到notifyIcon上
