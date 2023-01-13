@@ -10,6 +10,7 @@ import (
 const (
 	PNCLSIDFromProgID  ProcName = "CLSIDFromProgID"
 	PNCLSIDFromString  ProcName = "CLSIDFromString"
+	PNCoCreateGuid     ProcName = "CoCreateGuid"
 	PNCoCreateInstance ProcName = "CoCreateInstance"
 	PNCoInitialize     ProcName = "CoInitialize"
 	PNCoInitializeEx   ProcName = "CoInitializeEx"
@@ -28,6 +29,7 @@ func NewOle32DLL(procList ...ProcName) *Ole32DLL {
 		procList = []ProcName{
 			PNCLSIDFromProgID,
 			PNCLSIDFromString,
+			PNCoCreateGuid,
 			PNCoCreateInstance,
 			PNCoInitialize,
 			PNCoInitializeEx,
@@ -83,6 +85,16 @@ func (dll *Ole32DLL) CoCreateInstance(clsID *GUID,
 		uintptr(unsafe.Pointer(&unk)),
 	)
 	return unk, syscall.Errno(hr)
+}
+
+// CoCreateGuid https://learn.microsoft.com/en-us/windows/win32/api/combaseapi/nf-combaseapi-cocreateguid?redirectedfrom=MSDN
+// Creates a GUID, a unique 128-bit integer used for CLSIDs and interface identifiers.
+func (dll *Ole32DLL) CoCreateGuid(guid *GUID) HRESULT {
+	proc := dll.mustProc(PNCoCreateGuid)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(unsafe.Pointer(guid)),
+	)
+	return HRESULT(r1)
 }
 
 // CoInitialize https://learn.microsoft.com/en-us/windows/win32/api/objbase/nf-objbase-coinitialize

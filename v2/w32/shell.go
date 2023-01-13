@@ -21,13 +21,13 @@ type NOTIFYICONDATA struct {
 	UCallbackMessage uint32
 	HIcon            HICON
 	// if ... // szTip有兩種選擇，一種長度採用128, 另一種長度使用64
-	SzTip [128]uint16 // 指的是tooltip的訊息內容 // A為CHAR byte W為WCHAR: uint16
+	SzTip [128]uint16 // message when the mouse hovering // A為CHAR byte W為WCHAR: uint16
 	// else ...
 	// SzTip            [64]uint16
 	// endif
 	DwState     uint32
 	DwStateMask uint32
-	SzInfo      [256]uint16 // A CHAR byte , W WCHAR: uint16
+	SzInfo      [256]uint16 // body message // A CHAR byte , W WCHAR: uint16
 
 	/*
 			union {
@@ -37,7 +37,7 @@ type NOTIFYICONDATA struct {
 	*/
 	union1 uint32 // 可以表示:uTimeout或者uVersion，不過uTimeout只在windows XP有在用而已 // https://docs.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shell_notifyicona#remarks
 
-	SzInfoTitle  [64]uint16 // A CHAR byte , W WCHAR: uint16
+	SzInfoTitle  [64]uint16 // Title // A CHAR byte , W WCHAR: uint16
 	DwInfoFlags  uint32     // NIIF_NONE, NIIF_INFO,
 	GuidItem     GUID
 	HBalloonIcon HICON

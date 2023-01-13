@@ -409,3 +409,16 @@ func Test_wmi(t *testing.T) {
 		item.Release()
 	}
 }
+
+func ExampleOle32DLL_CoCreateGuid() {
+	// 創建三組GUID，可以發現他們所產生的內容都不一樣
+	for i := 0; i < 3; i++ {
+		var guid w32.GUID
+		if eno := oleDll.CoCreateGuid(&guid); eno != 0 {
+			log.Println(syscall.Errno(eno))
+		}
+		// {46997087-EADB-4C19-844E-D97A5B41D892}
+		log.Println(guid.String())
+	}
+	// Output:
+}
