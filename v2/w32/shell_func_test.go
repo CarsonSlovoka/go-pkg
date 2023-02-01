@@ -62,6 +62,42 @@ func ExampleShellDLL_ExtractIcon() {
 	// Output:
 }
 
+func ExampleShellDLL_ShellExecute() {
+	_, _ = shellDll.ShellExecute(0, "open", "https://stackoverflow.com/", "", "", w32.SW_SHOWNORMAL)
+	_, _ = shellDll.ShellExecute(0, "explore", os.Getenv("programData"), "", "", w32.SW_SHOWNORMAL)
+	_, _ = shellDll.ShellExecute(0, "runas", "powershell", "", "", w32.SW_SHOWNORMAL)
+	if hInstance, err := shellDll.ShellExecute(0, "notExistCommand", "https://stackoverflow.com/", "", "", w32.SW_SHOWNORMAL); err != 0 {
+		// hInstance must < 32 when err != nil
+		if int(hInstance) == w32.SE_ERR_NOASSOC {
+			log.Println("true")
+		}
+		log.Println(hInstance, err)
+	}
+}
+
+func ExampleShellDLL_ShellExecuteEx() {
+	var info w32.ShellExeCuteInfo
+	// info.LpVerb = &(utf16.Encode([]rune("open" + "\x00")))[0]           // 可以用nil，使用預設.
+	info.LpFile = &(utf16.Encode([]rune("powershell.exe" + "\x00")))[0] // or C:\\xxx.exe
+	info.Size = uint32(unsafe.Sizeof(info))
+	info.Mask = w32.SEE_MASK_NOCLOSEPROCESS
+	info.NShow = w32.SW_SHOW
+	if eno := shellDll.ShellExecuteEx(&info); eno != 0 {
+		log.Fatal(eno)
+	}
+	// kernelDll.WaitForSingleObject(info.HProcess, w32.INFINITE)
+	rtnVal := kernelDll.WaitForSingleObject(info.HProcess, 1000) // 1 second
+	switch rtnVal {
+	case w32.WAIT_TIMEOUT:
+		log.Println("timeout")
+	case w32.WAIT_OBJECT_0: // 0
+		if exitCode, eno := kernelDll.GetExitCodeProcess(info.HProcess); eno == 0 {
+			log.Println("exitCode", exitCode) // 您可以在powershell之中輸入: exit(N) 其中N為想要測試的錯誤代碼，即可測試. 其中 exit(-1) 得到的是4294967295為uint32: 0xffffffff
+		}
+	}
+	// Output:
+}
+
 // 使用ExtractIcon來計算該檔案擁有的圖標數量
 func ExampleShellDLL_ExtractIcon_count() {
 	shell32dll := w32.NewShellDLL(

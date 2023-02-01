@@ -29,6 +29,7 @@ const (
 
 	PNGetCurrentThread     ProcName = "GetCurrentThread"
 	PNGetCurrentThreadId   ProcName = "GetCurrentThreadId"
+	PNGetExitCodeProcess   ProcName = "GetExitCodeProcess"
 	PNGetLastError         ProcName = "GetLastError"
 	PNGetModuleFileName    ProcName = "GetModuleFileNameW"
 	PNGetModuleHandle      ProcName = "GetModuleHandleW"
@@ -60,6 +61,8 @@ const (
 	PNTerminateProcess ProcName = "TerminateProcess"
 
 	PNUpdateResource ProcName = "UpdateResourceW"
+
+	PNWaitForSingleObject ProcName = "WaitForSingleObject"
 
 	PNWriteFile ProcName = "WriteFile"
 )
@@ -93,6 +96,7 @@ func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 
 			PNGetCurrentThread,
 			PNGetCurrentThreadId,
+			PNGetExitCodeProcess,
 			PNGetLastError,
 			PNGetModuleFileName,
 			PNGetModuleHandle,
@@ -124,6 +128,8 @@ func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 			PNTerminateProcess,
 
 			PNUpdateResource,
+
+			PNWaitForSingleObject,
 
 			PNWriteFile,
 		}
@@ -313,6 +319,18 @@ func (dll *Kernel32DLL) GetCurrentThreadId() uint32 {
 	proc := dll.mustProc(PNGetCurrentThreadId)
 	r1, _, _ := syscall.SyscallN(proc.Addr())
 	return uint32(r1)
+}
+
+// GetExitCodeProcess https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getexitcodeprocess?redirectedfrom=MSDN
+// If the function succeeds, the return value is nonzero.
+func (dll *Kernel32DLL) GetExitCodeProcess(hProcess HANDLE) (uint32, syscall.Errno) {
+	var exitCode uint32
+	proc := dll.mustProc(PNGetExitCodeProcess)
+	_, _, eno := syscall.SyscallN(proc.Addr(),
+		uintptr(hProcess),
+		uintptr(unsafe.Pointer(&exitCode)),
+	)
+	return exitCode, eno
 }
 
 func (dll *Kernel32DLL) GetLastError() uint32 {
@@ -587,6 +605,17 @@ func (dll *Kernel32DLL) UpdateResource(handle HANDLE,
 		uintptr(cb),
 	)
 	return r1 == 1
+}
+
+// WaitForSingleObject https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitforsingleobject
+// return value: WAIT_ABANDONED, WAIT_OBJECT_0, WAIT_TIMEOUT, WAIT_FAILED
+func (dll *Kernel32DLL) WaitForSingleObject(handle HANDLE, milliseconds uint32) uint32 {
+	proc := dll.mustProc(PNWaitForSingleObject)
+	r, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(handle),
+		uintptr(milliseconds),
+	)
+	return uint32(r)
 }
 
 // WriteFile https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-writefile

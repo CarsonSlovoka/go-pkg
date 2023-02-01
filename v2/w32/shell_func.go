@@ -10,6 +10,8 @@ import (
 const (
 	PNExtractIcon ProcName = "ExtractIconW"
 
+	PNShellExecute    ProcName = "ShellExecuteW"
+	PNShellExecuteEx  ProcName = "ShellExecuteExW"
 	PNShellNotifyIcon ProcName = "Shell_NotifyIconW"
 )
 
@@ -25,6 +27,8 @@ func NewShellDLL(procList ...ProcName) *ShellDLL {
 		procList = []ProcName{
 			PNExtractIcon,
 
+			PNShellExecute,
+			PNShellExecuteEx,
 			PNShellNotifyIcon,
 		}
 	}
@@ -40,8 +44,8 @@ func NewShellDLL(procList ...ProcName) *ShellDLL {
 // - -1 返回圖標總數. 如果是exe, dll返回RT_GROUP_ICON資源數量, .ico文件返回1
 // - 對於其他不等於-1的負數，表示要取得的圖標資源下標值，例如-3表示取得第三個圖標句柄
 func (dll *ShellDLL) ExtractIcon(hInst uintptr, // 透過哪一個對象來呼叫此dll函數，一般用本身應用程式自身0就可以了
-	exeFileName string,                         // {相對路徑, 絕對路徑, 只有運用程式名稱(要系統路徑能找到)}，這三類都可以
-	nIconIndex int,                             // 雖然我們用的是int，但它不影響轉成uintptr的結果: https://go.dev/play/p/kv17S1IfWGB
+	exeFileName string, // {相對路徑, 絕對路徑, 只有運用程式名稱(要系統路徑能找到)}，這三類都可以
+	nIconIndex int, // 雖然我們用的是int，但它不影響轉成uintptr的結果: https://go.dev/play/p/kv17S1IfWGB
 ) HICON {
 	proc := dll.mustProc(PNExtractIcon)
 	hIcon, _, _ := syscall.SyscallN(proc.Addr(),
@@ -50,6 +54,39 @@ func (dll *ShellDLL) ExtractIcon(hInst uintptr, // 透過哪一個對象來呼�
 		uintptr(nIconIndex),
 	)
 	return HICON(hIcon)
+}
+
+// ShellExecute https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shellexecutew
+// If the function succeeds, it returns a value greater than 32 (Hinstance)
+// 如果錯誤Hinstance的數值其實和Errno的數值是一樣的
+func (dll *ShellDLL) ShellExecute(hwnd HWND,
+	operation, // edit, explore, find, print, runas, NULL
+	file,
+	paras,
+	wkDir string, // If this value is NULL or "", the current working directory is used
+	showCmd int32, // SW_SHOWNORMAL
+) (HINSTANCE, syscall.Errno) {
+	proc := dll.mustProc(PNShellExecute)
+	r1, _, eno := syscall.SyscallN(proc.Addr(),
+		uintptr(hwnd),
+		UintptrFromStr(operation),
+		UintptrFromStr(file),
+		UintptrFromStr(paras),
+		UintptrFromStr(wkDir),
+		uintptr(showCmd),
+	)
+	return HINSTANCE(r1), eno
+}
+
+// ShellExecuteEx https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shellexecuteexw
+// Returns TRUE if successful; otherwise, FALSE.
+func (dll *ShellDLL) ShellExecuteEx(info *ShellExeCuteInfo) syscall.Errno {
+	proc := dll.mustProc(PNShellExecuteEx)
+	_, _, eno := syscall.SyscallN(proc.Addr(),
+		uintptr(unsafe.Pointer(info)),
+	)
+	// return r1 != 0, eno
+	return eno
 }
 
 // ShellNotifyIcon https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shell_notifyiconw
