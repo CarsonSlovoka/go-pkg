@@ -965,7 +965,7 @@ func ExampleUser32DLL_CreateWindowEx() {
 		}()
 
 		fmt.Println("CreateWindowEx")
-		if hwnd, errno = user32dll.CreateWindowEx(0,
+		if hwnd, errno = user32dll.CreateWindowEx(0, /* | w32.WS_EX_TOOLWINDOW 如果不想要讓應用程式出現在任務欄可以考慮加上此屬性 */
 			className,
 			windowName,              // 視窗左上角的標題名稱
 			w32.WS_OVERLAPPEDWINDOW, // 這項包含了: WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX // 如果不想要最小和最大化按鈕要在這邊調整，而關閉按鈕則是需要透過class註冊的時候就設定要還是不要
@@ -1019,6 +1019,11 @@ func ExampleUser32DLL_CreateWindowEx() {
 		// 以下為模擬外層程式，向視窗發送訊息
 		{
 			fmt.Println("ShowWindow")
+			if false {
+				_, _ = user32dll.SetWindowLongPtr(hwnd, w32.GWL_EXSTYLE, uintptr(user32dll.GetWindowLong(hwnd, w32.GWL_EXSTYLE)|w32.WS_EX_TOOLWINDOW)) // 可以之後透過此方法來修改WS_EX屬性
+				_, _ = user32dll.SetWindowLongPtr(hwnd, w32.GWL_STYLE, uintptr(user32dll.GetWindowLong(hwnd, w32.GWL_STYLE)&^w32.WS_THICKFRAME))       // 移除WS某屬性
+			}
+
 			user32dll.ShowWindow(hwnd, w32.SW_MAXIMIZE)
 
 			fmt.Println("CloseWindow")                            // 僅是縮小視窗

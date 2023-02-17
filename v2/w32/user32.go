@@ -259,8 +259,8 @@ const (
 // GetWindowLong and GetWindowLongPtr constants
 // https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowlonga#parameters
 const (
-	GWL_EXSTYLE     = -20
-	GWL_STYLE       = -16 // window styles
+	GWL_EXSTYLE     = -20 // Extended window style 修改 WS_E_...屬性，例如: WS_EX_TOOLWINDOW
+	GWL_STYLE       = -16 // window styles 修改WS_...屬性，例如: WS_OVERLAPPEDWINDOW
 	GWL_WNDPROC     = -4
 	GWLP_WNDPROC    = -4
 	GWL_HINSTANCE   = -6
@@ -685,6 +685,7 @@ const (
 )
 
 // Extended window style constants
+// https://learn.microsoft.com/en-us/windows/win32/winmsg/extended-window-styles
 const (
 	WS_EX_DLGMODALFRAME    = 0x00000001
 	WS_EX_NOPARENTNOTIFY   = 0x00000004
@@ -692,7 +693,7 @@ const (
 	WS_EX_ACCEPTFILES      = 0x00000010
 	WS_EX_TRANSPARENT      = 0x00000020
 	WS_EX_MDICHILD         = 0x00000040
-	WS_EX_TOOLWINDOW       = 0x00000080
+	WS_EX_TOOLWINDOW       = 0x00000080 // not appear in the taskbar or in the dialog that appears when the user presses ALT+TAB
 	WS_EX_WINDOWEDGE       = 0x00000100
 	WS_EX_CLIENTEDGE       = 0x00000200
 	WS_EX_CONTEXTHELP      = 0x00000400

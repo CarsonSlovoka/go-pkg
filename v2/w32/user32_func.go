@@ -377,9 +377,10 @@ func (dll *User32DLL) CreatePopupMenu() HMENU {
 // If the function succeeds, the return value is a handle to the new window.
 // If the function fails, the return value is NULL.
 func (dll *User32DLL) CreateWindowEx(
-	dwExStyle DWORD,
-	lpClassName string, lpWindowName string,
-	dwStyle DWORD,
+	dwExStyle DWORD, // {WS_EX_TOOLWINDOW, ...} for example: https://learn.microsoft.com/en-us/windows/win32/winmsg/extended-window-styles
+	lpClassName string,
+	lpWindowName string,
+	dwStyle DWORD, // {WS_OVERLAPPEDWINDOW, ...} https://learn.microsoft.com/en-us/windows/win32/winmsg/window-styles
 	x int32, y int32, nWidth int32, nHeight int32,
 	hWndParent HWND,
 	hMenu HMENU,
