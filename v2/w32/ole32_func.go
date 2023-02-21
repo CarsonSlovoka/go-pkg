@@ -14,6 +14,7 @@ const (
 	PNCoCreateInstance ProcName = "CoCreateInstance"
 	PNCoInitialize     ProcName = "CoInitialize"
 	PNCoInitializeEx   ProcName = "CoInitializeEx"
+	PNCoTaskMemFree    ProcName = "CoTaskMemFree"
 	PNCoUnInitialize   ProcName = "CoUninitialize"
 )
 
@@ -33,6 +34,7 @@ func NewOle32DLL(procList ...ProcName) *Ole32DLL {
 			PNCoCreateInstance,
 			PNCoInitialize,
 			PNCoInitializeEx,
+			PNCoTaskMemFree,
 			PNCoUnInitialize,
 		}
 	}
@@ -119,6 +121,17 @@ func (dll *Ole32DLL) CoInitializeEx(
 		uintptr(dwCoInit),
 	)
 	return HRESULT(r1)
+}
+
+// CoTaskMemFree https://learn.microsoft.com/en-us/windows/win32/api/combaseapi/nf-combaseapi-cotaskmemfree
+// Frees a block of task memory previously allocated through a call to the CoTaskMemAlloc or CoTaskMemRealloc function.
+func (dll *Ole32DLL) CoTaskMemFree(
+	address unsafe.Pointer, // A pointer to the memory block to be freed. If this parameter is NULL, the function has no effect.
+) {
+	proc := dll.mustProc(PNCoTaskMemFree)
+	_, _, _ = syscall.SyscallN(proc.Addr(),
+		uintptr(address),
+	)
 }
 
 // CoUnInitialize https://learn.microsoft.com/en-us/windows/win32/api/combaseapi/nf-combaseapi-couninitialize

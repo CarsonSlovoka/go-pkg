@@ -422,3 +422,8 @@ func ExampleOle32DLL_CoCreateGuid() {
 	}
 	// Output:
 }
+
+func ExampleOle32DLL_CoTaskMemFree() {
+	oleDll.CoTaskMemFree(unsafe.Pointer(nil))
+	// Output:
+}
