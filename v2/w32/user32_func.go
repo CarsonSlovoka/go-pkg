@@ -84,9 +84,11 @@ const (
 	PNMapVirtualKey ProcName = "MapVirtualKeyW"
 	PNMessageBox    ProcName = "MessageBoxW"
 
-	PNPostMessage     ProcName = "PostMessageW"
-	PNPostQuitMessage ProcName = "PostQuitMessage"
-	PNPrintWindow     ProcName = "PrintWindow"
+	PNPostMessage       ProcName = "PostMessageW"
+	PNPostQuitMessage   ProcName = "PostQuitMessage"
+	PNPostThreadMessage ProcName = "PostThreadMessageW"
+
+	PNPrintWindow ProcName = "PrintWindow"
 
 	PNRegisterClass  ProcName = "RegisterClassW"
 	PNRegisterHotKey ProcName = "RegisterHotKey"
@@ -203,6 +205,8 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 
 			PNPostMessage,
 			PNPostQuitMessage,
+			PNPostThreadMessage,
+
 			PNPrintWindow,
 
 			PNRegisterClass,
@@ -1054,6 +1058,18 @@ func (dll *User32DLL) PostQuitMessage(nExitCode int32) {
 	_, _, _ = syscall.SyscallN(proc.Addr(),
 		uintptr(nExitCode),
 	)
+}
+
+// PostThreadMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-postthreadmessagew
+func (dll *User32DLL) PostThreadMessage(idThread, msg uint32, wParam, lParam uintptr) syscall.Errno {
+	proc := dll.mustProc(PNPostThreadMessage)
+	_, _, eno := syscall.SyscallN(proc.Addr(),
+		uintptr(idThread),
+		uintptr(msg),
+		wParam,
+		lParam,
+	)
+	return eno
 }
 
 // PrintWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-printwindow

@@ -380,6 +380,19 @@ func ExampleUser32DLL_PostMessage() {
 	}
 }
 
+func ExampleUser32DLL_PostThreadMessage() {
+	threadID := kernelDll.GetCurrentThreadId()
+
+	// 發送自定義消息至當前的隊列中
+	messageID := w32.WM_USER + 1
+
+	eno := userDll.PostThreadMessage(threadID, uint32(messageID), 0, 0)
+	if eno != 0 {
+		log.Println(eno)
+	}
+	// Output:
+}
+
 func ExampleUser32DLL_FindWindow() {
 	user32dll := w32.NewUser32DLL(
 		w32.PNFindWindow,
