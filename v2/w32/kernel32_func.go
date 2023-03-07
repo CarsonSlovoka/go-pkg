@@ -27,6 +27,7 @@ const (
 
 	PNFreeLibrary ProcName = "FreeLibrary"
 
+	PNGetConsoleWindow     ProcName = "GetConsoleWindow"
 	PNGetCurrentThread     ProcName = "GetCurrentThread"
 	PNGetCurrentThreadId   ProcName = "GetCurrentThreadId"
 	PNGetExitCodeProcess   ProcName = "GetExitCodeProcess"
@@ -94,6 +95,7 @@ func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 
 			PNFreeLibrary,
 
+			PNGetConsoleWindow,
 			PNGetCurrentThread,
 			PNGetCurrentThreadId,
 			PNGetExitCodeProcess,
@@ -305,6 +307,14 @@ func (dll *Kernel32DLL) FreeLibrary(hLibModule HMODULE) syscall.Errno {
 	proc := dll.mustProc(PNFreeLibrary)
 	_, _, errno := syscall.SyscallN(proc.Addr(), uintptr(hLibModule))
 	return errno
+}
+
+// GetConsoleWindow https://learn.microsoft.com/en-us/windows/console/getconsolewindow
+// NULL if there is no such associated console.
+func (dll *Kernel32DLL) GetConsoleWindow() HANDLE {
+	proc := dll.mustProc(PNGetConsoleWindow)
+	r1, _, _ := syscall.SyscallN(proc.Addr())
+	return HANDLE(r1)
 }
 
 // GetCurrentThread https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getcurrentthread

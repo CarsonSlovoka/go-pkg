@@ -157,6 +157,11 @@ func ExampleKernel32DLL_CreateProcess() {
 	// Output:
 }
 
+func ExampleKernel32DLL_GetConsoleWindow() {
+	log.Println(kernelDll.GetConsoleWindow())
+	// Output:
+}
+
 func ExampleKernel32DLL_GetNativeSystemInfo() {
 	kernel32dll := w32.NewKernel32DLL(w32.PNGetNativeSystemInfo)
 	info := kernel32dll.GetNativeSystemInfo()
