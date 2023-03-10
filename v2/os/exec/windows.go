@@ -52,7 +52,7 @@ func TaskKill(exeName string) error {
 // 此函數的特色:能刪除掉自身執行檔
 // 如果您選擇的是刪除自身執行檔，那麼callbackFunc，不應該寫得太複雜，因為結束動作是直接打開powershell運行，
 // 因此當您的callback要花很多時間，有可能還沒跑完就刪除了
-func ListenToDelete(ch chan string, cbFunc func(string, error)) {
+func ListenToDelete(ch chan string, cbFunc func(string, error), sysProcAttr *syscall.SysProcAttr) {
 	var err error
 	for {
 		select {
@@ -70,14 +70,30 @@ func ListenToDelete(ch chan string, cbFunc func(string, error)) {
 				continue
 			}
 			cmd := exec.Command("powershell", "del", filePath)
-			cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+			if sysProcAttr == nil {
+				cmd.SysProcAttr = &syscall.SysProcAttr{
+					HideWindow:    true,
+					CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP,
+				}
+			} else {
+				cmd.SysProcAttr = sysProcAttr
+			}
 			cbFunc(filePath, cmd.Start())
 		}
 	}
 }
 
+// Deprecated: Use the Cmd to instead of this.
 func CmdWithoutWindow(name string, args ...string) *exec.Cmd {
 	cmd := exec.Command(name, args...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	return cmd
+}
+
+func Cmd(name string, args []string, sysProcAttr *syscall.SysProcAttr) *exec.Cmd {
+	cmd := exec.Command(name, // 如果路徑不存在，會從系統路徑找尋
+		args...,
+	)
+	cmd.SysProcAttr = sysProcAttr
 	return cmd
 }

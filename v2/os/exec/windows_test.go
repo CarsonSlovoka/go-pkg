@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -145,5 +146,19 @@ func ExampleCmdWithoutWindow() {
 	}
 	log.Println(string(rtnBytes))
 
+	// Output:
+}
+
+func ExampleCmd() {
+	cmd := Cmd("powershell", []string{fmt.Sprintf("Get-FileHash %s -Algorithm md5 | select Hash,Path", os.Args[0])},
+		&syscall.SysProcAttr{
+			HideWindow:    false,
+			CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP,
+		})
+	rtnBytes, err := cmd.Output()
+	if err != nil {
+		return // <-- github action 會無法執行成功，為了避免影響測試，故不進行錯誤處理
+	}
+	log.Println(string(rtnBytes))
 	// Output:
 }
