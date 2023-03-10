@@ -75,7 +75,7 @@ func ExampleListenToDelete() {
 		}
 		// fmt.Printf("remove the file successful: %s\n", curFile) // 由於我們用start去運行，因此沒有錯誤只是代表呼叫成功，但不意味已經刪除該檔案了
 		fmt.Printf("call the del command successful: %s\n", curFile)
-	})
+	}, nil)
 	chanRemoveFile <- os.Args[0]
 	select {
 	case <-chanQuit:
@@ -107,7 +107,7 @@ func ExampleListenToDelete_multiple() {
 			return
 		}
 		fmt.Printf("call the del command successful: %s\n", curFile)
-	})
+	}, nil)
 
 	go func() {
 		var curFile string
