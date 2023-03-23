@@ -19,6 +19,7 @@ const (
 	PNCreateFile               ProcName = "CreateFileW"
 	PNCreateMutex              ProcName = "CreateMutexW"
 	PNCreateProcess            ProcName = "CreateProcessW"
+	PNCreateProcessAsUser      ProcName = "CreateProcessAsUserW"
 	PNCreateToolHelp32Snapshot ProcName = "CreateToolhelp32Snapshot"
 
 	PNEndUpdateResource ProcName = "EndUpdateResourceW"
@@ -90,6 +91,7 @@ func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 			PNCreateFile,
 			PNCreateMutex,
 			PNCreateProcess,
+			PNCreateProcessAsUser,
 			PNCreateToolHelp32Snapshot,
 
 			PNEndUpdateResource,
@@ -244,6 +246,35 @@ func (dll *Kernel32DLL) CreateProcess(applicationName string, cmd string,
 ) syscall.Errno {
 	proc := dll.mustProc(PNCreateProcess)
 	_, _, errno := syscall.SyscallN(proc.Addr(),
+		UintptrFromStr(applicationName),
+		UintptrFromStr(cmd),
+		uintptr(unsafe.Pointer(processAtt)),
+		uintptr(unsafe.Pointer(threadAttr)),
+		UintptrFromBool(isInherit),
+		uintptr(creationFlags),
+		lpEnvironment,
+		UintptrFromStr(currentDirectory),
+		uintptr(unsafe.Pointer(startupInfo)),
+		uintptr(unsafe.Pointer(processInformation)),
+	)
+	return errno
+}
+
+// CreateProcessAsUser https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessasuserw
+func (dll *Kernel32DLL) CreateProcessAsUser(
+	hToken HANDLE,
+	applicationName string, cmd string,
+	processAtt *SECURITY_ATTRIBUTES, threadAttr *SECURITY_ATTRIBUTES,
+	isInherit bool,
+	creationFlags uint32,
+	lpEnvironment uintptr,
+	currentDirectory string,
+	startupInfo *STARTUPINFO,
+	processInformation *PROCESS_INFORMATION,
+) syscall.Errno {
+	proc := dll.mustProc(PNCreateProcessAsUser)
+	_, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hToken),
 		UintptrFromStr(applicationName),
 		UintptrFromStr(cmd),
 		uintptr(unsafe.Pointer(processAtt)),

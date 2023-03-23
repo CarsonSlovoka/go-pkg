@@ -8,12 +8,16 @@ import (
 )
 
 const (
+	PNAddAccessAllowedAce ProcName = "AddAccessAllowedAce"
+
 	PNAllocateAndInitializeSid ProcName = "AllocateAndInitializeSid"
 
 	PNCheckTokenMembership ProcName = "CheckTokenMembership"
 
 	PNConvertSidToStringSid ProcName = "ConvertSidToStringSidW"
 	PNConvertStringSidToSid ProcName = "ConvertStringSidToSidW"
+
+	PNCreateRestrictedToken ProcName = "CreateRestrictedToken"
 
 	PNDuplicateToken ProcName = "DuplicateToken"
 
@@ -33,12 +37,16 @@ type AdApiDLL struct {
 func NewAdApi32DLL(procList ...ProcName) *AdApiDLL {
 	if len(procList) == 0 {
 		procList = []ProcName{
+			PNAddAccessAllowedAce,
+
 			PNAllocateAndInitializeSid,
 
 			PNCheckTokenMembership,
 
 			PNConvertSidToStringSid,
 			PNConvertStringSidToSid,
+
+			PNCreateRestrictedToken,
 
 			PNDuplicateToken,
 
@@ -53,6 +61,19 @@ func NewAdApi32DLL(procList ...ProcName) *AdApiDLL {
 	}
 	dll := newDll(DNAdApi32, procList)
 	return &AdApiDLL{dll}
+}
+
+// AddAccessAllowedAce https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-addaccessallowedace
+// errCode: ERROR_ALLOTTED_SPACE_EXCEEDED, ERROR_INVALID_ACL, ERROR_INVALID_SID, ERROR_REVISION_MISMATCH, ERROR_SUCCESS
+func (dll *AdApiDLL) AddAccessAllowedAce(acl *AccessAllowedAce, aceRevision uint32, accessMask uint32, pSid *SID) syscall.Errno {
+	proc := dll.mustProc(PNAddAccessAllowedAce)
+	_, _, eno := syscall.SyscallN(proc.Addr(),
+		uintptr(unsafe.Pointer(&acl)),
+		uintptr(aceRevision),
+		uintptr(accessMask),
+		uintptr(unsafe.Pointer(pSid)),
+	)
+	return eno
 }
 
 // AllocateAndInitializeSid https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-allocateandinitializesid
@@ -122,6 +143,29 @@ func (dll *AdApiDLL) ConvertStringSidToSid(sidStr string) (*SID, syscall.Errno) 
 		uintptr(unsafe.Pointer(sid)),
 	)
 	return *sid, eno
+}
+
+// CreateRestrictedToken https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-createrestrictedtoken
+func (dll *AdApiDLL) CreateRestrictedToken(existingTokenHandle HANDLE,
+	flags uint32,
+	disableSidCount uint32, sidsToDisable *SidAndAttributes,
+	deletePrivilegeCount uint32, privilegesToDelete *LuidAndAttributes,
+	restrictedSidCount uint32, sidsToRestrict *SidAndAttributes,
+) (HANDLE, syscall.Errno) {
+	var out *uintptr
+	proc := dll.mustProc(PNCreateRestrictedToken)
+	_, _, eno := syscall.SyscallN(proc.Addr(),
+		uintptr(existingTokenHandle),
+		uintptr(flags),
+		uintptr(disableSidCount),
+		uintptr(unsafe.Pointer(sidsToDisable)),
+		uintptr(deletePrivilegeCount),
+		uintptr(unsafe.Pointer(privilegesToDelete)),
+		uintptr(restrictedSidCount),
+		uintptr(unsafe.Pointer(sidsToRestrict)),
+		uintptr(unsafe.Pointer(out)),
+	)
+	return HANDLE(*out), eno
 }
 
 // DuplicateToken https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-duplicatetoken

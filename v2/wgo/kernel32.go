@@ -64,6 +64,7 @@ func (w *WGO) KillProcess(
 		errno1, errno2 syscall.Errno
 	)
 	for _, entry := range entrySlice {
+
 		handle, _ = w.kernel.OpenProcess(w32.PROCESS_TERMINATE, false, entry.Th32ProcessID)
 		if handle == 0 {
 			continue

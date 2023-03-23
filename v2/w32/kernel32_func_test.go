@@ -157,6 +157,31 @@ func ExampleKernel32DLL_CreateProcess() {
 	// Output:
 }
 
+func ExampleKernel32DLL_CreateProcessAsUser() {
+	var (
+		si w32.STARTUPINFO
+		pi w32.PROCESS_INFORMATION
+	)
+
+	if errno := kernelDll.CreateProcess("", // No module name (use command line)
+		filepath.Join(os.Getenv("windir"), "system32/cmd.exe")+" /C echo hello world",
+		nil,   // Process handle not inheritable
+		nil,   // Thread handle not inheritable
+		false, // Set handle inheritance to FALSE
+		0,     // No creation flags
+		0,     // Use parent's environment block
+		"",    // Use parent's starting directory
+		&si,   // Pointer to STARTUPINFO structure
+		&pi,   // Pointer to PROCESS_INFORMATION structure
+	); errno != 0 {
+		log.Println(errno)
+		return
+	}
+	_ = kernelDll.CloseHandle(pi.HProcess)
+	_ = kernelDll.CloseHandle(pi.HThread)
+	// Output:
+}
+
 func ExampleKernel32DLL_GetConsoleWindow() {
 	hwnd := kernelDll.GetConsoleWindow()
 	if hwnd != 0 {

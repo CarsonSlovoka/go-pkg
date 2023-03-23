@@ -638,6 +638,40 @@ func (s *SID) SubAuthority() []uint32 {
 	return subAuthorities
 }
 
+// SidAndAttributes SID_AND_ATTRIBUTES
+type SidAndAttributes struct {
+	Sid        *SID
+	Attributes uint32
+}
+
+// LUID https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-luid
+type LUID struct {
+	LowPart  uint32
+	HighPart int32
+}
+
+// LuidAndAttributes LUID_AND_ATTRIBUTES https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-luid_and_attributes
+type LuidAndAttributes struct {
+	Luid       LUID
+	Attributes uint32
+}
+
+// ACEHeader ACE_HEADER https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-ace_header
+type ACEHeader struct {
+	AceType  byte
+	AceFlags byte
+	AceSize  uint16
+}
+
+// type ACCESS_MASK uint32
+
+// AccessAllowedAce ACCESS_ALLOWED_ACE https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-access_allowed_ace
+type AccessAllowedAce struct {
+	Header   ACEHeader
+	Mask     uint32
+	SidStart uint32
+}
+
 const (
 	SECURITY_DIALUP_RID                 = 0x00000001
 	SECURITY_NETWORK_RID                = 0x00000002
