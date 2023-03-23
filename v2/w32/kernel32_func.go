@@ -25,9 +25,11 @@ const (
 
 	PNFindResource ProcName = "FindResourceW"
 
+	PNFreeConsole ProcName = "FreeConsole"
 	PNFreeLibrary ProcName = "FreeLibrary"
 
 	PNGetConsoleWindow     ProcName = "GetConsoleWindow"
+	PNGetCurrentProcess    ProcName = "GetCurrentProcess"
 	PNGetCurrentThread     ProcName = "GetCurrentThread"
 	PNGetCurrentThreadId   ProcName = "GetCurrentThreadId"
 	PNGetExitCodeProcess   ProcName = "GetExitCodeProcess"
@@ -45,6 +47,7 @@ const (
 
 	PNLoadLibrary  ProcName = "LoadLibraryW"
 	PNLoadResource ProcName = "LoadResource"
+	PNLocalFree    ProcName = "LocalFree"
 	PNLockResource ProcName = "LockResource"
 
 	PNProcess32First ProcName = "Process32FirstW"
@@ -93,9 +96,11 @@ func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 
 			PNFindResource,
 
+			PNFreeConsole,
 			PNFreeLibrary,
 
 			PNGetConsoleWindow,
+			PNGetCurrentProcess,
 			PNGetCurrentThread,
 			PNGetCurrentThreadId,
 			PNGetExitCodeProcess,
@@ -113,6 +118,7 @@ func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 
 			PNLoadLibrary,
 			PNLoadResource,
+			PNLocalFree,
 			PNLockResource,
 
 			PNProcess32First,
@@ -302,6 +308,14 @@ func (dll *Kernel32DLL) FindResource(hModule HMODULE, lpName, lpType *uint16) (H
 	return HRSRC(ret), errno
 }
 
+// FreeConsole https://learn.microsoft.com/en-us/windows/console/freeconsole
+// Consider using this method if you don't want to show the console anymore.
+func (dll *Kernel32DLL) FreeConsole() syscall.Errno {
+	proc := dll.mustProc(PNFreeConsole)
+	_, _, eno := syscall.SyscallN(proc.Addr())
+	return eno
+}
+
 // FreeLibrary https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-freelibrary
 func (dll *Kernel32DLL) FreeLibrary(hLibModule HMODULE) syscall.Errno {
 	proc := dll.mustProc(PNFreeLibrary)
@@ -311,8 +325,15 @@ func (dll *Kernel32DLL) FreeLibrary(hLibModule HMODULE) syscall.Errno {
 
 // GetConsoleWindow https://learn.microsoft.com/en-us/windows/console/getconsolewindow
 // NULL if there is no such associated console.
-func (dll *Kernel32DLL) GetConsoleWindow() HANDLE {
+func (dll *Kernel32DLL) GetConsoleWindow() HWND {
 	proc := dll.mustProc(PNGetConsoleWindow)
+	r1, _, _ := syscall.SyscallN(proc.Addr())
+	return HWND(r1)
+}
+
+// GetCurrentProcess https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getcurrentprocess
+func (dll *Kernel32DLL) GetCurrentProcess() HANDLE {
+	proc := dll.mustProc(PNGetCurrentProcess)
 	r1, _, _ := syscall.SyscallN(proc.Addr())
 	return HANDLE(r1)
 }
@@ -476,6 +497,15 @@ func (dll *Kernel32DLL) LoadResource(hModule HMODULE, hResInfo HRSRC) (HGLOBAL, 
 		uintptr(hResInfo),
 	)
 	return HGLOBAL(ret), errno
+}
+
+// LocalFree https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-localfree
+func (dll *Kernel32DLL) LocalFree(hMem uintptr) (HLOCAL, syscall.Errno) {
+	proc := dll.mustProc(PNLocalFree)
+	h, _, eno := syscall.SyscallN(proc.Addr(),
+		hMem,
+	)
+	return HLOCAL(h), eno
 }
 
 // LockResource https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-lockresource

@@ -9,6 +9,7 @@ var (
 	oleAutDll *w32.OleAut32DLL
 	shellDll  *w32.ShellDLL
 	gdiDll    *w32.Gdi32DLL
+	adApiDll  *w32.AdApiDLL
 )
 
 func init() {
@@ -18,6 +19,7 @@ func init() {
 	userDll = w32.NewUser32DLL()
 	shellDll = w32.NewShellDLL()
 	gdiDll = w32.NewGdi32DLL()
+	adApiDll = w32.NewAdApi32DLL()
 }
 
 func getTestHwnd() w32.HWND {

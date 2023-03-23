@@ -14,6 +14,7 @@ const (
 	DNNtdll    DllName = "ntdll.dll"
 	DNOle32    DllName = "Ole32.dll"
 	DNOleAut32 DllName = "OleAut32.dll" // ole auto
+	DNAdApi32  DllName = "Advapi32.dll"
 )
 
 type ProcName string

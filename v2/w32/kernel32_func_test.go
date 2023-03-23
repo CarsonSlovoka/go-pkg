@@ -158,7 +158,17 @@ func ExampleKernel32DLL_CreateProcess() {
 }
 
 func ExampleKernel32DLL_GetConsoleWindow() {
-	log.Println(kernelDll.GetConsoleWindow())
+	hwnd := kernelDll.GetConsoleWindow()
+	if hwnd != 0 {
+		userDll.ShowWindow(hwnd, w32.SW_HIDE)
+	}
+	// Output:
+}
+
+func ExampleKernel32DLL_FreeConsole() {
+	if eno := kernelDll.FreeConsole(); eno != 0 {
+		log.Println(eno)
+	}
 	// Output:
 }
 
