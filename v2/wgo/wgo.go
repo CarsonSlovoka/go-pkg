@@ -34,6 +34,7 @@ func NewWGO(dlls ...dllLike) *WGO {
 			w32.PNOpenProcess,
 			w32.PNProcess32First,
 			w32.PNProcess32Next,
+			w32.PNTerminateProcess,
 		)
 	}
 
