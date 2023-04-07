@@ -572,13 +572,13 @@ func (dll *User32DLL) FindWindow(className, windowName string) HWND {
 
 // FindWindowEx https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-findwindowexw
 // If the function fails, the return value is NULL.
-func (dll *User32DLL) FindWindowEx(hWndParent, hWndChildAfter uintptr, className, windowName string) HWND {
+func (dll *User32DLL) FindWindowEx(hWndParent, hWndChildAfter HWND, className, windowName string) HWND {
 	proc := dll.mustProc(PNFindWindowEx)
 	// lpClassName, _ := syscall.UTF16PtrFromString(className)
 	// lpWindowName, _ := syscall.UTF16PtrFromString(windowName)
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
-		hWndParent,
-		hWndChildAfter,
+		uintptr(hWndParent),
+		uintptr(hWndChildAfter),
 		UintptrFromStr(className), // uintptr(unsafe.Pointer(lpClassName)) // 這樣其實也可以，不過如果是NULL就會有問題，要給0
 		UintptrFromStr(windowName),
 	)
@@ -840,6 +840,9 @@ func (dll *User32DLL) GetWindowRect(hWnd HWND,
 }
 
 // GetWindowText
+// If the target window is owned by the current process, GetWindowText causes a WM_GETTEXT message to be sent to the specified window or control.
+// If the target window is owned by another process and has a caption, GetWindowText retrieves the window caption text. If the window does not have a caption, the return value is a null string.
+// 如果window是current process會向其發送WM_GETTEXT, 若不是則會嘗試獲取該窗口的標題名稱，如果沒有標題名稱會返回空字串
 // https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowtextw
 func (dll *User32DLL) GetWindowText(hwnd HWND) (string, error) {
 	proc := dll.mustProc(PNGetWindowText)
@@ -1256,7 +1259,7 @@ func (dll *User32DLL) SendInput(arraySize uint32,
 
 // SendMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendmessage
 // 注意，他會等待回應，會造成程式當掉的錯覺 https://social.msdn.microsoft.com/Forums/en-US/6900f74f-6ece-47da-88fc-f9c8bcd40206/sendmessage-api-slow?forum=wpf
-func (dll *User32DLL) SendMessage(hwnd HWND, wmMsgID uint32, wParam, lParam uintptr) (r1, r2 uintptr, err error) {
+func (dll *User32DLL) SendMessage(hwnd HWND, wmMsgID uint32, wParam, lParam uintptr) (r1, r2 uintptr, err syscall.Errno) {
 	proc := dll.mustProc(PNSendMessage)
 	return syscall.SyscallN(proc.Addr(), uintptr(hwnd), uintptr(wmMsgID), wParam, lParam)
 }

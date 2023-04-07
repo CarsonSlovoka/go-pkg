@@ -415,11 +415,36 @@ func ExampleUser32DLL_FindWindow() {
 }
 
 // 使用FindWindowEx找到視窗的HWND接著發送WM_SETTEXT來改變標題名稱
+// 接著查找子窗口Edit獲得當前正在編輯的文本內容
 func ExampleUser32DLL_FindWindowEx() {
 	hwnd := userDll.FindWindowEx(0, 0, "Notepad", "")
+	// userDll.FindWindow("Notepad", "") // 同上
+	if hwnd == 0 {
+		return // 窗口不存在
+	}
+
+	// 修改標題
 	_, _, eno := userDll.SendMessage(hwnd, w32.WM_SETTEXT, 0, uintptr(unsafe.Pointer(&utf16.Encode([]rune("hello world!" + "\x00"))[0])))
-	if eno != nil {
+	if eno != 0 {
 		log.Println(eno)
+	}
+
+	// 獲取記事本正在編輯的文本內容
+	{
+		// 找到記事本的視窗句柄
+		// userDll.FindWindow("Notepad", "") // 使用這個只能得到記事本的窗口標題
+		hwnd = userDll.FindWindowEx(hwnd, 0, "Edit", "") // 記事本中還有一個Edit這個子窗口，他可以響應WM_GETTEXT與WM_GETTEXTLENGTH這兩個消息 https://stackoverflow.com/a/63494725/9935654
+
+		textLength, _, _ := userDll.SendMessage(hwnd, w32.WM_GETTEXTLENGTH, 0, 0) // 這的每一個元素是uint16
+		textLength += 1
+
+		// 向記事本發送WM_GETTEXT消息，獲取內容
+		buf := make([]uint16, textLength)
+		if _, _, eno = userDll.SendMessage(hwnd, w32.WM_GETTEXT, textLength, uintptr(unsafe.Pointer(&buf[0]))); eno != 0 {
+			log.Fatal(eno)
+		}
+
+		log.Println("Text:", syscall.UTF16ToString(buf))
 	}
 	// Output:
 }
