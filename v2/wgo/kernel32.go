@@ -81,3 +81,22 @@ func (w *WGO) KillProcess(
 		}
 	}
 }
+
+func (w *WGO) KillProcessByPID(processID uint32) (eno syscall.Errno) {
+	var handle w32.HANDLE
+	handle, eno = w.kernel.OpenProcess(w32.PROCESS_TERMINATE, false, processID)
+	if eno != 0 {
+		return
+	}
+	defer func() {
+		eno2 := w.kernel.CloseHandle(handle)
+		if eno == 0 { // 如果回傳值已經有錯誤就以該錯誤為主
+			eno = eno2
+		}
+	}()
+	eno = w.kernel.TerminateProcess(handle, 0)
+	if eno != 0 {
+		return
+	}
+	return 0
+}

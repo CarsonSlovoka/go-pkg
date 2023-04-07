@@ -7,6 +7,7 @@ import (
 
 type WGO struct {
 	kernel *w32.Kernel32DLL
+	psApi  *w32.PsApiDLL
 }
 
 type dllLike interface {
@@ -21,6 +22,8 @@ func NewWGO(dlls ...dllLike) *WGO {
 		switch dll.Name() {
 		case string(w32.DNKernel32):
 			w.kernel = dll.(*w32.Kernel32DLL)
+		case string(w32.DNPsApi):
+			w.psApi = dll.(*w32.PsApiDLL)
 		}
 	}
 
@@ -31,6 +34,15 @@ func NewWGO(dlls ...dllLike) *WGO {
 			w32.PNOpenProcess,
 			w32.PNProcess32First,
 			w32.PNProcess32Next,
+		)
+	}
+
+	if w.psApi == nil {
+		w.psApi = w32.NewPsApiDLL(
+			w32.PNGetModuleFileNameExW,
+
+			w32.PNEnumProcesses,
+			w32.PNEnumProcessModules,
 		)
 	}
 
