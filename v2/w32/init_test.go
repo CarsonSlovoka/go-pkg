@@ -10,6 +10,7 @@ var (
 	shellDll  *w32.ShellDLL
 	gdiDll    *w32.Gdi32DLL
 	adApiDll  *w32.AdApiDLL
+	psApiDll  *w32.PsApiDLL
 )
 
 func init() {
@@ -20,6 +21,7 @@ func init() {
 	shellDll = w32.NewShellDLL()
 	gdiDll = w32.NewGdi32DLL()
 	adApiDll = w32.NewAdApi32DLL()
+	psApiDll = w32.NewPsApiDLL()
 }
 
 func getTestHwnd() w32.HWND {

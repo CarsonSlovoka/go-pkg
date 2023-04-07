@@ -1,8 +1,6 @@
 package w32
 
-import (
-	"unsafe"
-)
+import "unsafe"
 
 // WINLANG_H
 const (
@@ -577,18 +575,20 @@ const (
 	SPECIFIC_RIGHTS_ALL = 0x0000FFFF
 )
 
+// https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights
+
 const (
-	PROCESS_TERMINATE                 = 0x0001
+	PROCESS_TERMINATE                 = 0x0001 // Required to terminate a process using TerminateProcess.
 	PROCESS_CREATE_THREAD             = 0x0002
 	PROCESS_SET_SESSIONID             = 0x0004
 	PROCESS_VM_OPERATION              = 0x0008
-	PROCESS_VM_READ                   = 0x0010
+	PROCESS_VM_READ                   = 0x0010 // Required to read memory in a process using ReadProcessMemory.
 	PROCESS_VM_WRITE                  = 0x0020
 	PROCESS_DUP_HANDLE                = 0x0040
 	PROCESS_CREATE_PROCESS            = 0x0080
 	PROCESS_SET_QUOTA                 = 0x0100
 	PROCESS_SET_INFORMATION           = 0x0200
-	PROCESS_QUERY_INFORMATION         = 0x0400
+	PROCESS_QUERY_INFORMATION         = 0x0400 // Required to retrieve certain information about a process, such as its token, exit code, and priority class (see OpenProcessToken)
 	PROCESS_SUSPEND_RESUME            = 0x0800
 	PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 	PROCESS_SET_LIMITED_INFORMATION   = 0x2000
@@ -637,6 +637,19 @@ func (s *SID) SubAuthority() []uint32 {
 	}
 	return subAuthorities
 }
+
+// ACL: Access Control List
+// DACL: Discretionary Access Control List.
+const (
+	ACL_REVISION1    uint32 = 1
+	ACL_REVISION     uint32 = 2
+	ACL_REVISION2    uint32 = 2
+	ACL_REVISION3    uint32 = 3
+	ACL_REVISION4    uint32 = 4
+	ACL_REVISION_DS  uint32 = 4
+	MIN_ACL_REVISION uint32 = 2
+	MAX_ACL_REVISION uint32 = 4
+)
 
 const (
 	SECURITY_DIALUP_RID                 = 0x00000001

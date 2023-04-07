@@ -596,6 +596,7 @@ func (dll *Kernel32DLL) SizeofResource(hModule HMODULE, hResInfo HRSRC) (uint32,
 }
 
 // OpenProcess https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-openprocess
+// 🧙 When you are finished with the handle, be sure to close it using the CloseHandle function.
 // If the function fails, the return value is NULL.
 func (dll *Kernel32DLL) OpenProcess(desiredAccess uint32, isInheritHandle bool, processID uint32) (HANDLE, syscall.Errno) {
 	proc := dll.mustProc(PNOpenProcess)
@@ -608,10 +609,11 @@ func (dll *Kernel32DLL) OpenProcess(desiredAccess uint32, isInheritHandle bool, 
 }
 
 // TerminateProcess https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminateprocess
-func (dll *Kernel32DLL) TerminateProcess(handle HANDLE, exitCode uint32) syscall.Errno {
+// hProcess: The handle must have the PROCESS_TERMINATE access right.
+func (dll *Kernel32DLL) TerminateProcess(hProcess HANDLE, exitCode uint32) syscall.Errno {
 	proc := dll.mustProc(PNTerminateProcess)
 	_, _, errno := syscall.SyscallN(proc.Addr(),
-		uintptr(handle),
+		uintptr(hProcess),
 		uintptr(exitCode),
 	)
 	return errno
