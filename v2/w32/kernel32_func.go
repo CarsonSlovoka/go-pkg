@@ -54,6 +54,7 @@ const (
 	PNProcess32Next  ProcName = "Process32NextW"
 
 	PNReadDirectoryChanges ProcName = "ReadDirectoryChangesW"
+	PNReadProcessMemory    ProcName = "ReadProcessMemory"
 
 	PNSetLastError         ProcName = "SetLastError"
 	PNSetThreadDescription ProcName = "SetThreadDescription"
@@ -66,9 +67,13 @@ const (
 
 	PNUpdateResource ProcName = "UpdateResourceW"
 
+	PNVirtualAllocEx ProcName = "VirtualAllocEx"
+	PNVirtualFreeEx  ProcName = "VirtualFreeEx"
+
 	PNWaitForSingleObject ProcName = "WaitForSingleObject"
 
-	PNWriteFile ProcName = "WriteFile"
+	PNWriteFile          ProcName = "WriteFile"
+	PNWriteProcessMemory ProcName = "WriteProcessMemory"
 )
 
 type Kernel32DLL struct {
@@ -125,6 +130,7 @@ func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 			PNProcess32Next,
 
 			PNReadDirectoryChanges,
+			PNReadProcessMemory,
 
 			PNSetLastError,
 			PNSetThreadDescription,
@@ -137,9 +143,13 @@ func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 
 			PNUpdateResource,
 
+			PNVirtualAllocEx,
+			PNVirtualFreeEx,
+
 			PNWaitForSingleObject,
 
 			PNWriteFile,
+			PNWriteProcessMemory,
 		}
 	}
 	dll := newDll(DNKernel32, procList)
@@ -568,6 +578,25 @@ func (dll *Kernel32DLL) ReadDirectoryChanges(hDirectory HANDLE,
 	return errno
 }
 
+// ReadProcessMemory https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-readprocessmemory
+func (dll *Kernel32DLL) ReadProcessMemory(
+	hProcess HANDLE,
+	lpBaseAddress uintptr,
+	lpBuffer uintptr,
+	size SIZE_T,
+	lpNumberOfBytesRead *SIZE_T, // [out]
+) syscall.Errno {
+	proc := dll.mustProc(PNReadProcessMemory)
+	_, _, eno := syscall.SyscallN(proc.Addr(),
+		uintptr(hProcess),
+		lpBaseAddress,
+		lpBuffer,
+		uintptr(size),
+		uintptr(unsafe.Pointer(&lpNumberOfBytesRead)),
+	)
+	return eno
+}
+
 // SetLastError https://learn.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-setlasterror
 func (dll *Kernel32DLL) SetLastError(dwErrCode uint32) {
 	proc := dll.mustProc(PNSetLastError)
@@ -649,6 +678,45 @@ func (dll *Kernel32DLL) UpdateResource(handle HANDLE,
 	return r1 == 1
 }
 
+// VirtualAllocEx https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualallocex
+// 🧙 Call VirtualFreeEx to making it a free page.
+// hProcess: The handle must have the PROCESS_VM_OPERATION access right.
+// lpAddress: The pointer that specifies a desired starting address for the region of pages that you want to allocate.
+// size: The size of the region of memory to allocate, in bytes.
+// allocationType: MEM_COMMIT, MEM_RESERVE, ...
+// protect: PAGE_NOACCESS, PAGE_GUARD, PAGE_NOCACHE, PAGE_WRITECOMBINE. When allocating dynamic memory for an enclave, the flProtect parameter must be PAGE_READWRITE or PAGE_EXECUTE_READWRITE.
+// If the function succeeds, the return value is the base address of the allocated region of pages.
+func (dll *Kernel32DLL) VirtualAllocEx(hProcess HANDLE,
+	lpAddress uintptr, // [in, optional]
+	size SIZE_T, allocationType, protect uint32) (uintptr, syscall.Errno) {
+	proc := dll.mustProc(PNVirtualAllocEx)
+	r, _, eno := syscall.SyscallN(proc.Addr(),
+		uintptr(hProcess),
+		lpAddress,
+		uintptr(size),
+		uintptr(allocationType),
+		uintptr(protect),
+	)
+	return r, eno
+}
+
+// VirtualFreeEx https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualfreeex
+// Releases, decommits, or releases and decommits a region of memory within the virtual address space of a specified process.
+func (dll *Kernel32DLL) VirtualFreeEx(hProcess HANDLE, // The handle must have the PROCESS_VM_OPERATION access right.
+	lpAddress uintptr,
+	size SIZE_T, // If the dwFreeType parameter is MEM_RELEASE, dwSize must be 0 (zero). 不然會遇到The parameter is incorrect的錯誤
+	dwFreeType uint32, // MEM_DECOMMIT, MEM_RELEASE
+) syscall.Errno {
+	proc := dll.mustProc(PNVirtualFreeEx)
+	_, _, eno := syscall.SyscallN(proc.Addr(),
+		uintptr(hProcess),
+		lpAddress,
+		uintptr(size),
+		uintptr(dwFreeType),
+	)
+	return eno
+}
+
 // WaitForSingleObject https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitforsingleobject
 // return value: WAIT_ABANDONED, WAIT_OBJECT_0, WAIT_TIMEOUT, WAIT_FAILED
 func (dll *Kernel32DLL) WaitForSingleObject(handle HANDLE, milliseconds uint32) uint32 {
@@ -677,4 +745,24 @@ func (dll *Kernel32DLL) WriteFile(hFile HANDLE,
 		uintptr(unsafe.Pointer(lpOverlapped)),
 	)
 	return errno
+}
+
+// WriteProcessMemory https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-writeprocessmemory
+// If the function succeeds, the return value is nonzero.
+// Writes data to an area of memory in a specified process. The entire area to be written to must be accessible or the operation fails.
+func (dll *Kernel32DLL) WriteProcessMemory(hProcess HANDLE, // The handle must have PROCESS_VM_WRITE and PROCESS_VM_OPERATION access to the process.
+	lpBaseAddress uintptr,
+	lpBuffer uintptr,
+	size SIZE_T,
+	lpNumberOfBytesWritten *SIZE_T, // [out] This parameter is optional. If lpNumberOfBytesWritten is NULL, the parameter is ignored.
+) syscall.Errno {
+	proc := dll.mustProc(PNWriteProcessMemory)
+	_, _, eno := syscall.SyscallN(proc.Addr(),
+		uintptr(hProcess),
+		lpBaseAddress,
+		lpBuffer,
+		uintptr(size),
+		uintptr(unsafe.Pointer(&lpNumberOfBytesWritten)),
+	)
+	return eno
 }

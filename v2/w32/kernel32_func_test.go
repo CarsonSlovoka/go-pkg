@@ -724,3 +724,56 @@ func ExampleKernel32DLL_GetModuleFileName() {
 	}
 	// Output:
 }
+
+func ExampleKernel32DLL_WriteProcessMemory() {
+	// 要寫入的資料
+	data := []byte("Hello, World!")
+
+	// 取得自身的 ProcessHandle
+	handle := kernelDll.GetCurrentProcess()
+
+	// 指向要寫入的資料的指標
+	var dataPtr = unsafe.Pointer(&data[0])
+
+	// 計算要寫入的資料大小
+	var dataSize = w32.SIZE_T(len(data))
+
+	// 分配一個用來寫入的記憶體空間
+	var address uintptr
+	{
+		var eno syscall.Errno
+		address, eno = kernelDll.VirtualAllocEx(handle, 0, 1024, w32.MEM_COMMIT|w32.MEM_RESERVE, w32.PAGE_READWRITE)
+		if eno != 0 {
+			fmt.Println("Failed to allocate memory:", eno)
+			return
+		}
+		defer func() {
+			if eno = kernelDll.VirtualFreeEx(handle, address, 0, w32.MEM_RELEASE); eno != 0 {
+				log.Println(eno)
+			}
+		}()
+	}
+
+	// 使用 WriteProcessMemory 寫入資料
+	var bytesWritten w32.SIZE_T
+	if eno := kernelDll.WriteProcessMemory(handle, address, uintptr(dataPtr), dataSize, &bytesWritten); eno != 0 {
+		fmt.Println("Error writing process memory:", eno)
+		return
+	}
+
+	// 確認資料是否已經成功寫入
+	var readData = make([]byte, len(data))
+	if eno := kernelDll.ReadProcessMemory(handle, address, uintptr(unsafe.Pointer(&readData[0])), dataSize, &bytesWritten); eno != 0 {
+		fmt.Println("Error reading process memory:", eno)
+		return
+	}
+
+	if string(readData) != string(data) {
+		fmt.Println("Error: Data not written successfully")
+		return
+	}
+
+	fmt.Println("Data written successfully")
+	// Output:
+	// Data written successfully
+}

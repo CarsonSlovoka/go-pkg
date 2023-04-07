@@ -134,3 +134,23 @@ const (
 	CP_OEMCP        = 1 // Use system default OEM code page.
 	CP_MACCP        = 2 // Use the system default Macintosh code page.
 )
+
+// https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualallocex#parameters
+const (
+	MEM_COMMIT      = 0x00001000
+	MEM_RESERVE     = 0x00002000
+	MEM_RESET       = 0x00080000
+	MEM_RESET_UNDO  = 0x1000000
+	MEM_LARGE_PAGES = 0x20000000
+	MEM_PHYSICAL    = 0x00400000
+	MEM_TOP_DOWN    = 0x00100000
+)
+
+const (
+	MEM_DECOMMIT = 0x00004000
+	MEM_RELEASE  = 0x00008000
+
+	// When using MEM_RELEASE, this parameter can additionally specify one of the following values.
+	MEM_COALESCE_PLACEHOLDERS = 0x00000001
+	MEM_PRESERVE_PLACEHOLDER  = 0x00000002
+)
