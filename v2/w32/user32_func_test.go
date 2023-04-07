@@ -414,10 +414,13 @@ func ExampleUser32DLL_FindWindow() {
 	// Output:
 }
 
+// 使用FindWindowEx找到視窗的HWND接著發送WM_SETTEXT來改變標題名稱
 func ExampleUser32DLL_FindWindowEx() {
-	user32dll := w32.NewUser32DLL(w32.PNFindWindowEx)
-	hwnd := user32dll.FindWindowEx(0, 0, "Notepad", "")
-	log.Println(hwnd)
+	hwnd := userDll.FindWindowEx(0, 0, "Notepad", "")
+	_, _, eno := userDll.SendMessage(hwnd, w32.WM_SETTEXT, 0, uintptr(unsafe.Pointer(&utf16.Encode([]rune("hello world!" + "\x00"))[0])))
+	if eno != nil {
+		log.Println(eno)
+	}
 	// Output:
 }
 
