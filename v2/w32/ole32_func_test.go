@@ -241,6 +241,37 @@ func Test_openIE2(t *testing.T) {
 	oleAutDll.SysFreeString((*uint16)(unsafe.Pointer(uintptr(vargs[0].Val))))
 }
 
+func ExampleOle32DLL_CLSIDFromProgID() {
+	oleDll.CoInitialize(0)
+	defer oleDll.CoUnInitialize()
+	clsID := new(w32.GUID)
+	if eno := oleDll.CLSIDFromProgID("Excel.Application", clsID); eno != 0 { // HKEY_LOCAL_MACHINE\SOFTWARE\Classes\Excel.Application\CLSID
+		log.Fatal(eno)
+		return
+	}
+	log.Println(clsID.String()) // {00024500-0000-0000-C000-000000000046}
+
+	{
+	}
+
+	// Output:
+}
+
+func ExampleOle32DLL_CLSIDFromString() {
+	oleDll.CoInitialize(0)
+	defer oleDll.CoUnInitialize()
+	clsID := new(w32.GUID)
+	if eno := oleDll.CLSIDFromString("{50AC103F-D235-4598-BBEF-98FE4D1A3AD4}", clsID); eno != 0 {
+		log.Fatal(eno)
+	}
+	fmt.Println(clsID.String())
+	fmt.Println(w32.NewGUID("{50AC103F-D235-4598-BBEF-98FE4D1A3AD4}").String())
+
+	// Output:
+	// {50AC103F-D235-4598-BBEF-98FE4D1A3AD4}
+	// {50AC103F-D235-4598-BBEF-98FE4D1A3AD4}
+}
+
 func Test_excel(t *testing.T) {
 	oleDll.CoInitialize(0)
 	defer oleDll.CoUnInitialize()
@@ -352,7 +383,6 @@ func Test_excel(t *testing.T) {
 
 	_, _ = workbook.PropertyPut("Saved", true) // 儲存異動結果(非存檔)
 	// workbook.MustMethod("SaveAs", "C:\\myDir\\out.xlsx") // 注意！是用\\而不是/
-	workbook.MustMethod("SaveAs", "C:\\Users\\Carson\\go\\1.16\\src\\github.com\\CarsonSlovoka\\go-set\\repos\\go-pkg\\v2\\w32\\test.xlsx") // 注意！是用\\而不是/
 	_, _ = workbook.Method("Closed", false)
 	excel.MustMethod("Quit")
 }
@@ -368,6 +398,7 @@ func Test_wmi(t *testing.T) {
 	defer oleDll.CoUnInitialize()
 
 	// https://learn.microsoft.com/en-us/windows/win32/wmisdk/document-conventions-for-the-scripting-api
+	// HKEY_LOCAL_MACHINE\SOFTWARE\Classes\WbemScripting.SWbemLocator
 	unknown, errno := w32.NewIUnknownInstance(oleDll, "WbemScripting.SWbemLocator", w32.CLSCTX_SERVER)
 	if errno != 0 {
 		return

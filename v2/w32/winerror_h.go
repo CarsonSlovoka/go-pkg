@@ -1448,12 +1448,12 @@ const (
 
 	// **** Available SYSTEM error codes ****
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//    Capability Authorization Error codes       //
 	//                                               //
 	//                =0450 to=0460                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_CAPAUTHZ_NOT_DEVUNLOCKED
 	// Neither developer unlocked mode nor side loading mode is enabled on the device.
@@ -3624,12 +3624,12 @@ const (
 	// A thread involved in this operation appears to be unresponsive.
 	ERROR_APP_HANG = 1298
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//             SECURITY Error codes              //
 	//                                               //
 	//                =1299 to=1399                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_INVALID_LABE
 	// Indicates a particular Security ID may not be assigned as the label of an object.
@@ -4031,12 +4031,12 @@ const (
 	// This operation cannot be performed on the current domain.
 	ERROR_CURRENT_DOMAIN_NOT_ALLOWED = 1399
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//              WinUser Error codes              //
 	//                                               //
 	//                =1400 to=1499                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_INVALID_WINDOW_HANDLE
 	// Invalid window handle.
@@ -4326,12 +4326,12 @@ const (
 	// Unable to finish the requested operation because the specified process is not a GUI process.
 	ERROR_NOT_GUI_PROCESS = 1471
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//             EventLog Error codes              //
 	//                                               //
 	//                =1500 to=1549                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_EVENTLOG_FILE_CORRUPT
 	// The event log file is corrupted.
@@ -4357,12 +4357,12 @@ const (
 	// The specified Job does not have a container assigned to it.
 	ERROR_JOB_NO_CONTAINER = 1505
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//            Class Scheduler Error codes        //
 	//                                               //
 	//                =1550 to=1599                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_INVALID_TASK_NAME
 	// The specified task name is invalid.
@@ -4376,12 +4376,12 @@ const (
 	// The specified thread is already joining a task.
 	ERROR_THREAD_ALREADY_IN_TASK = 1552
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//                MSI Error codes                //
 	//                                               //
 	//                =1600 to=1699                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_INSTALL_SERVICE_FAILURE
 	// The Windows Installer Service could not be accessed. This can occur if the Windows Installer is not correctly installed. Contact your support personnel for assistance.
@@ -4619,12 +4619,12 @@ const (
 	// An invalid cross-partition private file/section access was attempted.
 	ERROR_CROSS_PARTITION_VIOLATION = 1661
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//               RPC Error codes                 //
 	//                                               //
 	//                =1700 to=1999                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// RPC_S_INVALID_STRING_BINDING
 	// The string binding is invalid.
@@ -5449,12 +5449,12 @@ const (
 	// An administrator has restricted sign in. To sign in, make sure your device is connected to the Internet, and have your administrator sign in first.
 	ERROR_LOST_MODE_LOGON_RESTRICTION = 1939
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//              OpenGL Error codes               //
 	//                                               //
 	//                =2000 to=2009                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_INVALID_PIXEL_FORMAT
 	// The pixel format is invalid.
@@ -5480,12 +5480,12 @@ const (
 	// The requested clipping operation is not supported.
 	ERROR_CLIPPING_NOT_SUPPORTED = 2005
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//       Image Color Management Error codes      //
 	//                                               //
 	//                =2010 to=2049                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_INVALID_CMM
 	// The specified color management module is invalid.
@@ -5543,7 +5543,7 @@ const (
 	// The specified profile is intended for a device of a different type than the specified device.
 	ERROR_PROFILE_DOES_NOT_MATCH_DEVICE = 2023
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//             Winnet32 Error codes              //
 	//                                               //
@@ -5552,7 +5552,7 @@ const (
 	// The range=2100 through=2999 is reserved for   //
 	// network status codes. See lmerr.h for a       //
 	// complete listing                              //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_CONNECTED_OTHER_PASSWORD
 	// The network connection was made successfully, but the user had to be prompted for a password other than the one originally specified.
@@ -5582,12 +5582,12 @@ const (
 	// The device is in use by an active process and cannot be disconnected.
 	ERROR_DEVICE_IN_USE = 2404
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//           Win32 Spooler Error codes           //
 	//                                               //
 	//                =3000 to=3049                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_UNKNOWN_PRINT_MONITOR
 	// The specified print monitor is unknown.
@@ -5681,23 +5681,23 @@ const (
 	// The specified printer cannot be shared.
 	ERROR_PRINTER_NOT_SHAREABLE = 3022
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//           CopyFile ext. Error codes           //
 	//                                               //
 	//                =3050 to=3059                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_REQUEST_PAUSED
 	// The operation was paused.
 	ERROR_REQUEST_PAUSED = 3050
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//           AppExec Error codes                 //
 	//                                               //
 	//                =3060 to=3079                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_APPEXEC_CONDITION_NOT_SATISFIED
 	// The condition supplied for the app execution request was not satisfied, so the request was not performed.
@@ -5731,41 +5731,41 @@ const (
 	// The operation was not completed because the specified user was not known to the service.
 	ERROR_APPEXEC_UNKNOWN_USER = 3067
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//                  Available                    //
 	//                                               //
 	//                =3080 to=3199                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	//               the message range
 	//                =3200 to=3299
 	//      is reserved and used in isolation lib
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//                  Available                    //
 	//                                               //
 	//                =3300 to=3899                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//                IO Error Codes                 //
 	//                                               //
 	//                =3900 to=3999                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_IO_REISSUE_AS_CACHED
 	// Reissue the given operation as a cached IO operation
 	ERROR_IO_REISSUE_AS_CACHED = 3950
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//                Wins Error codes               //
 	//                                               //
 	//                =4000 to=4049                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_WINS_INTERNA
 	// WINS encountered an error while processing the command.
@@ -5795,12 +5795,12 @@ const (
 	// Replication with a nonconfigured partner is not allowed.
 	ERROR_RPL_NOT_ALLOWED = 4006
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//              PeerDist Error codes             //
 	//                                               //
 	//                =4050 to=4099                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// PEERDIST_ERROR_CONTENTINFO_VERSION_UNSUPPORTED
 	// The version of the supplied content information is not supported.
@@ -5887,30 +5887,30 @@ const (
 
 	PEERDIST_ERROR_TRUST_FAILURE = 4066
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//               DHCP Error codes                //
 	//                                               //
 	//                =4100 to=4149                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_DHCP_ADDRESS_CONFLICT
 	// The DHCP client has obtained an IP address that is already in use on the network. The local interface will be disabled until the DHCP client can obtain a new address.
 	ERROR_DHCP_ADDRESS_CONFLICT = 4100
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//                  Available                    //
 	//                                               //
 	//                =4150 to=4199                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//               WMI Error codes                 //
 	//                                               //
 	//                =4200 to=4249                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_WMI_GUID_NOT_FOUND
 	// The GUID passed was not recognized as valid by a WMI data provider.
@@ -5972,12 +5972,12 @@ const (
 	// The WMI data item or data block could not be changed.
 	ERROR_WMI_SET_FAILURE = 4214
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//      app container Specific Error Codes        //
 	//                                               //
 	//                =4250 to=4299                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_NOT_APPCONTAINER
 	// This operation is only valid in the context of an app container.
@@ -5995,12 +5995,12 @@ const (
 	// The length of the SID supplied is not a valid length for app container SIDs.
 	ERROR_INVALID_PACKAGE_SID_LENGTH = 4253
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//        RSM (Media Services) Error codes       //
 	//                                               //
 	//                =4300 to=4349                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_INVALID_MEDIA
 	// The media identifier does not represent a valid medium.
@@ -6170,12 +6170,12 @@ const (
 	// Cannot use the inject/eject port because it is not empty.
 	ERROR_IEPORT_FULL = 4341
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//       Remote Storage Service Error codes      //
 	//                                               //
 	//                =4350 to=4389                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_FILE_OFFLINE
 	// This file is currently not available for use on this computer.
@@ -6189,12 +6189,12 @@ const (
 	// The remote storage service encountered a media error.
 	ERROR_REMOTE_STORAGE_MEDIA_ERROR = 4352
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//           Reparse Point Error codes           //
 	//                                               //
 	//                =4390 to=4399                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_NOT_A_REPARSE_POINT
 	// The file or directory is not a reparse point.
@@ -6220,12 +6220,12 @@ const (
 	// The object manager encountered a reparse point while retrieving an object.
 	ERROR_REPARSE_POINT_ENCOUNTERED = 4395
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//         Fast Cache Specific Error Codes       //
 	//                                               //
 	//                =4400 to=4419                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_APP_DATA_NOT_FOUND
 	// Fast Cache data not found.
@@ -6247,12 +6247,12 @@ const (
 	// Fast Cache has been ReArmed and requires a reboot until it can be updated.
 	ERROR_APP_DATA_REBOOT_REQUIRED = 4404
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//             SecureBoot Error codes            //
 	//                                               //
 	//                =4420 to=4439                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_SECUREBOOT_ROLLBACK_DETECTED
 	// Secure Boot detected that rollback of protected data has been attempted.
@@ -6318,12 +6318,12 @@ const (
 	// Base Secure Boot policy file can not be loaded as a Supplemental Secure Boot policy.
 	ERROR_SECUREBOOT_NOT_SUPPLEMENTAL_POLICY = 4435
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//       File System Specific Error Codes        //
 	//                                               //
 	//                =4440 to=4499                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_OFFLOAD_READ_FLT_NOT_SUPPORTED
 	// The copy offload read operation is not supported by a filter.
@@ -6361,23 +6361,23 @@ const (
 	// The WOF driver encountered a corruption in the compressed file's Resource Table.
 	ERROR_WOF_FILE_RESOURCE_TABLE_CORRUPT = 4448
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//    Single Instance Store (SIS) Error codes    //
 	//                                               //
 	//                =4500 to=4549                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_VOLUME_NOT_SIS_ENABLED
 	// Single Instance Storage is not available on this volume.
 	ERROR_VOLUME_NOT_SIS_ENABLED = 4500
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//             System Integrity Error codes      //
 	//                                               //
 	//                =4550 to=4559                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_SYSTEM_INTEGRITY_ROLLBACK_DETECTED
 	// System Integrity detected that policy rollback has been attempted.
@@ -6395,12 +6395,12 @@ const (
 	// The System Integrity policy is either not signed or is signed by a non-trusted signer.
 	ERROR_SYSTEM_INTEGRITY_POLICY_NOT_SIGNED = 4553
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//             VSM Error codes                   //
 	//                                               //
 	//                =4560 to=4569                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_VSM_NOT_INITIALIZED
 	// Virtual Secure Mode (VSM) is not initialized. The hypervisor or VSM may not be present or enabled.
@@ -6410,12 +6410,12 @@ const (
 	// The hypervisor is not protecting DMA because an IOMMU is not present or not enabled in the BIOS.
 	ERROR_VSM_DMA_PROTECTION_NOT_IN_USE = 4561
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//         Platform Manifest Error Codes         //
 	//                                               //
 	//                =4570 to=4579                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_PLATFORM_MANIFEST_NOT_AUTHORIZED
 	// The Platform Manifest file was not authorized on this machine.
@@ -6445,19 +6445,19 @@ const (
 	// The Platform Manifest file was not properly signed.
 	ERROR_PLATFORM_MANIFEST_NOT_SIGNED = 4576
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//                  Available                    //
 	//                                               //
 	//                =4580 to=4599                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//             Cluster Error codes               //
 	//                                               //
 	//                =5000 to=5999                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_DEPENDENT_RESOURCE_EXISTS
 	// The operation cannot be completed because other resources are dependent on this resource.
@@ -7268,12 +7268,12 @@ const (
 	// The action cannot be completed because the cluster set management cluster is unreachable.
 	ERROR_CLUSTERSET_MANAGEMENT_CLUSTER_UNREACHABLE = 5999
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//               EFS Error codes                 //
 	//                                               //
 	//                =6000 to=6099                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_ENCRYPTION_FAILED
 	// The specified file could not be encrypted.
@@ -7367,12 +7367,12 @@ const (
 	// The requested operation was blocked by policy. For more information, contact your system administrator.
 	ERROR_ENCRYPTION_POLICY_DENIES_OPERATION = 6022
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//              BROWSER Error codes              //
 	//                                               //
 	//                =6100 to=6199                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// This message number is for historical purposes and cannot be changed or re-used.
 
@@ -7380,32 +7380,32 @@ const (
 	// The list of servers for this workgroup is not currently available
 	ERROR_NO_BROWSER_SERVERS_FOUND = 6118
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//            Task Scheduler Error codes         //
 	//            NET START must understand          //
 	//                                               //
 	//                =6200 to=6249                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// SCHED_E_SERVICE_NOT_LOCALSYSTEM
 	// The Task Scheduler service must be configured to run in the System account to function properly. Individual tasks may be configured to run in other accounts.
 
 	SCHED_E_SERVICE_NOT_LOCALSYSTEM = 6200
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//                  Available                    //
 	//                                               //
 	//                =6250 to=6599                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//         Common Log (CLFS) Error codes         //
 	//                                               //
 	//                =6600 to=6699                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_LOG_SECTOR_INVALID
 	// Log service encountered an invalid log sector.
@@ -7603,12 +7603,12 @@ const (
 	// The log is pinned due to reservation consuming most of the log space. Free some reserved records to make space available.
 	ERROR_LOG_PINNED_RESERVATION = 6648
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//           Transaction (KTM) Error codes       //
 	//                                               //
 	//                =6700 to=6799                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_INVALID_TRANSACTION
 	// The transaction handle associated with this operation is not valid.
@@ -7738,13 +7738,13 @@ const (
 	// The attempt to commit the Transaction completed, but it is possible that some portion of the transaction tree did not commit successfully due to heuristics.  Therefore it is possible that some data modified in the transaction may not have committed, resulting in transactional inconsistency.  If possible, check the consistency of the associated data.
 	ERROR_HEURISTIC_DAMAGE_POSSIBLE = 6731
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//        Transactional File Services (TxF)      //
 	//                  Error codes                  //
 	//                                               //
 	//                =6800 to=6899                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_TRANSACTIONAL_CONFLICT
 	// The function attempted to use a name that is reserved for use by another transaction.
@@ -7962,19 +7962,19 @@ const (
 	// The specified operation could not be performed because the resource manager is not enlisted in the transaction.
 	ERROR_TRANSACTION_NOT_ENLISTED = 6855
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//                  Available                    //
 	//                                               //
 	//                =6900 to=6999                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//          Terminal Server Error codes          //
 	//                                               //
 	//                =7000 to=7099                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_CTX_WINSTATION_NAME_INVALID
 	// The specified session name is invalid.
@@ -8181,7 +8181,7 @@ const (
 	// Windows can't connect to your session because a problem occurred in the Windows video subsystem. Try connecting again later, or contact the server administrator for assistance.
 	ERROR_TS_VIDEO_SUBSYSTEM_ERROR = 7070
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//          Windows Fabric Error Codes           //
 	//                                               //
@@ -8189,23 +8189,23 @@ const (
 	//                                               //
 	//          defined in FabricCommon.idl          //
 	//                                               //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                                /
 	//           Traffic Control Error Codes          /
 	//                                                /
 	//                 =7500 to=7999                  /
 	//                                                /
 	//            defined in: tcerror.h               /
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//           Active Directory Error codes        //
 	//                                               //
 	//                =8000 to=8999                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// *****************
 	// FACILITY_FILE_REPLICATION_SERVICE
@@ -8393,7 +8393,7 @@ const (
 	// A domain controller promotion is not currently active
 	ERROR_NO_PROMOTION_ACTIVE = 8222
 
-	//=8223 unused
+	// =8223 unused
 
 	// ERROR_DS_OPERATIONS_ERROR
 	// An operations error occurred.
@@ -8627,7 +8627,7 @@ const (
 	// The specified attribute is already present on the object.
 	ERROR_DS_ATT_ALREADY_EXISTS = 8318
 
-	//=8319 unused
+	// =8319 unused
 
 	// ERROR_DS_CANT_ADD_ATT_VALUES
 	// The specified attribute is not present, or has no values.
@@ -9957,19 +9957,19 @@ const (
 	// The link value specified was not found, but a link value with that key was found.
 	ERROR_DS_VALUE_KEY_NOT_UNIQUE = 8650
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                                /
 	//        End of Active Directory Error Codes     /
 	//                                                /
 	//                 =8000 to =8999                 /
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//               DNS Error codes                 //
 	//                                               //
 	//                =9000 to=9999                  //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// =============================
 	// Facility DNS Error Messages
@@ -9981,7 +9981,7 @@ const (
 
 	DNS_ERROR_RCODE_NO_ERROR = NO_ERROR
 
-	DNS_ERROR_MASK = 0x00002328 //=9000 or DNS_ERROR_RESPONSE_CODES_BASE
+	DNS_ERROR_MASK = 0x00002328 // =9000 or DNS_ERROR_RESPONSE_CODES_BASE
 
 	// DNS_ERROR_RCODE_FORMAT_ERROR         =0x00002329
 
@@ -11267,19 +11267,19 @@ const (
 
 	DNS_ERROR_POLICY_INVALID_CRITERIA_TIME_OF_DAY = 9996
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//             End of DNS Error Codes            //
 	//                                               //
 	//                 =9000 to=9999                 //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//               WinSock Error Codes             //
 	//                                               //
 	//                =10000 to=11999                //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// WinSock error codes are also defined in WinSock.h
 	// and WinSock2.h, hence the IFDEF
@@ -11741,26 +11741,26 @@ const (
 
 	WSA_IPSEC_NAME_POLICY_ERROR = 11033
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//           End of WinSock Error Codes          //
 	//                                               //
 	//                =10000 to=11999                //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//                  Available                    //
 	//                                               //
 	//                =12000 to=12999                //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//           Start of IPSec Error codes          //
 	//                                               //
 	//                =13000 to=13999                //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_IPSEC_QM_POLICY_EXISTS
 	// The specified quick mode policy already exists.
@@ -12384,19 +12384,19 @@ const (
 	// IPsec DoS Protection failed to create a per internal IP rate limit queue because the maximum number of queues allowed by policy has been reached.
 	ERROR_IPSEC_DOSP_MAX_PER_IP_RATELIMIT_QUEUES = 13932
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//           End of IPSec Error codes            //
 	//                                               //
 	//                =13000 to=13999                //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//         Start of Side By Side Error Codes     //
 	//                                               //
 	//                =14000 to=14999                //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_SXS_SECTION_NOT_FOUND
 	// The requested section was not present in the activation context.
@@ -12842,19 +12842,19 @@ const (
 	// A component is missing file verification information in its manifest.
 	ERROR_SXS_FILE_HASH_MISSING = 14110
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//           End of Side By Side Error Codes     //
 	//                                               //
 	//                =14000 to=14999                //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//           Start of WinEvt Error codes         //
 	//                                               //
 	//                =15000 to=15079                //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_EVT_INVALID_CHANNEL_PATH
 	// The specified channel path is invalid.
@@ -13008,12 +13008,12 @@ const (
 	// Attempted to create a numeric type that is outside of its valid range.
 	ERROR_EVT_FILTER_OUT_OF_RANGE = 15038
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//           Start of Wecsvc Error codes         //
 	//                                               //
 	//                =15080 to=15099                //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_EC_SUBSCRIPTION_CANNOT_ACTIVATE
 	// The subscription fails to activate.
@@ -13039,12 +13039,12 @@ const (
 	// No active channel is found for the query.
 	ERROR_EC_NO_ACTIVE_CHANNEL = 15085
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	//           Start of MUI Error codes            //
 	//                                               //
 	//                =15100 to=15199                //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_MUI_FILE_NOT_FOUND
 	// The resource loader failed to find MUI file.
@@ -13242,12 +13242,12 @@ const (
 	// Unable to find the specified package.
 	ERROR_MRM_PACKAGE_NOT_FOUND = 15159
 
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 	//                                               //
 	// Start of Monitor Configuration API error codes//
 	//                                               //
 	//                =15200 to=15249                //
-	///////////////////////////////////////////////////
+	// /////////////////////////////////////////////////
 
 	// ERROR_MCA_INVALID_CAPABILITIES_STRING
 	// The monitor returned a DDC/CI capabilities string that did not comply with the ACCESS.bus=3.0, DDC/CI=1.1 or MCCS=2 Revision=1 specification.
@@ -13281,19 +13281,19 @@ const (
 	// The caller of SetMonitorColorTemperature specified a color temperature that the current monitor did not support. This error implies that the monitor violated the MCCS=2.0 or MCCS=2.0 Revision=1 specification.
 	ERROR_MCA_UNSUPPORTED_COLOR_TEMPERATURE = 15207
 
-	//////////////////////////////////////////////////
+	// ////////////////////////////////////////////////
 	//                                              //
 	// End of Monitor Configuration API error codes //
 	//                                              //
 	//               =15200 to=15249                //
 	//                                              //
-	//////////////////////////////////////////////////
-	//////////////////////////////////////////////////
+	// ////////////////////////////////////////////////
+	// ////////////////////////////////////////////////
 	//                                              //
 	//         Start of Syspart error codes         //
 	//               =15250 -=15299                 //
 	//                                              //
-	//////////////////////////////////////////////////
+	// ////////////////////////////////////////////////
 
 	// ERROR_AMBIGUOUS_SYSTEM_DEVICE
 	// The requested system device cannot be identified due to multiple indistinguishable devices potentially matching the identification criteria.
@@ -13303,12 +13303,12 @@ const (
 	// The requested system device cannot be found.
 	ERROR_SYSTEM_DEVICE_NOT_FOUND = 15299
 
-	//////////////////////////////////////////////////
+	// ////////////////////////////////////////////////
 	//                                              //
 	//         Start of Vortex error codes          //
 	//               =15300 -=15320                 //
 	//                                              //
-	//////////////////////////////////////////////////
+	// ////////////////////////////////////////////////
 
 	// ERROR_HASH_NOT_SUPPORTED
 	// Hash generation for the specified hash version and hash type is not enabled on the server.
@@ -13318,12 +13318,12 @@ const (
 	// The hash requested from the server is not available or no longer valid.
 	ERROR_HASH_NOT_PRESENT = 15301
 
-	//////////////////////////////////////////////////
+	// ////////////////////////////////////////////////
 	//                                              //
 	//         Start of GPIO error codes            //
 	//               =15321 -=15340                 //
 	//                                              //
-	//////////////////////////////////////////////////
+	// ////////////////////////////////////////////////
 
 	// ERROR_SECONDARY_IC_PROVIDER_NOT_REGISTERED
 	// The secondary interrupt controller instance that manages the specified interrupt is not registered.
@@ -13353,12 +13353,12 @@ const (
 	// The interrupt requested to be unmasked is not masked.
 	ERROR_GPIO_INTERRUPT_ALREADY_UNMASKED = 15327
 
-	//////////////////////////////////////////////////
+	// ////////////////////////////////////////////////
 	//                                              //
 	//         Start of Run Level error codes       //
 	//               =15400 -=15500                 //
 	//                                              //
-	//////////////////////////////////////////////////
+	// ////////////////////////////////////////////////
 
 	// ERROR_CANNOT_SWITCH_RUNLEVE
 	// The requested run level switch cannot be completed successfully.
@@ -13386,23 +13386,23 @@ const (
 	// One or more services failed to start during the service startup phase of a run level switch.
 	ERROR_SERVICES_FAILED_AUTOSTART = 15405
 
-	//////////////////////////////////////////////////
+	// ////////////////////////////////////////////////
 	//                                              //
 	//         Start of Com Task error codes        //
 	//               =15501 -=15510                 //
 	//                                              //
-	//////////////////////////////////////////////////
+	// ////////////////////////////////////////////////
 
 	// ERROR_COM_TASK_STOP_PENDING
 	// The task stop request cannot be completed immediately since
 	// task needs more time to shutdown.
 	ERROR_COM_TASK_STOP_PENDING = 15501
 
-	////////////////////////////////////////
+	// //////////////////////////////////////
 	//                                    //
 	// APPX Caller Visible Error Codes    //
 	//         =15600-15699               //
-	////////////////////////////////////////
+	// //////////////////////////////////////
 
 	// ERROR_INSTALL_OPEN_PACKAGE_FAILED
 	// Package could not be opened.
@@ -13596,12 +13596,12 @@ const (
 	// Remote drives are not supported; use \\server\share to register a remote package.
 	ERROR_REGISTRATION_FROM_REMOTE_DRIVE_NOT_SUPPORTED = 15647
 
-	//////////////////////////
+	// ////////////////////////
 	//                      //
 	// AppModel Error Codes //
 	//    =15700-15720      //
 	//                      //
-	//////////////////////////
+	// ////////////////////////
 
 	// APPMODEL_ERROR_NO_PACKAGE
 	// The process has no package identity.
@@ -13638,12 +13638,12 @@ const (
 
 	APPMODEL_ERROR_PACKAGE_NOT_AVAILABLE = 15706
 
-	/////////////////////////////
+	// ///////////////////////////
 	//                         //
 	// Appx StateManager Codes //
 	//    =15800-15840         //
 	//                         //
-	/////////////////////////////
+	// ///////////////////////////
 
 	// ERROR_STATE_LOAD_STORE_FAILED
 	// Loading the state store failed.
@@ -13721,23 +13721,23 @@ const (
 	// The length of the state manager container name has exceeded the limit.
 	ERROR_STATE_CONTAINER_NAME_SIZE_LIMIT_EXCEEDED = 15818
 
-	/////////////////////////////////
+	// ///////////////////////////////
 	//                             //
 	// Application Partition Codes //
 	//    =15841-15860             //
 	//                             //
-	/////////////////////////////////
+	// ///////////////////////////////
 
 	// ERROR_API_UNAVAILABLE
 	// This API cannot be used in the context of the caller's application type.
 	ERROR_API_UNAVAILABLE = 15841
 
-	/////////////////////////////////
+	// ///////////////////////////////
 	//                             //
 	// Windows Store Codes         //
 	//    =15861-15880             //
 	//                             //
-	/////////////////////////////////
+	// ///////////////////////////////
 
 	// STORE_ERROR_UNLICENSED
 	// This PC does not have a valid license for the application or product.
@@ -13761,7 +13761,7 @@ const (
 
 const (
 	CLASS_E_NOAGGREGATION = 0x80040110
-	REGDB_E_CLASSNOTREG   = 0x80040154
+	REGDB_E_CLASSNOTREG   = 0x80040154 // Class not registered in the registry.
 )
 
 const (
@@ -13769,7 +13769,8 @@ const (
 	CO_E_IIDSTRING   = 0x800401F4 // Invalid interface string
 )
 
+// https://learn.microsoft.com/en-us/windows/win32/api/combaseapi/nf-combaseapi-progidfromclsid#return-value
 const (
-	REGDB_E_READREGDB  = 0x80040150 // Could not read key from registry
+	REGDB_E_READREGDB  = 0x80040150 // Could not read key from registry // There was an error reading from the registry.
 	REGDB_E_WRITEREGDB = 0x80040151 // Could not write key to registry
 )

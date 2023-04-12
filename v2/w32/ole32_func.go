@@ -43,20 +43,25 @@ func NewOle32DLL(procList ...ProcName) *Ole32DLL {
 }
 
 // CLSIDFromProgID https://learn.microsoft.com/en-us/windows/win32/api/combaseapi/nf-combaseapi-clsidfromprogid
+// The CLSID format is {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}.
+// ProgID 是一個字串它記錄在: HKEY_LOCAL_MACHINE\SOFTWARE\Classes\<progID>\CLSID 可以知道此progID會對應到哪一個CLSID，
+// 它所對應的CLSID紀錄在 HKEY_LOCAL_MACHINE\SOFTWARE\Classes\CLSID // https://learn.microsoft.com/en-us/windows/win32/com/progid
 // This function can return the following values.
 // S_OK, CO_E_CLASSSTRING, REGDB_E_WRITEREGDB
-func (dll *Ole32DLL) CLSIDFromProgID(progID string, guid *GUID /*[out]*/) syscall.Errno {
+func (dll *Ole32DLL) CLSIDFromProgID(progID string, clsID *GUID /*[out]*/) syscall.Errno {
 	proc := dll.mustProc(PNCLSIDFromProgID)
 	r, _, _ := syscall.SyscallN(proc.Addr(),
 		UintptrFromStr(progID),
-		uintptr(unsafe.Pointer(guid)),
+		uintptr(unsafe.Pointer(clsID)),
 	)
 	return syscall.Errno(r)
 }
 
 // CLSIDFromString https://learn.microsoft.com/en-us/windows/win32/api/combaseapi/nf-combaseapi-clsidfromstring
+// 例如輸入: "{50AC103F-D235-4598-BBEF-98FE4D1A3AD4}" 會將此字串轉為GUID
+// 可以使用 NewGUID 來代替此函數
 // return values:
-// NOERROR, CO_E_CLASSSTRING, REGDB_E_CLASSNOTREG, REGDB_E_READREGDB
+// NOERROR, CO_E_CLASSSTRING
 func (dll *Ole32DLL) CLSIDFromString(str string, guid *GUID /*[out]*/) syscall.Errno {
 	proc := dll.mustProc(PNCLSIDFromString)
 	hr, _, _ := syscall.SyscallN(proc.Addr(),
