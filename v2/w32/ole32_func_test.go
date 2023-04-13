@@ -246,7 +246,7 @@ func ExampleOle32DLL_CLSIDFromProgID() {
 	defer oleDll.CoUnInitialize()
 	clsID := new(w32.GUID)
 	if eno := oleDll.CLSIDFromProgID("Excel.Application", clsID); eno != 0 { // HKEY_LOCAL_MACHINE\SOFTWARE\Classes\Excel.Application\CLSID
-		log.Fatal(eno)
+		log.Println("ProgID: Excel.Application not found") // GitHub action 會沒有裝，所以會找不到
 		return
 	}
 	log.Println(clsID.String()) // {00024500-0000-0000-C000-000000000046}
