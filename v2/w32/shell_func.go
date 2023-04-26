@@ -10,6 +10,10 @@ import (
 const (
 	PNExtractIcon ProcName = "ExtractIconW"
 
+	PNGetCurrentProcessExplicitAppUserModelID ProcName = "GetCurrentProcessExplicitAppUserModelID"
+
+	PNSetCurrentProcessExplicitAppUserModelID ProcName = "SetCurrentProcessExplicitAppUserModelID"
+
 	PNShellExecute    ProcName = "ShellExecuteW"
 	PNShellExecuteEx  ProcName = "ShellExecuteExW"
 	PNShellNotifyIcon ProcName = "Shell_NotifyIconW"
@@ -26,6 +30,10 @@ func NewShellDLL(procList ...ProcName) *ShellDLL {
 	if len(procList) == 0 {
 		procList = []ProcName{
 			PNExtractIcon,
+
+			PNGetCurrentProcessExplicitAppUserModelID,
+
+			PNSetCurrentProcessExplicitAppUserModelID,
 
 			PNShellExecute,
 			PNShellExecuteEx,
@@ -54,6 +62,28 @@ func (dll *ShellDLL) ExtractIcon(hInst uintptr, // 透過哪一個對象來呼�
 		uintptr(nIconIndex),
 	)
 	return HICON(hIcon)
+}
+
+// GetCurrentProcessExplicitAppUserModelID https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-getcurrentprocessexplicitappusermodelid
+func (dll *ShellDLL) GetCurrentProcessExplicitAppUserModelID() string {
+	proc := dll.mustProc(PNGetCurrentProcessExplicitAppUserModelID)
+	var out *uint16
+	r, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(unsafe.Pointer(&out)),
+	)
+	if r == S_OK {
+		return UTF16PtrToString(out)
+	}
+	return ""
+}
+
+// SetCurrentProcessExplicitAppUserModelID https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-setcurrentprocessexplicitappusermodelid
+func (dll *ShellDLL) SetCurrentProcessExplicitAppUserModelID(appID string) uintptr {
+	proc := dll.mustProc(PNSetCurrentProcessExplicitAppUserModelID)
+	r, _, _ := syscall.SyscallN(proc.Addr(),
+		UintptrFromStr(appID),
+	)
+	return r
 }
 
 // ShellExecute https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shellexecutew

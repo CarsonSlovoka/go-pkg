@@ -62,6 +62,16 @@ func ExampleShellDLL_ExtractIcon() {
 	// Output:
 }
 
+func ExampleShellDLL_SetCurrentProcessExplicitAppUserModelID() {
+	if r := shellDll.SetCurrentProcessExplicitAppUserModelID("myAppUserModelID"); r != w32.S_OK {
+		log.Println(r)
+	}
+	fmt.Println(shellDll.GetCurrentProcessExplicitAppUserModelID())
+
+	// Output:
+	// myAppUserModelID
+}
+
 func ExampleShellDLL_ShellExecute() {
 	_, _ = shellDll.ShellExecute(0, "open", "https://stackoverflow.com/", "", "", w32.SW_SHOWNORMAL)
 	_, _ = shellDll.ShellExecute(0, "explore", os.Getenv("programData"), "", "", w32.SW_SHOWNORMAL)
