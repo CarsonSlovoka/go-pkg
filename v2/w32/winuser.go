@@ -1,6 +1,8 @@
 package w32
 
-import "unsafe"
+import (
+	"unsafe"
+)
 
 // https://learn.microsoft.com/en-us/windows/win32/menurc/resource-types
 const (
@@ -58,7 +60,7 @@ const (
 type WndEnumProc func(hWnd HWND, lParam LPARAM) BOOL
 
 // WndProc https://learn.microsoft.com/en-us/windows/win32/api/winuser/nc-winuser-wndproc
-type WndProc func(unnamed0 HWND, unnamed1 UINT, unnamed2 WPARAM, unnamed3 LPARAM) LRESULT
+type WndProc func(hwnd HWND, msg UINT, wParam WPARAM, lParam LPARAM) LRESULT
 
 // Constants for MENUITEMINFO.fState
 // https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-menuiteminfow
