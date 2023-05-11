@@ -578,6 +578,22 @@ func ExampleUser32DLL_LoadImage() {
 	// Output:
 }
 
+func ExampleUser32DLL_ClientToScreen() {
+	hwnd := userDll.FindWindow("Notepad", "")
+	if hwnd == 0 {
+		return
+	}
+	var pt w32.POINT
+	pt.X = 100
+	pt.Y = 300
+	if userDll.ClientToScreen(hwnd, &pt) {
+		log.Printf("Screen coordinates: (%d, %d)\n", pt.X, pt.Y)
+	} else {
+		log.Println("ClientToScreen failed.")
+	}
+	// Output:
+}
+
 // https://stackoverflow.com/a/68845977/9935654
 // https://learn.microsoft.com/en-us/windows/win32/menurc/using-menus
 func ExampleUser32DLL_CreatePopupMenu() {
@@ -1886,11 +1902,7 @@ func ExampleUser32DLL_SendInput_keyboard() {
 
 	if hwnd != 0 {
 		user32dll.ShowWindow(hwnd, w32.SW_NORMAL) // 在視窗最小化時SetForegroundWindow或者SetActiveWindow都沒有用
-		// user32dll.SetForegroundWindow(hwnd)
-		var errno syscall.Errno
-		if hwnd, errno = user32dll.SetActiveWindow(hwnd); hwnd == 0 {
-			fmt.Printf("%s", errno)
-		}
+		user32dll.SetForegroundWindow(hwnd)
 	}
 
 	if n, errno := user32dll.SendInput(uint32(len(uint16Array)*2), &input[0], int32(unsafe.Sizeof(input[0]))); n == 0 {

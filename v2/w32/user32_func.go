@@ -16,7 +16,9 @@ const (
 
 	PNCallNextHookEx ProcName = "CallNextHookEx"
 
-	PNCloseWindow ProcName = "CloseWindow"
+	PNClientToScreen ProcName = "ClientToScreen"
+	PNClipCursor     ProcName = "ClipCursor"
+	PNCloseWindow    ProcName = "CloseWindow"
 
 	PNCopyImage ProcName = "CopyImage"
 
@@ -93,9 +95,11 @@ const (
 	PNRegisterClass  ProcName = "RegisterClassW"
 	PNRegisterHotKey ProcName = "RegisterHotKey"
 
-	PNReleaseDC ProcName = "ReleaseDC"
+	PNReleaseCapture ProcName = "ReleaseCapture"
+	PNReleaseDC      ProcName = "ReleaseDC"
 
 	PNSetActiveWindow     ProcName = "SetActiveWindow"
+	PNSetCapture          ProcName = "SetCapture"
 	PNSetForegroundWindow ProcName = "SetForegroundWindow"
 	PNSetMenuDefaultItem  ProcName = "SetMenuDefaultItem"
 	PNSetMenuItemInfo     ProcName = "SetMenuItemInfoW"
@@ -135,6 +139,8 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 
 			PNCallNextHookEx,
 
+			PNClientToScreen,
+			PNClipCursor,
 			PNCloseWindow,
 
 			PNCopyImage,
@@ -212,9 +218,11 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 			PNRegisterClass,
 			PNRegisterHotKey,
 
+			PNReleaseCapture,
 			PNReleaseDC,
 
 			PNSetActiveWindow,
+			PNSetCapture,
 			PNSetForegroundWindow,
 			PNSetMenuDefaultItem,
 			PNSetMenuItemInfo,
@@ -297,6 +305,33 @@ func (dll *User32DLL) CallNextHookEx(hhk HHOOK, nCode int32, wParam WPARAM, lPar
 		uintptr(lParam),
 	)
 	return LRESULT(r1)
+}
+
+// ClientToScreen https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-clienttoscreen
+// 將視窗的座標轉為螢幕座標
+// If the function succeeds, the return value is nonzero.
+func (dll *User32DLL) ClientToScreen(hWnd HWND,
+	point *POINT, // [in, out]
+) bool {
+	proc := dll.mustProc(PNClientToScreen)
+	r, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+		uintptr(unsafe.Pointer(point)),
+	)
+	return r != 0
+}
+
+// ClipCursor https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-clipcursor
+// If this parameter is NULL, the cursor is free to move anywhere on the screen.
+// 限制鼠標不會超過此矩形區域, 如果超過會自動回至該區域內，不讓超過。
+// 當您想要解除時，傳遞nil給他即可
+// If the function succeeds, the return value is nonzero.
+func (dll *User32DLL) ClipCursor(rect *RECT) syscall.Errno {
+	proc := dll.mustProc(PNClipCursor)
+	_, _, eno := syscall.SyscallN(proc.Addr(),
+		uintptr(unsafe.Pointer(rect)),
+	)
+	return eno
 }
 
 // CloseWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-closewindow
@@ -1109,6 +1144,13 @@ func (dll *User32DLL) RegisterHotKey(hWnd HWND, id int32, fsModifiers uint32, vk
 	return errno
 }
 
+// ReleaseCapture https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-releasecapture
+func (dll *User32DLL) ReleaseCapture() syscall.Errno {
+	proc := dll.mustProc(PNReleaseCapture)
+	_, _, eno := syscall.SyscallN(proc.Addr())
+	return eno
+}
+
 // ReleaseDC https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-releasedc
 // If the DC was released, the return value is 1 or 0 otherwise.
 func (dll *User32DLL) ReleaseDC(hwnd HWND, hdc HDC) int32 {
@@ -1123,11 +1165,24 @@ func (dll *User32DLL) ReleaseDC(hwnd HWND, hdc HDC) int32 {
 // SetActiveWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setactivewindow
 // If the function fails, the return value is NULL.
 func (dll *User32DLL) SetActiveWindow(hWnd HWND) (HWND, syscall.Errno) {
-	proc := dll.mustProc(PNSetForegroundWindow)
+	proc := dll.mustProc(PNSetActiveWindow)
 	r1, _, errno := syscall.SyscallN(proc.Addr(),
 		uintptr(hWnd),
 	)
 	return HWND(r1), errno
+}
+
+// SetCapture https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setcapture
+// 可以讓視窗補瘡到滑鼠的動作，而不僅僅是鼠標在窗口內部移動時才會收到訊息。
+// SetCapture可以實現一些特殊的鼠標操作，例如: 拖曳、拉框選擇、放大縮小等等，即使鼠標移動到其他視窗，也不會丟失鼠標消息，直到調用 ReleaseCapture
+// 🧙 Call ReleaseCapture when you are not used.
+// The return value is a handle to the window that had previously captured the mouse. If there is no such window, the return value is NULL.
+func (dll *User32DLL) SetCapture(hWnd HWND) HWND {
+	proc := dll.mustProc(PNSetCapture)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hWnd),
+	)
+	return HWND(r1)
 }
 
 // SetForegroundWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setforegroundwindow

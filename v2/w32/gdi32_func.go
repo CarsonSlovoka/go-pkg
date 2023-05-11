@@ -19,6 +19,7 @@ const (
 	PNCreateCompatibleDC     ProcName = "CreateCompatibleDC"
 	PNCreateFontIndirect     ProcName = "CreateFontIndirectW"
 	PNCreateFont             ProcName = "CreateFontW"
+	PNCreatePen              ProcName = "CreatePen"
 	PNCreateRectRgnIndirect  ProcName = "CreateRectRgnIndirect"
 	PNCreateSolidBrush       ProcName = "CreateSolidBrush"
 
@@ -34,6 +35,10 @@ const (
 	PNGetObject ProcName = "GetObjectW"
 	PNGetPixel  ProcName = "GetPixel"
 
+	PNLineTo ProcName = "LineTo"
+
+	PNMoveToEx ProcName = "MoveToEx"
+
 	PNRemoveFontMemResourceEx ProcName = "RemoveFontMemResourceEx"
 	PNRemoveFontResource      ProcName = "RemoveFontResourceW"
 	PNRemoveFontResourceEx    ProcName = "RemoveFontResourceExW"
@@ -43,6 +48,7 @@ const (
 	PNSetBkColor        ProcName = "SetBkColor"
 	PNSetBkMode         ProcName = "SetBkMode"
 	PNSetStretchBltMode ProcName = "SetStretchBltMode"
+	PNSetROP2           ProcName = "SetROP2"
 	PNSetTextColor      ProcName = "SetTextColor"
 
 	PNStretchBlt ProcName = "StretchBlt"
@@ -70,6 +76,7 @@ func NewGdi32DLL(procList ...ProcName) *Gdi32DLL {
 			PNCreateCompatibleDC,
 			PNCreateFontIndirect,
 			PNCreateFont,
+			PNCreatePen,
 			PNCreateRectRgnIndirect,
 			PNCreateSolidBrush,
 
@@ -85,6 +92,10 @@ func NewGdi32DLL(procList ...ProcName) *Gdi32DLL {
 			PNGetObject,
 			PNGetPixel,
 
+			PNLineTo,
+
+			PNMoveToEx,
+
 			PNRemoveFontMemResourceEx,
 			PNRemoveFontResource,
 			PNRemoveFontResourceEx,
@@ -94,6 +105,7 @@ func NewGdi32DLL(procList ...ProcName) *Gdi32DLL {
 			PNSetBkColor,
 			PNSetBkMode,
 			PNSetStretchBltMode,
+			PNSetROP2,
 			PNSetTextColor,
 
 			PNStretchBlt,
@@ -290,6 +302,20 @@ func (dll *Gdi32DLL) CreateFontIndirect(logFont *LOGFONT) HFONT {
 	return HFONT(r1)
 }
 
+// CreatePen https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createpen
+// style: PS_SOLID, PS_DASH, PS_NULL, ...
+// 🧙 Call DeleteObject(HGDIOBJ(hPen)) when you are not used.
+// If the function fails, the return value is NULL.
+func (dll *Gdi32DLL) CreatePen(style, width int32, color COLORREF) HPEN {
+	proc := dll.mustProc(PNCreatePen)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(style),
+		uintptr(width),
+		uintptr(color),
+	)
+	return HPEN(r1)
+}
+
 // CreateFont https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createfontw
 // If the function fails, the return value is NULL.
 func (dll *Gdi32DLL) CreateFont(
@@ -479,6 +505,33 @@ func (dll *Gdi32DLL) GetPixel(hdc HDC, x int32, y int32) COLORREF {
 	return COLORREF(r1)
 }
 
+// LineTo https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-lineto
+// If the function succeeds, the return value is nonzero.
+func (dll *Gdi32DLL) LineTo(hdc HDC, x, y int32) bool {
+	proc := dll.mustProc(PNLineTo)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+		uintptr(x),
+		uintptr(y))
+	return r1 != 0
+}
+
+// MoveToEx https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-movetoex
+// If the function succeeds, the return value is nonzero.
+func (dll *Gdi32DLL) MoveToEx(hdc HDC,
+	x, y int32, // 結束位置
+	pt *POINT, // [out] 移動前的位置, 如果不需要，可以給nil即可.
+) bool {
+	proc := dll.mustProc(PNMoveToEx)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+		uintptr(x),
+		uintptr(y),
+		uintptr(unsafe.Pointer(pt)),
+	)
+	return r1 != 0
+}
+
 // RemoveFontMemResourceEx https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-removefontmemresourceex
 // If the function succeeds, the return value is nonzero.
 // If the function fails, the return value is zero. No extended error information is available.
@@ -572,6 +625,19 @@ func (dll *Gdi32DLL) SetStretchBltMode(hdc HDC, mode int32) int32 {
 		uintptr(mode),
 	)
 	return int32(r1)
+}
+
+// SetROP2 https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-setrop2
+// 取反操作，兩次會回到原來的內容，可以用來當成橡皮擦，第一次畫可以畫出顏色，第二次再畫到相同的地方則恢復成原本的顏色
+// If the function succeeds, the return value specifies the previous mix mode.
+// If the function fails, the return value is zero.
+func (dll *Gdi32DLL) SetROP2(hdc HDC, rop2 int32) int32 {
+	proc := dll.mustProc(PNSetROP2)
+	r, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+		uintptr(rop2),
+	)
+	return int32(r)
 }
 
 // SetTextColor https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-settextcolor

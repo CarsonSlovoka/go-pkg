@@ -908,6 +908,12 @@ type POINT struct {
 	X, Y int32
 }
 
+/*
+type POINTS struct {
+	X, Y int16
+}
+*/
+
 type RECT struct {
 	Left, Top, Right, Bottom int32
 }

@@ -855,3 +855,126 @@ func ExampleGdi32DLL_BitBlt() {
 
 	// Output:
 }
+
+// https://learn.microsoft.com/en-us/windows/win32/inputdev/using-mouse-input#drawing-lines-with-the-mouse
+func ExampleGdi32DLL_LineTo() {
+	opt := &w32.WindowOptions{}
+	var (
+		hdc w32.HDC
+
+		rectClient w32.RECT
+		ptClientLT w32.POINT // client left top corner
+		ptClientRB w32.POINT // client right bottom corner
+
+		ptBegin   w32.POINT
+		ptEnd     w32.POINT
+		ptPrevEnd w32.POINT
+
+		isLineMode bool // 當前的狀態是否處於畫線
+	)
+
+	hPen := gdiDll.CreatePen(w32.PS_SOLID, 5, w32.RGB(255, 0, 0))
+	defer func() {
+		if !gdiDll.DeleteObject(w32.HGDIOBJ(hPen)) {
+			log.Println("DeleteObject hpen error")
+		}
+	}()
+
+	opt.WndProc = func(hwnd w32.HWND, uMsg uint32, wParam w32.WPARAM, lParam w32.LPARAM) uintptr {
+		switch uMsg {
+		case w32.WM_CREATE:
+			userDll.ShowWindow(hwnd, w32.SW_SHOW)
+			go func() {
+				<-time.After(5 * time.Second) // 如果要測試，可以自行延長秒數
+				_, _, _ = userDll.SendMessage(hwnd, w32.WM_CLOSE, 0, 0)
+			}()
+
+		// 限制鼠標不可超過繪圖區，以及紀錄開始繪製的起點
+		case w32.WM_LBUTTONDOWN:
+			userDll.SetCapture(hwnd)
+
+			_ = userDll.GetClientRect(hwnd, &rectClient)
+			log.Printf("client rect: %+v", rectClient)
+			ptClientLT.X = rectClient.Left
+			ptClientLT.Y = rectClient.Top
+			ptClientRB.X = rectClient.Right + 1 // +1 是為了包含到邊界，因為GetClientRect並不包含右下邊界線
+			ptClientRB.Y = rectClient.Bottom + 1
+
+			userDll.ClientToScreen(hwnd, &ptClientLT)
+			userDll.ClientToScreen(hwnd, &ptClientRB)
+
+			// 重新設定rectClient
+			userDll.SetRect(&rectClient,
+				ptClientLT.X, ptClientLT.Y,
+				ptClientRB.X, ptClientRB.Y,
+			)
+			log.Printf("client to screen: %+v", rectClient)
+
+			if eno := userDll.ClipCursor(&rectClient); eno != 0 {
+				log.Println(eno)
+				break
+			}
+			ptBegin = w32.MakePoint(lParam)
+			return 0
+		case w32.WM_MOUSEMOVE: // 移動且左鍵被按下，則畫線
+			if wParam != w32.MK_LBUTTON {
+				break
+			}
+
+			hdc = userDll.GetDC(hwnd)
+			gdiDll.SelectObject(hdc, w32.HGDIOBJ(hPen))
+			gdiDll.SetROP2(hdc, w32.R2_NOTXORPEN)
+
+			// 當我們按住左鍵移動的時候，如果繞一個弧線，此時我們在最後彈開的位置才需要畫線，因此我們要讓弧線被劃過的部分都消去
+			if isLineMode {
+				// 在畫一次會消去
+				gdiDll.MoveToEx(hdc, ptBegin.X, ptBegin.Y, nil)
+				gdiDll.LineTo(hdc, ptPrevEnd.X, ptPrevEnd.Y)
+			}
+
+			// 底下才是最後被畫的線
+			ptEnd = w32.MakePoint(lParam)
+			gdiDll.MoveToEx(hdc, ptBegin.X, ptBegin.Y, nil)
+			gdiDll.LineTo(hdc, ptEnd.X, ptEnd.Y)
+			isLineMode = true
+			ptPrevEnd = ptEnd
+			userDll.ReleaseDC(hwnd, hdc)
+		case w32.WM_LBUTTONUP:
+			isLineMode = false
+			_ = userDll.ClipCursor(nil)
+			if eno := userDll.ReleaseCapture(); eno != 0 {
+				log.Println(eno)
+			}
+		case w32.WM_DESTROY:
+			userDll.PostQuitMessage(0)
+			return 0
+		}
+		return uintptr(userDll.DefWindowProc(hwnd, w32.UINT(uMsg), wParam, lParam))
+	}
+
+	wnd, err := createWindow("LineTo demo", opt)
+	if err != nil {
+		log.Fatal(err)
+	}
+	wnd.Run()
+
+	// Output:
+}
+
+func ExampleGdi32DLL_MoveToEx() {
+	var pt w32.POINT
+	hdc := userDll.GetDC(0)
+	defer func() {
+		if userDll.ReleaseDC(0, hdc) == 0 {
+			log.Println("ReleaseDC error")
+		}
+	}()
+	gdiDll.MoveToEx(hdc, 100, 200, &pt) // 如果之前都沒有移動過，那麼一開始得到的pt位置是0, 0. 移動到(100, 200)的位置並獲取移動前的位置存放在pt中
+	fmt.Println(pt)
+	gdiDll.MoveToEx(hdc, 200, 300, &pt) // 前一個點位置在100, 200
+	fmt.Println(pt)
+
+	// Output:
+	// {0 0}
+	// {100 200}
+}
