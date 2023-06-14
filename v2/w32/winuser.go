@@ -57,7 +57,8 @@ const (
 	CW_USEDEFAULT int32 = -2147483648
 )
 
-type WndEnumProc func(hWnd HWND, lParam LPARAM) BOOL
+type WndEnumProc func(hwnd HWND, lParam LPARAM) BOOL
+type DesktopEnumProc func(name string, lParam LPARAM) BOOL // https://learn.microsoft.com/en-us/previous-versions/windows/desktop/legacy/ms682612(v=vs.85)
 
 // WndProc https://learn.microsoft.com/en-us/windows/win32/api/winuser/nc-winuser-wndproc
 type WndProc func(hwnd HWND, msg UINT, wParam WPARAM, lParam LPARAM) LRESULT

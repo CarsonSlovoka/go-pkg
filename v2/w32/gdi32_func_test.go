@@ -322,6 +322,50 @@ func ExampleGdi32DLL_CreateCompatibleBitmap() {
 	// ok
 }
 
+// 以鼠標為中心，依據輸入範圍，將矩形框內的範圍複製到剪貼簿之中
+func Example_copy2clipboard() {
+	// 鼠標中心矩形的框的範圍
+	var rectSize int32 = 100
+
+	var cursorPos w32.POINT
+	if errno := userDll.GetCursorPos(&cursorPos); errno != 0 {
+		log.Printf("GetCursorPos %s", errno)
+	}
+
+	// 計算矩形左上角和右下角的座標
+	centerX := cursorPos.X
+	centerY := cursorPos.Y
+	left := centerX - rectSize
+	top := centerY - rectSize
+	right := centerX + rectSize
+	bottom := centerY + rectSize
+
+	screenDC := userDll.GetDC(0)
+	defer userDll.ReleaseDC(0, screenDC)
+	memDC := gdiDll.CreateCompatibleDC(screenDC)
+	defer gdiDll.DeleteObject(w32.HGDIOBJ(memDC))
+
+	hBitmapMem := gdiDll.CreateCompatibleBitmap(screenDC, right-left, bottom-top)
+	defer gdiDll.DeleteObject(w32.HGDIOBJ(hBitmapMem))
+
+	gdiDll.SelectObject(memDC, w32.HGDIOBJ(hBitmapMem))
+
+	// 複製到位圖之中
+	_ = gdiDll.BitBlt(memDC, 0, 0, right-left, bottom-top, screenDC, left, top, w32.SRCCOPY)
+
+	_ = userDll.OpenClipboard(0)
+
+	_ = userDll.EmptyClipboard()
+
+	if _, eno := userDll.SetClipboardData(w32.CF_BITMAP, w32.HANDLE(hBitmapMem)); eno != 0 {
+		log.Println(eno)
+	}
+
+	_ = userDll.CloseClipboard()
+
+	// Output:
+}
+
 // Example_saveFileIconAsBitmap
 // Step:
 // get HICON

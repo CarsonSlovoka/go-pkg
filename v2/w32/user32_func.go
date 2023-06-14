@@ -18,6 +18,7 @@ const (
 
 	PNClientToScreen ProcName = "ClientToScreen"
 	PNClipCursor     ProcName = "ClipCursor"
+	PNCloseClipboard ProcName = "CloseClipboard"
 	PNCloseWindow    ProcName = "CloseWindow"
 
 	PNCopyImage ProcName = "CopyImage"
@@ -42,8 +43,11 @@ const (
 	PNDrawMenuBar ProcName = "DrawMenuBar"
 	PNDrawText    ProcName = "DrawTextW"
 
-	PNEndPaint    ProcName = "EndPaint"
-	PNEnumWindows ProcName = "EnumWindows"
+	PNEmptyClipboard     ProcName = "EmptyClipboard"
+	PNEndPaint           ProcName = "EndPaint"
+	PNEnumDesktopWindows ProcName = "EnumDesktopWindows"
+	PNEnumDesktops       ProcName = "EnumDesktopsW"
+	PNEnumWindows        ProcName = "EnumWindows"
 
 	PNFindWindow   ProcName = "FindWindowW"
 	PNFindWindowEx ProcName = "FindWindowExW"
@@ -51,6 +55,7 @@ const (
 	PNGetActiveWindow          ProcName = "GetActiveWindow"
 	PNGetClassName             ProcName = "GetClassNameW"
 	PNGetClientRect            ProcName = "GetClientRect"
+	PNGetClipboardData         ProcName = "GetClipboardData"
 	PNGetCursorPos             ProcName = "GetCursorPos"
 	PNGetDC                    ProcName = "GetDC"
 	PNGetDesktopWindow         ProcName = "GetDesktopWindow"
@@ -86,6 +91,8 @@ const (
 	PNMapVirtualKey ProcName = "MapVirtualKeyW"
 	PNMessageBox    ProcName = "MessageBoxW"
 
+	PNOpenClipboard ProcName = "OpenClipboard"
+
 	PNPostMessage       ProcName = "PostMessageW"
 	PNPostQuitMessage   ProcName = "PostQuitMessage"
 	PNPostThreadMessage ProcName = "PostThreadMessageW"
@@ -100,6 +107,7 @@ const (
 
 	PNSetActiveWindow     ProcName = "SetActiveWindow"
 	PNSetCapture          ProcName = "SetCapture"
+	PNSetClipboardData    ProcName = "SetClipboardData"
 	PNSetForegroundWindow ProcName = "SetForegroundWindow"
 	PNSetMenuDefaultItem  ProcName = "SetMenuDefaultItem"
 	PNSetMenuItemInfo     ProcName = "SetMenuItemInfoW"
@@ -141,6 +149,7 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 
 			PNClientToScreen,
 			PNClipCursor,
+			PNCloseClipboard,
 			PNCloseWindow,
 
 			PNCopyImage,
@@ -165,7 +174,10 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 			PNDrawMenuBar,
 			PNDrawText,
 
+			PNEmptyClipboard,
 			PNEndPaint,
+			PNEnumDesktopWindows,
+			PNEnumDesktops,
 			PNEnumWindows,
 
 			PNFindWindow,
@@ -174,6 +186,7 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 			PNGetActiveWindow,
 			PNGetClassName,
 			PNGetClientRect,
+			PNGetClipboardData,
 			PNGetCursorPos,
 			PNGetDC,
 			PNGetDesktopWindow,
@@ -209,6 +222,8 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 			PNMapVirtualKey,
 			PNMessageBox,
 
+			PNOpenClipboard,
+
 			PNPostMessage,
 			PNPostQuitMessage,
 			PNPostThreadMessage,
@@ -223,6 +238,7 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 
 			PNSetActiveWindow,
 			PNSetCapture,
+			PNSetClipboardData,
 			PNSetForegroundWindow,
 			PNSetMenuDefaultItem,
 			PNSetMenuItemInfo,
@@ -332,6 +348,13 @@ func (dll *User32DLL) ClipCursor(rect *RECT) syscall.Errno {
 		uintptr(unsafe.Pointer(rect)),
 	)
 	return eno
+}
+
+// CloseClipboard  https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-closeclipboard
+func (dll *User32DLL) CloseClipboard() syscall.Errno {
+	proc := dll.mustProc(PNCloseClipboard)
+	_, _, errno := syscall.SyscallN(proc.Addr())
+	return errno
 }
 
 // CloseWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-closewindow
@@ -564,6 +587,13 @@ func (dll *User32DLL) DrawText(hdc HDC, text string,
 	return int32(r1)
 }
 
+// EmptyClipboard https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-emptyclipboard
+func (dll *User32DLL) EmptyClipboard() syscall.Errno {
+	proc := dll.mustProc(PNEmptyClipboard)
+	_, _, eno := syscall.SyscallN(proc.Addr())
+	return eno
+}
+
 // EndPaint https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-endpaint
 // If the caret was hidden by BeginPaint, EndPaint restores the caret to the screen.
 // The return value is always nonzero.
@@ -575,6 +605,48 @@ func (dll *User32DLL) EndPaint(hWnd HWND, lpPaint *PAINTSTRUCT) {
 	)
 }
 
+// EnumDesktopWindows https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-enumdesktopwindows
+// EnumDesktopWindows 與 EnumWindows 的不同之處主要在於列舉的範圍。 EnumDesktopWindows 會列出所有窗口以及其「子窗口」。但 EnumWindows 不會列出子窗口
+// If the function fails or is unable to perform the enumeration, the return value is zero.
+// You must ensure that the callback function sets SetLastError if it fails.
+func (dll *User32DLL) EnumDesktopWindows(
+	hDesktop HDESK, // If this parameter is NULL, the current desktop is used. // This handle is returned by the CreateDesktop, GetThreadDesktop, OpenDesktop, or OpenInputDesktop function, and must have the DESKTOP_READOBJECTS access right.
+	callbackFunc WndEnumProc, // 1. 當傳遞的函數傳回0之後就會直接終止，若不為0則會繼續直到窮舉完畢 // You must ensure that the callback function sets SetLastError if it fails.
+	lParam LPARAM, // 要傳遞給callbackFunc的參數
+) (BOOL, syscall.Errno) {
+	lpEnumFuncCallback := syscall.NewCallback(func(hWndRawArg HWND, lParamRawArg LPARAM) uintptr {
+		ret := callbackFunc(hWndRawArg, lParamRawArg)
+		return uintptr(ret)
+	})
+	proc := dll.mustProc(PNEnumDesktopWindows)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hDesktop),
+		lpEnumFuncCallback,
+		uintptr(lParam),
+	)
+	return BOOL(r1), errno
+}
+
+// EnumDesktops https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-enumdesktopsw
+// 回傳值為0表示有錯誤，可以在callbackFunc裡面使用 SetLastError 來設定eno
+func (dll *User32DLL) EnumDesktops(
+	hDesktop HWINSTA, // If this parameter is NULL, the current window station is used.
+	callbackFunc DesktopEnumProc, // 1. 當傳遞的函數傳回0之後就會直接終止，若不為0則會繼續直到窮舉完畢
+	lParam LPARAM, // 要傳遞給callbackFunc的參數
+) (BOOL, syscall.Errno) {
+	lpEnumFuncCallback := syscall.NewCallback(func(name *uint16, lParam LPARAM) uintptr {
+		ret := callbackFunc(UTF16PtrToString(name), lParam)
+		return uintptr(ret)
+	})
+	proc := dll.mustProc(PNEnumDesktops)
+	r1, _, errno := syscall.SyscallN(proc.Addr(),
+		uintptr(hDesktop),
+		lpEnumFuncCallback,
+		uintptr(lParam),
+	)
+	return BOOL(r1), errno
+}
+
 // EnumWindows https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-enumwindows
 // If the function succeeds, the return value is nonzero.
 // 注意: 如果程式沒有註冊任何窗口，那麼此函數會無法列舉到該項目
@@ -582,15 +654,15 @@ func (dll *User32DLL) EnumWindows(
 	lpEnumFunc WndEnumProc, // 1. 當傳遞的函數傳回0之後就會直接終止，若不為0則會繼續直到窮舉完畢 // 2. If EnumWindowsProc returns zero, the return value is also zero. In this case, the callback function should call SetLastError to obtain a meaningful error code to be returned to the caller of EnumWindows.
 	lParam LPARAM, // An application-defined value to be passed to the callback function.
 ) (BOOL, syscall.Errno) {
-	lpEnumFuncCallback := syscall.NewCallback(func(hWndRawArg HWND, lParamRawArg LPARAM) uintptr {
-		ret := lpEnumFunc(hWndRawArg, lParamRawArg)
+	lpEnumFuncCallback := syscall.NewCallback(func(hwnd HWND, lparam LPARAM) uintptr {
+		ret := lpEnumFunc(hwnd, lparam)
 		return uintptr(ret)
 	})
 	proc := dll.mustProc(PNEnumWindows)
 	r1, _, errno := syscall.SyscallN(proc.Addr(),
 		lpEnumFuncCallback,
 		uintptr(lParam),
-		0)
+	)
 	return BOOL(r1), errno
 }
 
@@ -678,6 +750,17 @@ func (dll *User32DLL) GetClientRect(hwnd HWND, lpRect *RECT /* out */) syscall.E
 		uintptr(unsafe.Pointer(lpRect)),
 	)
 	return errno
+}
+
+// GetClipboardData https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getclipboarddata
+// If the function succeeds, the return value is the handle to a clipboard object in the specified format.
+// If the function fails, the return value is NULL.
+func (dll *User32DLL) GetClipboardData(format uint32) (HANDLE, syscall.Errno) {
+	proc := dll.mustProc(PNGetClipboardData)
+	r, _, eno := syscall.SyscallN(proc.Addr(),
+		uintptr(format),
+	)
+	return HANDLE(r), eno
 }
 
 // GetCursorPos https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getcursorpos
@@ -1083,6 +1166,14 @@ func (dll *User32DLL) MessageBox(hwnd HWND, text, caption string, btnFlag uint32
 	return clickBtnValue, errno
 }
 
+// OpenClipboard https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-openclipboard
+// If the function succeeds, the return value is nonzero.
+func (dll *User32DLL) OpenClipboard(hWndNewOwner HWND) syscall.Errno {
+	proc := dll.mustProc(PNOpenClipboard)
+	_, _, errno := syscall.SyscallN(proc.Addr(), uintptr(hWndNewOwner))
+	return errno
+}
+
 // PostMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-postmessagew
 // If the function succeeds, the return value is nonzero.
 func (dll *User32DLL) PostMessage(hwnd HWND, wmMsgID uint32, wParam, lParam uintptr) syscall.Errno {
@@ -1183,6 +1274,17 @@ func (dll *User32DLL) SetCapture(hWnd HWND) HWND {
 		uintptr(hWnd),
 	)
 	return HWND(r1)
+}
+
+// SetClipboardData https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setclipboarddata
+// If the function succeeds, the return value is the handle to the data.
+func (dll *User32DLL) SetClipboardData(uFormat uint32, hMem HANDLE) (HANDLE, syscall.Errno) {
+	proc := dll.mustProc(PNSetClipboardData)
+	r1, _, eno := syscall.SyscallN(proc.Addr(),
+		uintptr(uFormat),
+		uintptr(hMem),
+	)
+	return HANDLE(r1), eno
 }
 
 // SetForegroundWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setforegroundwindow

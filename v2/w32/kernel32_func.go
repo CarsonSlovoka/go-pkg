@@ -50,6 +50,8 @@ const (
 	PNLocalFree    ProcName = "LocalFree"
 	PNLockResource ProcName = "LockResource"
 
+	PNStrCpyW ProcName = "lstrcpyW"
+
 	PNProcess32First ProcName = "Process32FirstW"
 	PNProcess32Next  ProcName = "Process32NextW"
 
@@ -125,6 +127,8 @@ func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 			PNLoadResource,
 			PNLocalFree,
 			PNLockResource,
+
+			PNStrCpyW,
 
 			PNProcess32First,
 			PNProcess32Next,
@@ -525,6 +529,18 @@ func (dll *Kernel32DLL) LockResource(hResData HGLOBAL) uintptr {
 		uintptr(hResData),
 	)
 	return ret
+}
+
+// StrCpyW https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-lstrcpyw
+// If the function succeeds, the return value is a pointer to the buffer.
+// If the function fails, the return value is NULL
+func (dll *Kernel32DLL) StrCpyW(dst uintptr, src *uint16) uintptr {
+	proc := dll.mustProc(PNStrCpyW)
+	r, _, _ := syscall.SyscallN(proc.Addr(),
+		dst,
+		uintptr(unsafe.Pointer(src)),
+	)
+	return r
 }
 
 // Process32First https://learn.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-process32firstw

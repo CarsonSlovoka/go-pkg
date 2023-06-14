@@ -1943,7 +1943,7 @@ func TestUser32DLL_EnumWindows(t *testing.T) {
 		if d.id == 666 {
 			log.Println(string(d.tag[:])) // 123, wall
 		}
-		return 888
+		return 888 // 不建議這樣用，因為只要非0就還會繼續，最終的回傳值取決於最後一個回傳的結果
 	})
 
 	enumFuncErr := w32.WndEnumProc(func(hwnd w32.HWND, lParam w32.LPARAM) w32.BOOL {
@@ -1974,7 +1974,7 @@ func TestUser32DLL_EnumWindows(t *testing.T) {
 		// Example 3 模擬錯誤的情況. 注意enumWindows當傳遞的函數傳回0之後就會直接終止，若不為0則會繼續直到窮舉完畢
 		log.Println("test error")
 		if r, errno := user32dll.EnumWindows(enumFuncErr, 0); r == 0 {
-			log.Printf("%d, %s\n", errno, errno)
+			log.Printf("%s\n", errno)
 		}
 		ch <- "finish"
 	}()
@@ -1988,6 +1988,38 @@ func TestUser32DLL_EnumWindows(t *testing.T) {
 
 	// Output:
 	// 888
+}
+
+func ExampleUser32DLL_EnumDesktopWindows() {
+	var curDesktopHandList []w32.HWND
+	r, eno := userDll.EnumDesktopWindows(0, func(hwnd w32.HWND, lParam w32.LPARAM) w32.BOOL {
+		curDesktopHandList = append(curDesktopHandList, hwnd)
+		var className, windowName string
+		var err error
+		if windowName, err = userDll.GetWindowText(hwnd); err != nil {
+			return 1 // 繼續列舉，回傳0就會列舉結束
+		}
+		if className, err = userDll.GetClassName(hwnd); err != nil {
+			return 1
+		}
+		_, _ = fmt.Fprintf(os.Stderr, "%d _ %s _ %s\n", hwnd, className, windowName)
+		return 1
+	}, 0)
+	log.Println(r, eno) // 1, 0
+	log.Println(curDesktopHandList)
+	// Output:
+}
+
+// 打印出桌面名稱
+// https://learn.microsoft.com/en-us/windows/win32/winstation/window-station-and-desktop-creation
+func ExampleUser32DLL_EnumDesktops() {
+	log.Println(
+		userDll.EnumDesktops(0, func(name string, lParam w32.LPARAM) w32.BOOL {
+			_, _ = fmt.Fprintf(os.Stderr, "%s\n", name) // WinSta0, Service-0x0-3e7$
+			return 1
+		}, 0),
+	)
+	// Output:
 }
 
 func ExampleUser32DLL_PrintWindow() {
@@ -2219,4 +2251,54 @@ func Test_captureWindow(t *testing.T) {
 			close(ch)
 		}
 	}
+}
+
+func ExampleUser32DLL_SetClipboardData() {
+	_ = userDll.OpenClipboard(0)
+	_ = userDll.EmptyClipboard()
+
+	text := `
+Hello World 您好 世界
+123
+`
+	// data := syscall.StringToUTF16(text)
+	data := utf16.Encode([]rune(text + "\x00"))
+	size := len(data) * int(unsafe.Sizeof(data[0]))
+	hMem, eno := kernelDll.GlobalAlloc(w32.GMEM_MOVEABLE, w32.SIZE_T(size))
+	if eno == 0 {
+		// 鎖定內存
+		lpMemData, _ := kernelDll.GlobalLock(hMem)
+
+		// 寫入資料
+		kernelDll.StrCpyW(uintptr(lpMemData), &data[0])
+
+		// 解鎖後才能被調用
+		if _, eno = kernelDll.GlobalUnlock(hMem); eno != 0 {
+			log.Println(eno)
+		}
+		defer kernelDll.GlobalFree(hMem)
+	}
+
+	if _, eno = userDll.SetClipboardData(w32.CF_UNICODETEXT, w32.HANDLE(hMem)); eno != 0 {
+		log.Println(eno)
+	}
+	_ = userDll.CloseClipboard()
+
+	// 驗證
+	_ = userDll.OpenClipboard(0)
+
+	hClipboardData, eno := userDll.GetClipboardData(w32.CF_UNICODETEXT)
+	if hClipboardData != 0 {
+		lpMemData, _ := kernelDll.GlobalLock(w32.HGLOBAL(hClipboardData))
+		clipboardText := syscall.UTF16ToString((*[1 << 20]uint16)(unsafe.Pointer(lpMemData))[:])
+		_, _ = kernelDll.GlobalUnlock(w32.HGLOBAL(hClipboardData))
+		log.Println("Clipboard text:", clipboardText)
+		fmt.Println(text == clipboardText)
+	} else {
+		log.Println(eno)
+	}
+	_ = userDll.CloseClipboard()
+
+	// Output:
+	// true
 }
