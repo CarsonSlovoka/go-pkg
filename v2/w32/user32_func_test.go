@@ -1990,6 +1990,7 @@ func TestUser32DLL_EnumWindows(t *testing.T) {
 	// 888
 }
 
+// Github actions執行會有問題，所以不實際跑
 func ExampleUser32DLL_EnumDesktopWindows() {
 	var curDesktopHandList []w32.HWND
 	r, eno := userDll.EnumDesktopWindows(0, func(hwnd w32.HWND, lParam w32.LPARAM) w32.BOOL {
@@ -2007,11 +2008,11 @@ func ExampleUser32DLL_EnumDesktopWindows() {
 	}, 0)
 	log.Println(r, eno) // 1, 0
 	log.Println(curDesktopHandList)
-	// Output:
 }
 
 // 打印出桌面名稱
 // https://learn.microsoft.com/en-us/windows/win32/winstation/window-station-and-desktop-creation
+// Github actions執行會有問題，所以不實際跑
 func ExampleUser32DLL_EnumDesktops() {
 	log.Println(
 		userDll.EnumDesktops(0, func(name string, lParam w32.LPARAM) w32.BOOL {
@@ -2019,7 +2020,6 @@ func ExampleUser32DLL_EnumDesktops() {
 			return 1
 		}, 0),
 	)
-	// Output:
 }
 
 func ExampleUser32DLL_PrintWindow() {
