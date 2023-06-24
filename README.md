@@ -6,7 +6,7 @@
       <img src="https://img.shields.io/badge/Documentation-go_pkg-blue.svg" alt="Documentation">
   </a>
 
-  <img src="https://img.shields.io/github/go-mod/go-version/CarsonSlovoka/go-pkg?filename=v2%2Fgo.mod" alt="Go Version">
+  <img src="https://img.shields.io/github/go-mod/go-version/CarsonSlovoka/go-pkg?filename=go.mod" alt="Go Version">
 
   <a href="https://GitHub.com/CarsonSlovoka/go-pkg/releases/">
       <img src="https://img.shields.io/github/release/CarsonSlovoka/go-pkg" alt="Latest release">
