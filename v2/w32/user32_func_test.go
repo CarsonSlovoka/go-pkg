@@ -1878,7 +1878,9 @@ func ExampleUser32DLL_RegisterHotKey_clipboard() {
 		}
 	}()
 
-	opt := &w32.WindowOptions{Width: 800, Height: 600}
+	opt := &w32.WindowOptions{Width: 800, Height: 600,
+		ClassName: "ExampleUser32DLL_RegisterHotKey_clipboard", // 如果class名稱已經存在會遇到Class already exists的錯誤
+	}
 	opt.WndProc = func(hwnd w32.HWND, uMsg uint32, wParam w32.WPARAM, lParam w32.LPARAM) uintptr {
 		switch uMsg {
 		case w32.WM_CREATE:
