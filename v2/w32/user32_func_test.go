@@ -1896,6 +1896,12 @@ func ExampleUser32DLL_RegisterHotKey_clipboard() {
 			if en := userDll.RegisterHotKey(0, HokeyIDAlt2, w32.MOD_ALT, w32.VK_KEY_2); en != 0 {
 				log.Println(en)
 			}
+			go func() {
+				<-time.After(2 * time.Second)
+				log.Println("2秒已到，自動關閉程式. (如果要測試，可以自行延長秒數)")
+				_, _, _ = userDll.SendMessage(hwnd, w32.WM_CLOSE, 0, 0)
+			}()
+
 		case w32.WM_DESTROY:
 			for _, hotkeyID := range []int32{HokeyIDCtrl1, HokeyIDCtrl2, HokeyIDAlt1, HokeyIDAlt2} {
 				if en := userDll.UnregisterHotKey(0, hotkeyID); en != 0 {
