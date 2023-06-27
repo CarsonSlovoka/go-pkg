@@ -1000,7 +1000,7 @@ func ExampleGdi32DLL_LineTo() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	wnd.Run()
+	wnd.Run(nil)
 
 	// Output:
 }

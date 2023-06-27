@@ -1730,6 +1730,242 @@ func ExampleUser32DLL_RegisterHotKey() {
 	// hello
 }
 
+// 按下Ctrl+1複製，並保存在變數buf1之中，按下Alt+1可以將buf1變數的內容寫入到剪貼簿並且貼上
+// 熱鍵Ctrl+2複製選取內容到buf2變數; 熱鍵Alt+2將buf2的變數內容複製到剪貼簿並且貼上
+func ExampleUser32DLL_RegisterHotKey_clipboard() {
+	const (
+		HokeyIDCtrl1 = w32.WM_APP + 1
+		HokeyIDAlt1  = w32.WM_APP + 2
+
+		HokeyIDCtrl2 = w32.WM_APP + 3
+		HokeyIDAlt2  = w32.WM_APP + 4
+
+		WMUpdateWindow = w32.WM_APP + 1024
+	)
+
+	var (
+		buf1 = ""
+		buf2 = ""
+	)
+
+	var (
+		inputCtrlC [4]w32.INPUT
+		inputCtrlV [4]w32.INPUT
+	)
+
+	// init hotkey
+	{
+		// C
+		// 按下
+		inputCtrlC[0].Type = w32.INPUT_KEYBOARD
+		inputCtrlC[0].Ki().Vk = w32.VK_CONTROL
+		inputCtrlC[1].Type = w32.INPUT_KEYBOARD
+		inputCtrlC[1].Ki().Vk = w32.VK_KEY_C
+
+		// 彈起
+		inputCtrlC[2].Type = w32.INPUT_KEYBOARD
+		inputCtrlC[2].Ki().Vk = w32.VK_KEY_C
+		inputCtrlC[2].Ki().Flags = w32.KEYEVENTF_KEYUP
+
+		inputCtrlC[3].Type = w32.INPUT_KEYBOARD
+		inputCtrlC[3].Ki().Vk = w32.VK_CONTROL
+		inputCtrlC[3].Ki().Flags = w32.KEYEVENTF_KEYUP
+
+		// V
+		inputCtrlV[0].Type = w32.INPUT_KEYBOARD
+		inputCtrlV[0].Ki().Vk = w32.VK_CONTROL
+		inputCtrlV[1].Type = w32.INPUT_KEYBOARD
+		inputCtrlV[1].Ki().Vk = w32.VK_KEY_V
+
+		inputCtrlV[2].Type = w32.INPUT_KEYBOARD
+		inputCtrlV[2].Ki().Vk = w32.VK_KEY_V
+		inputCtrlV[2].Ki().Flags = w32.KEYEVENTF_KEYUP
+
+		inputCtrlV[3].Type = w32.INPUT_KEYBOARD
+		inputCtrlV[3].Ki().Vk = w32.VK_CONTROL
+		inputCtrlV[3].Ki().Flags = w32.KEYEVENTF_KEYUP
+	}
+
+	copy2clipboard := func() string {
+		if _, eno := userDll.SendInput(4, &inputCtrlC[0], int32(unsafe.Sizeof(inputCtrlC[0]))); eno != 0 {
+			log.Printf("SendInput error: %s\n", eno)
+			return ""
+		}
+		time.Sleep(200 * time.Millisecond) // 等待剪貼簿複製完成
+
+		// 從剪貼簿獲取資料
+		if eno := userDll.OpenClipboard(0); eno != 0 {
+			log.Printf("open clipboard error %s\n", eno)
+			return ""
+		}
+		defer func() {
+			if eno := userDll.CloseClipboard(); eno != 0 {
+				log.Printf("CloseClipboard error %s\n", eno)
+			}
+		}()
+
+		var clipboardText string
+		if hClipboardData, eno := userDll.GetClipboardData(w32.CF_UNICODETEXT); eno == 0 {
+			lpMemData, _ := kernelDll.GlobalLock(w32.HGLOBAL(hClipboardData))
+			clipboardText = syscall.UTF16ToString((*[1 << 20]uint16)(unsafe.Pointer(lpMemData))[:])
+			if _, eno = kernelDll.GlobalUnlock(w32.HGLOBAL(hClipboardData)); eno != 0 {
+				log.Printf("GlobalUnlock error. %s", eno)
+			}
+		} else {
+			log.Printf("GetClipboardData error %s\n", eno)
+			return ""
+		}
+		return clipboardText
+	}
+
+	paste := func(text string) {
+		// 將資料餵入剪貼簿
+		eno := userDll.OpenClipboard(0)
+		if eno != 0 {
+			log.Printf("open clipboard error %s\n", eno)
+			return
+		}
+		if eno = userDll.EmptyClipboard(); eno != 0 {
+			log.Printf("EmptyClipboard error %s\n", eno)
+			if eno = userDll.CloseClipboard(); eno != 0 {
+				log.Printf("CloseClipboard error %s\n", eno)
+			}
+			return
+		}
+		data := utf16.Encode([]rune(text + "\x00"))
+		size := len(data) * int(unsafe.Sizeof(data[0]))
+		hMem, eno := kernelDll.GlobalAlloc(w32.GMEM_MOVEABLE, w32.SIZE_T(size))
+		if eno == 0 {
+			lpMemData, _ := kernelDll.GlobalLock(hMem)
+			kernelDll.StrCpyW(uintptr(lpMemData), &data[0])
+			if _, eno = kernelDll.GlobalUnlock(hMem); eno == 0 {
+				defer kernelDll.GlobalFree(hMem)
+				if _, eno = userDll.SetClipboardData(w32.CF_UNICODETEXT, w32.HANDLE(hMem)); eno != 0 {
+					log.Printf("SetClipboardData error: %s\n", eno)
+				}
+			}
+		} else {
+			log.Printf("GlobalAlloc error %s\n", eno)
+		}
+		if eno = userDll.CloseClipboard(); eno != 0 {
+			log.Printf("CloseClipboard error %s\n", eno)
+		}
+
+		// 貼上
+		time.Sleep(250 * time.Millisecond) // 剪貼簿關閉之後要等待一段時間，等待的時間也不行太短100，否則接下來的SendInput都可能會異常，貼不到資料
+		if _, eno = userDll.SendInput(4, &inputCtrlV[0], int32(unsafe.Sizeof(inputCtrlV[0]))); eno != 0 {
+			log.Printf("SendInput error: %s\n", eno)
+		}
+	}
+
+	const fontSize = 36
+	hFontSystem := gdiDll.CreateFont(
+		int32(fontSize), 0, 0, 0,
+		w32.FW_DONTCARE,
+		0, 1, 0, w32.DEFAULT_CHARSET,
+		w32.OUT_OUTLINE_PRECIS,
+		w32.CLIP_DEFAULT_PRECIS,
+		w32.CLEARTYPE_QUALITY,
+		w32.DEFAULT_PITCH,
+		"System",
+	)
+	if hFontSystem == 0 {
+		return
+	}
+	defer func() {
+		if gdiDll.DeleteObject(w32.HGDIOBJ(hFontSystem)) {
+			log.Println("DeleteObject HFONT")
+		}
+	}()
+
+	opt := &w32.WindowOptions{Width: 800, Height: 600}
+	opt.WndProc = func(hwnd w32.HWND, uMsg uint32, wParam w32.WPARAM, lParam w32.LPARAM) uintptr {
+		switch uMsg {
+		case w32.WM_CREATE:
+			userDll.ShowWindow(hwnd, w32.SW_SHOW)
+			// hwnd Null 可以註冊全局熱鍵, 不過這種情況下，Msg的接收要寫在消息循環之中，因為他不綁hwnd
+			if en := userDll.RegisterHotKey(0, HokeyIDCtrl1, w32.MOD_CONTROL, w32.VK_KEY_1); en != 0 {
+				log.Println(en)
+			}
+			if en := userDll.RegisterHotKey(0, HokeyIDAlt1, w32.MOD_ALT, w32.VK_KEY_1); en != 0 {
+				log.Println(en)
+			}
+			if en := userDll.RegisterHotKey(0, HokeyIDCtrl2, w32.MOD_CONTROL, w32.VK_KEY_2); en != 0 {
+				log.Println(en)
+			}
+			if en := userDll.RegisterHotKey(0, HokeyIDAlt2, w32.MOD_ALT, w32.VK_KEY_2); en != 0 {
+				log.Println(en)
+			}
+		case w32.WM_DESTROY:
+			for _, hotkeyID := range []int32{HokeyIDCtrl1, HokeyIDCtrl2, HokeyIDAlt1, HokeyIDAlt2} {
+				if en := userDll.UnregisterHotKey(0, hotkeyID); en != 0 {
+					log.Printf("Error [UnregisterHotKey] %s", en)
+				}
+			}
+			userDll.PostQuitMessage(0)
+			return 0
+		case WMUpdateWindow:
+			hdc := userDll.GetDC(hwnd)
+			defer func() {
+				userDll.ReleaseDC(hwnd, hdc)
+			}()
+			// 清空
+			var rect w32.RECT
+			_ = userDll.GetClientRect(hwnd, &rect)
+			hRgnBackground := gdiDll.CreateRectRgnIndirect(&rect)
+			defer gdiDll.DeleteObject(w32.HGDIOBJ(hRgnBackground))
+			hBrush := gdiDll.CreateSolidBrush(w32.RGB(255, 255, 255))
+			defer gdiDll.DeleteObject(w32.HGDIOBJ(hBrush))
+			gdiDll.FillRgn(hdc, hRgnBackground, hBrush)
+
+			windowWidth := rect.Right - rect.Left
+			// windowHeight := rect.Bottom - rect.Top
+			gdiDll.SelectObject(hdc, w32.HGDIOBJ(hFontSystem))
+			for h, text := range []string{buf1, buf2} {
+				userDll.SetRect(&rect, 10, int32((h)*fontSize), windowWidth, int32((h+1)*fontSize))
+				userDll.DrawText(hdc, fmt.Sprintf("[%d] %s", h, text), -1, &rect, w32.DT_NOCLIP)
+			}
+			return 0
+		}
+		return uintptr(userDll.DefWindowProc(hwnd, w32.UINT(uMsg), wParam, lParam))
+	}
+
+	wnd, err := createWindow("multi clipboard", opt)
+	if err != nil {
+		log.Fatal(err)
+	}
+	wnd.Run(func(msg *w32.MSG) bool {
+		if msg.Message != w32.WM_HOTKEY {
+			return true
+		}
+		log.Println("WM_HOTKEY received")
+		var curBuf *string
+		switch msg.WParam {
+		// copy
+		case HokeyIDCtrl2:
+			curBuf = &buf2
+			fallthrough
+		case HokeyIDCtrl1:
+			if curBuf == nil {
+				curBuf = &buf1
+			}
+			*curBuf = copy2clipboard()                              // 複製到剪貼簿，也複製到該變數
+			_ = userDll.PostMessage(wnd.hwnd, WMUpdateWindow, 0, 0) // 在畫面上顯示剪貼簿的內容
+		// paste
+		case HokeyIDAlt2:
+			curBuf = &buf2
+			fallthrough
+		case HokeyIDAlt1:
+			if curBuf == nil {
+				curBuf = &buf1
+			}
+			paste(*curBuf)
+		}
+		return false
+	})
+	// Output:
+}
+
 func ExampleUser32DLL_BeginPaint() {
 	user32dll := w32.NewUser32DLL()
 	kernel32dll := w32.NewKernel32DLL()

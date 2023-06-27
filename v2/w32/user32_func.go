@@ -353,7 +353,10 @@ func (dll *User32DLL) ClipCursor(rect *RECT) syscall.Errno {
 // CloseClipboard  https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-closeclipboard
 func (dll *User32DLL) CloseClipboard() syscall.Errno {
 	proc := dll.mustProc(PNCloseClipboard)
-	_, _, errno := syscall.SyscallN(proc.Addr())
+	r, _, errno := syscall.SyscallN(proc.Addr())
+	if r != 0 {
+		return 0
+	}
 	return errno
 }
 
@@ -590,7 +593,10 @@ func (dll *User32DLL) DrawText(hdc HDC, text string,
 // EmptyClipboard https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-emptyclipboard
 func (dll *User32DLL) EmptyClipboard() syscall.Errno {
 	proc := dll.mustProc(PNEmptyClipboard)
-	_, _, eno := syscall.SyscallN(proc.Addr())
+	r, _, eno := syscall.SyscallN(proc.Addr())
+	if r != 0 {
+		return 0
+	}
 	return eno
 }
 
@@ -760,7 +766,10 @@ func (dll *User32DLL) GetClipboardData(format uint32) (HANDLE, syscall.Errno) {
 	r, _, eno := syscall.SyscallN(proc.Addr(),
 		uintptr(format),
 	)
-	return HANDLE(r), eno
+	if r == 0 {
+		return 0, eno
+	}
+	return HANDLE(r), 0
 }
 
 // GetCursorPos https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getcursorpos
@@ -828,7 +837,10 @@ func (dll *User32DLL) GetMessage(lpMsg *MSG, hWnd HWND, wMsgFilterMin uint32, wM
 		uintptr(wMsgFilterMin),
 		uintptr(wMsgFilterMax),
 	)
-	return int32(r1), errno
+	if int32(r1) == -1 {
+		return int32(r1), errno
+	}
+	return int32(r1), 0
 }
 
 // GetMenu https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getmenu
@@ -1167,10 +1179,13 @@ func (dll *User32DLL) MessageBox(hwnd HWND, text, caption string, btnFlag uint32
 }
 
 // OpenClipboard https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-openclipboard
-// If the function succeeds, the return value is nonzero.
+// If the function fails, the return value is zero. To get extended error information, call GetLastError.
 func (dll *User32DLL) OpenClipboard(hWndNewOwner HWND) syscall.Errno {
 	proc := dll.mustProc(PNOpenClipboard)
-	_, _, errno := syscall.SyscallN(proc.Addr(), uintptr(hWndNewOwner))
+	r1, _, errno := syscall.SyscallN(proc.Addr(), uintptr(hWndNewOwner))
+	if r1 != 0 { // 要先以r1為主，才能知道是否有錯，不能直接返回errno
+		return 0
+	}
 	return errno
 }
 
@@ -1401,17 +1416,22 @@ func (dll *User32DLL) SetWindowsHookEx(idHook int32, lpfn HOOKPROC, hMod HINSTAN
 }
 
 // SendInput https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendinput
-// If the function returns zero
+// If the function returns zero, the input was already blocked by another thread. To get extended error information, call GetLastError.
 func (dll *User32DLL) SendInput(arraySize uint32,
 	pInputs *INPUT, // An "array" of INPUT structures.
 	cbSize int32, // The size, in bytes, of "an" INPUT structure
 ) (uint32, syscall.Errno) {
 	proc := dll.mustProc(PNSendInput)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
+	r1, _, eno := syscall.SyscallN(proc.Addr(),
 		uintptr(arraySize),
 		uintptr(unsafe.Pointer(pInputs)),
 		uintptr(cbSize))
-	return uint32(r1), errno
+	// return uint32(r1), eno // 不可以直接返回，要先以r1為主
+	if r1 != 0 {
+		return uint32(r1), 0
+	} else {
+		return 0, eno
+	}
 }
 
 // SendMessage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendmessage

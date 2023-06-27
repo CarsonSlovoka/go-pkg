@@ -3,6 +3,7 @@ package w32_test
 import (
 	"fmt"
 	"github.com/CarsonSlovoka/go-pkg/v2/w32"
+	"log"
 	"syscall"
 )
 
@@ -40,14 +41,23 @@ type exampleWindow struct {
 	hwnd w32.HWND
 }
 
-func (w *exampleWindow) Run() {
+func (w *exampleWindow) Run(msgProc func(msg *w32.MSG) bool) {
 	var msg w32.MSG
 	for {
-		if status, _ := userDll.GetMessage(&msg, 0, 0, 0); status <= 0 {
+		if bRet, eno := userDll.GetMessage(&msg, 0, 0, 0); bRet == 0 {
+			// WM_QUIT
 			break
+		} else if bRet == -1 {
+			log.Printf("GetMessage error:%s\n", eno)
+		} else {
+			if msgProc != nil {
+				if !msgProc(&msg) { // 若為假則不進行轉譯
+					continue
+				}
+			}
+			userDll.TranslateMessage(&msg)
+			userDll.DispatchMessage(&msg)
 		}
-		userDll.TranslateMessage(&msg)
-		userDll.DispatchMessage(&msg)
 	}
 }
 
