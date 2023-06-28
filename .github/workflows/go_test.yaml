@@ -29,7 +29,7 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
           check-latest: true # 如果指定的go-version不是最新的，會去下載最新的go版本, 預設為false
-          cache-dependency-path: v2/go.sum
+          cache-dependency-path: v2/go.sum # go.mod如果不在根目錄，可以運用此參數來調整
           cache: true # 用go.sum來決定是否要在setupGo # 根路徑一定要存在go.mod, go.sum兩個檔案，不然會出現錯誤: Error: Some specified paths were not resolved, unable to cache dependencies.
           # cache-dependency-path: # 有多個相依文件才需考慮
 
