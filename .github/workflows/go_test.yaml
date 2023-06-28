@@ -10,7 +10,7 @@ on:
 defaults:
   run:
     # 指如果run的這些屬性沒有設定的時候，其預設值改為我們這裡所設定的數值
-    # working-directory: ./v2  # 這不適用在使用套件(uses)的情況下
+    working-directory: ./v2  # 這不適用在使用套件(uses)的情況下
     shell: pwsh # default shell used on Windows
 jobs:
   test:
@@ -25,10 +25,11 @@ jobs:
       - name: Check out code into the Go module directory. # 先checkout，這樣才會有go.sum檔案，才有辦法確認是否要用cache
         uses: actions/checkout@v3
       - name: Install Go.
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go-version }}
           check-latest: true # 如果指定的go-version不是最新的，會去下載最新的go版本, 預設為false
+          cache-dependency-path: v2/go.sum
           cache: true # 用go.sum來決定是否要在setupGo # 根路徑一定要存在go.mod, go.sum兩個檔案，不然會出現錯誤: Error: Some specified paths were not resolved, unable to cache dependencies.
           # cache-dependency-path: # 有多個相依文件才需考慮
 
@@ -54,4 +55,4 @@ jobs:
         uses: actions/upload-artifact@v3 # 它的path吃的是根路徑，與defaults.run.working-directory無關
         with:
           name: coverage-artifact # 表示輸出的zip檔案名稱，zip當中的各個檔案名稱不會更動 # go tool cover -html="coverage.txt"
-          path: coverage.txt # ./v2/coverage.txt
+          path: ./v2/coverage.txt # coverage.txt

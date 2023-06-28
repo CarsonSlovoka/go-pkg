@@ -55,3 +55,12 @@ go標準庫的補強 (不使用第三方套件)
 您也可以查看proxy的狀態，例如
 
 > https://proxy.golang.org/github.com/carsonslovoka/go-pkg/v2/@v/v2.3.0.info
+
+
+## 不兼容版本
+
+如果您已經發布更高的版本，例如v2且go.mod放在此目錄之中，然後試圖把go.mod在搬移至root(這種情況會視為v0或者v1的版本)
+
+因此在 https://deps.dev/go 會顯示有更高的版本，例如:
+- [github.com/CarsonSlovoka/go-pkg](https://deps.dev/go/github.com%2FCarsonSlovoka%2Fgo-pkg/v0.0.0-20230624080655-9982a8c299a1/versions)
+- [github.com/CarsonSlovoka/go-pkg/v2](https://deps.dev/go/github.com%2FCarsonSlovoka%2Fgo-pkg%2Fv2)
