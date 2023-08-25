@@ -269,13 +269,23 @@ func ExampleGdi32DLL_CreateCompatibleBitmap() {
 		// 其實可以直接透過以下這段把數值也順便寫入，即可完成。但我們因為要展示kernel32dll.CreateFile，所以寫入data的部分還是交由它去完成
 		if false {
 			// bitmapData
-			bmpDatas := make([]byte, sizeofDIB)
+			bmpData := make([]byte, sizeofDIB)
 			var offset uint32
 			for offset = 0; offset < sizeofDIB; offset++ {
 				curByteAddr := unsafe.Pointer(uintptr(lpBitmap) + uintptr(offset)) // 計算當前要寫入的byte位址在哪 // 我們是一個byte一個byte寫入，所以大小都是1
-				bmpDatas[offset] = *(*byte)(curByteAddr)
+				bmpData[offset] = *(*byte)(curByteAddr)
 			}
-			_ = binary.Write(f, binary.LittleEndian, bmpDatas)
+
+			/* 如果不想要用for慢慢一個一個給，可以用以下的方法一次賦值完畢
+			sliceHeader := reflect.SliceHeader{
+				Data: uintptr(lpBitmap),
+				Len:  int(sizeofDIB),
+				Cap:  int(sizeofDIB),
+			}
+			bmpData := *(*[]byte)(unsafe.Pointer(&sliceHeader))
+			*/
+
+			_ = binary.Write(f, binary.LittleEndian, bmpData)
 		}
 
 		_ = f.Close()
