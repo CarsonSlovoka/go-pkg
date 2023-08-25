@@ -2548,9 +2548,19 @@ Hello World 您好 世界
 	// true
 }
 
+// 模擬滑鼠移動到指定的位置之後雙擊左鍵
 func ExampleUser32DLL_SetCursorPos() {
 	eno := userDll.SetCursorPos(100, 200)
 	fmt.Println(eno != 0)
+
+	input := w32.INPUT{
+		Type: w32.INPUT_MOUSE,
+	}
+	input.Mi().Flags = w32.MOUSEEVENTF_LEFTDOWN | w32.MOUSEEVENTF_LEFTUP
+	_, _ = userDll.SendInput(1, &input, int32(unsafe.Sizeof(input)))
+	time.Sleep(50 * time.Millisecond)
+	_, _ = userDll.SendInput(1, &input, int32(unsafe.Sizeof(input)))
+
 	// Output:
 	// true
 }
