@@ -1898,6 +1898,7 @@ func ExampleUser32DLL_RegisterHotKey_clipboard() {
 			if en := userDll.RegisterHotKey(0, HokeyIDAlt2, w32.MOD_ALT, w32.VK_KEY_2); en != 0 {
 				log.Println(en)
 			}
+			// userDll.RegisterHotKey(0, HokeyIDTest, 0, w32.VK_F1) // 可以只單個按鍵: 例如F1 (輔助鍵不需要可以給NULL)，
 			go func() {
 				<-time.After(2 * time.Second)
 				log.Println("2秒已到，自動關閉程式. (如果要測試，可以自行延長秒數)")
