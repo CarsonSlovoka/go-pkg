@@ -105,9 +105,11 @@ const (
 	PNReleaseCapture ProcName = "ReleaseCapture"
 	PNReleaseDC      ProcName = "ReleaseDC"
 
-	PNSetActiveWindow     ProcName = "SetActiveWindow"
-	PNSetCapture          ProcName = "SetCapture"
-	PNSetClipboardData    ProcName = "SetClipboardData"
+	PNSetActiveWindow  ProcName = "SetActiveWindow"
+	PNSetCapture       ProcName = "SetCapture"
+	PNSetClipboardData ProcName = "SetClipboardData"
+	PNSetCursorPos     ProcName = "SetCursorPos"
+
 	PNSetForegroundWindow ProcName = "SetForegroundWindow"
 	PNSetMenuDefaultItem  ProcName = "SetMenuDefaultItem"
 	PNSetMenuItemInfo     ProcName = "SetMenuItemInfoW"
@@ -239,6 +241,7 @@ func NewUser32DLL(procList ...ProcName) *User32DLL {
 			PNSetActiveWindow,
 			PNSetCapture,
 			PNSetClipboardData,
+			PNSetCursorPos,
 			PNSetForegroundWindow,
 			PNSetMenuDefaultItem,
 			PNSetMenuItemInfo,
@@ -1300,6 +1303,17 @@ func (dll *User32DLL) SetClipboardData(uFormat uint32, hMem HANDLE) (HANDLE, sys
 		uintptr(hMem),
 	)
 	return HANDLE(r1), eno
+}
+
+// SetCursorPos  https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setcursorpos
+// Returns nonzero if successful or zero otherwise. To get extended error information, call GetLastError.
+func (dll *User32DLL) SetCursorPos(x, y int32) int32 {
+	proc := dll.mustProc(PNSetCursorPos)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(x),
+		uintptr(y),
+	)
+	return int32(r1)
 }
 
 // SetForegroundWindow https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setforegroundwindow

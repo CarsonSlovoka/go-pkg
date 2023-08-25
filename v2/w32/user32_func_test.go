@@ -2547,3 +2547,10 @@ Hello World 您好 世界
 	// Output:
 	// true
 }
+
+func ExampleUser32DLL_SetCursorPos() {
+	eno := userDll.SetCursorPos(100, 200)
+	fmt.Println(eno != 0)
+	// Output:
+	// true
+}
