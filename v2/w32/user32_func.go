@@ -1101,9 +1101,9 @@ func (dll *User32DLL) MustLoadIcon(hInstance HINSTANCE, lpIconName *uint16) HICO
 // LoadImage https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadimagew
 // If the function succeeds, the return value is the handle of the newly loaded image.
 // If the function fails, the return value is NULL
-func (dll *User32DLL) LoadImage(hInst HINSTANCE, name string, aType uint32, cx int32, cy int32, fuLoad uint32) (HANDLE, syscall.Errno) {
+func (dll *User32DLL) LoadImage(hInst HINSTANCE, name string, aType uint32, cx int32, cy int32, fuLoad uint32) (HANDLE, error) {
 	proc := dll.mustProc(PNLoadImage)
-	r1, _, errno := syscall.SyscallN(proc.Addr(),
+	r1, _, eno := syscall.SyscallN(proc.Addr(),
 		uintptr(hInst),
 		UintptrFromStr(name),
 		uintptr(aType),
@@ -1111,7 +1111,17 @@ func (dll *User32DLL) LoadImage(hInst HINSTANCE, name string, aType uint32, cx i
 		uintptr(cy),
 		uintptr(fuLoad),
 	)
-	return HANDLE(r1), errno
+
+	// 會有r1為0且eno也為0的情況，因此直接以eno去判斷將可能不準(eno為0寫的是執行成功，不像是錯誤訊息)
+	if eno != 0 {
+		// 可能是檔案不存在
+		return 0, eno
+	} else if r1 == 0 {
+		// 檔案格式不對時會發生
+		return 0, fmt.Errorf("LoadImage Error, please check the formart")
+	} else {
+		return HANDLE(r1), nil
+	}
 }
 
 /*
