@@ -408,8 +408,6 @@ func ExampleGdi32DLL_CreateDIBSection() {
 	}
 	var lpBits unsafe.Pointer
 	hBitmap := gdiDll.CreateDIBSection(0, &bmi, w32.DIB_RGB_COLORS, &lpBits, 0, 0)
-	log.Println(hBitmap)
-
 	bmpSize := ((width*int32(bmi.Header.BitCount) + 31) / 32) * 4 * height
 	pixels := make([]byte, bmpSize)
 	sliceHeader := reflect.SliceHeader{
@@ -419,13 +417,63 @@ func ExampleGdi32DLL_CreateDIBSection() {
 	}
 	pixels = *(*[]byte)(unsafe.Pointer(&sliceHeader))
 
-	// 以下您可以開始設定pixels的資訊
-	for i := int32(0); i < bmpSize; i++ {
-		copy(pixels[i:i+3], []byte{
+	for i := int32(0); i < bmpSize; i += 4 {
+		copy(pixels[i:i+4], []byte{
 			// b, g, r, a
-			255, 0, 0, 0,
+			255, 255, 0, 0,
 		}[:])
 	}
+
+	if err := saveHBitmap("testdata/test4.bmp", hBitmap); err == nil {
+		_ = os.Remove("testdata/test4.bmp")
+	}
+	// Output:
+}
+
+func Example_savePixelsAsImage() {
+	width := int32(30)
+	height := int32(50)
+	bitCount := uint16(32)
+	bmpSize := ((width*int32(bitCount) + 31) / 32) * 4 * height
+	pixels := make([]byte, bmpSize)
+	var x, y int32
+	var i int32
+	var b byte
+	for y = 0; y < height; y++ {
+		for x = 0; x < width; x++ {
+			if y < height/2 {
+				b = 255
+			} else {
+				b = 0
+			}
+			copy(pixels[i:i+4], []byte{
+				// b, g, r, a
+				b, 255, 0, 0,
+			}[:])
+			i += 4
+		}
+	}
+	outputPath := "testdata/test5.bmp"
+	f, _ := os.Create(outputPath)
+	defer func() {
+		_ = f.Close()
+		_ = os.Remove(outputPath)
+	}()
+	_ = binary.Write(f, binary.LittleEndian, w32.BitmapFileHeader{
+		Type:       0x4D42,
+		Size:       14 + 40 + uint32(bmpSize), // HEADER + INFO + DATA
+		OffsetBits: 14 + 40,
+	})
+	_ = binary.Write(f, binary.LittleEndian, w32.BitmapInfoHeader{
+		Size:     40,
+		Width:    width,
+		Height:   height,
+		Planes:   1,
+		BitCount: bitCount,
+	})
+	_, _ = f.Write(pixels)
+
+	// Output:
 }
 
 func TestGdi32DLL_CreateDIBSection(t *testing.T) {
@@ -480,7 +528,7 @@ func TestGdi32DLL_CreateDIBSection(t *testing.T) {
 			if x > width/2 {
 				b = 128
 			}
-			// copy(pixels[i:i+3], []byte{b, g, r, a}[:]) // 也可以用copy來幫忙
+			// copy(pixels[i:i+4], []byte{b, g, r, a}[:]) // 也可以用copy來幫忙
 			pixels[i+0] = b
 			pixels[i+1] = g
 			pixels[i+2] = r
@@ -489,7 +537,7 @@ func TestGdi32DLL_CreateDIBSection(t *testing.T) {
 		}
 	}
 
-	// 以下為純檔，一種直接寫入數據資料，另一種透過HBITMAP來存檔(多此一舉)
+	// 以下為存檔，一種直接寫入數據資料，另一種透過HBITMAP來存檔
 	outputFile1Path := "testdata/temp1.png"
 	outputFile2Path := "testdata/temp2.png"
 	{
@@ -517,7 +565,7 @@ func TestGdi32DLL_CreateDIBSection(t *testing.T) {
 		_, _ = f.Write(pixels)
 	}
 
-	// 這是另一種存檔方法，不過有點多此一舉，除非您是直接得到HBITMAP的對象才需考慮用以下的存法，否則點集資料都已知的情況下可以直接寫檔即可
+	// 這是另一種存檔方法
 	if err := saveHBitmap(outputFile2Path, hBitmap); err != nil {
 		t.Fatal(err)
 	} else {

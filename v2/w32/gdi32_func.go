@@ -299,7 +299,6 @@ func (dll *Gdi32DLL) CreateCompatibleDC(hdc HDC) HDC {
 // 該數據內容取決於 ppvBits
 // 在完成之後，可以找到ppvBits的位址，開始在該區塊內設定您的點集資料
 // 在數據寫完之後，您可以直接開檔將 {BitmapFileHeader, BitmapInfoHeader, 您的圖片數據} 都寫入，即可保存圖片檔案
-// 當然要透過HBITMAP去存也可以，但是多此一舉
 func (dll *Gdi32DLL) CreateDIBSection(hdc HDC, bitmapInfo *BitmapInfo,
 	usage uint32,
 	ppvBits *unsafe.Pointer, // [out]
