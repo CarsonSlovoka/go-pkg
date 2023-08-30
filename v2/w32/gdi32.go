@@ -1001,7 +1001,7 @@ type BitmapCoreHeader2 struct {
 type BitmapInfoHeader struct {
 	Size          uint32 // 4+4+4+2+2+4+4+4+4+4+4=40
 	Width         int32
-	Height        int32
+	Height        int32  // 正，負會影響方向(原點在左上(往下往右為正)或者原點在左下(往上往右為正)
 	Planes        uint16 // Specifies the number of planes for the target device. This value must be set to 1. // 位元圖數, 只能設定為1
 	BitCount      uint16 // Specifies the number of bits per pixel (bpp). Bits/pixel 1：單色點陣圖（使用 2 色調色盤）,... 8：8 位元點陣圖（使用 256 色調色盤）. 32：32 位元全彩點陣圖（不一定使用調色盤）
 	Compression   uint32 // 壓縮方式, {0為為壓縮縮BI_RGB, BI_RLE8, BI_RLE4, BI_BITFIELDS}

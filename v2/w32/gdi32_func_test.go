@@ -7,8 +7,10 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"reflect"
 	"sync"
 	"syscall"
+	"testing"
 	"time"
 	"unsafe"
 )
@@ -330,6 +332,197 @@ func ExampleGdi32DLL_CreateCompatibleBitmap() {
 
 	// Output:
 	// ok
+}
+
+func saveHBitmap(outputPath string, hBitmap w32.HBITMAP) error {
+	var bitmap w32.Bitmap
+	gdiDll.GetObject(w32.HANDLE(hBitmap), int32(unsafe.Sizeof(bitmap)), uintptr(unsafe.Pointer(&bitmap)))
+	hdc := userDll.GetDC(0)
+	defer userDll.ReleaseDC(0, hdc)
+	hdcMem := gdiDll.CreateCompatibleDC(hdc)
+	defer gdiDll.DeleteDC(hdcMem)
+	gdiDll.SelectObject(hdcMem, w32.HGDIOBJ(hBitmap))
+
+	bitCount := uint16(32)
+	bmpSize := ((bitmap.Width*int32(bitCount) + 31) / 32) * 4 * bitmap.Height
+	hDIB, _ := kernelDll.GlobalAlloc(w32.GHND, w32.SIZE_T(bmpSize))
+	defer func() {
+		_, _ = kernelDll.GlobalUnlock(hDIB)
+		kernelDll.GlobalFree(hDIB)
+	}()
+	var lpBitmap w32.LPVOID
+	lpBitmap, _ = kernelDll.GlobalLock(hDIB)
+
+	bitmapInfo := &w32.BitmapInfo{Header: w32.BitmapInfoHeader{
+		Size:  40,
+		Width: bitmap.Width, Height: bitmap.Height,
+		Planes:      1,
+		BitCount:    bitCount,
+		Compression: w32.BI_RGB,
+	}}
+
+	gdiDll.GetDIBits(
+		hdcMem, hBitmap, 0,
+		w32.UINT(bitmap.Height),
+		lpBitmap, // [out]
+		bitmapInfo,
+		w32.DIB_RGB_COLORS,
+	)
+
+	f, err := os.Create(outputPath)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = f.Close()
+	}()
+	_ = binary.Write(f, binary.LittleEndian, w32.BitmapFileHeader{
+		Type:       0x4D42,
+		Size:       14 + 40 + uint32(bmpSize), // HEADER + INFO + DATA
+		OffsetBits: 14 + 40,
+	})
+	_ = binary.Write(f, binary.LittleEndian, bitmapInfo.Header)
+
+	bmpData := make([]byte, bmpSize)
+	sliceHeader := reflect.SliceHeader{
+		Data: uintptr(lpBitmap),
+		Len:  int(bmpSize),
+		Cap:  int(bmpSize),
+	}
+	bmpData = *(*[]byte)(unsafe.Pointer(&sliceHeader))
+	_, err = f.Write(bmpData)
+	return err
+}
+
+func ExampleGdi32DLL_CreateDIBSection() {
+	width := int32(30)
+	height := int32(50)
+	bmi := w32.BitmapInfo{
+		Header: w32.BitmapInfoHeader{
+			Size:     40,
+			Width:    width,
+			Height:   height,
+			Planes:   1,
+			BitCount: 32,
+		},
+	}
+	var lpBits unsafe.Pointer
+	hBitmap := gdiDll.CreateDIBSection(0, &bmi, w32.DIB_RGB_COLORS, &lpBits, 0, 0)
+	log.Println(hBitmap)
+
+	bmpSize := ((width*int32(bmi.Header.BitCount) + 31) / 32) * 4 * height
+	pixels := make([]byte, bmpSize)
+	sliceHeader := reflect.SliceHeader{
+		Data: uintptr(lpBits),
+		Len:  int(bmpSize),
+		Cap:  int(bmpSize),
+	}
+	pixels = *(*[]byte)(unsafe.Pointer(&sliceHeader))
+
+	// 以下您可以開始設定pixels的資訊
+	for i := int32(0); i < bmpSize; i++ {
+		copy(pixels[i:i+3], []byte{
+			// b, g, r, a
+			255, 0, 0, 0,
+		}[:])
+	}
+}
+
+func TestGdi32DLL_CreateDIBSection(t *testing.T) {
+	width := int32(30)
+	height := int32(50)
+	bmi := w32.BitmapInfo{
+		Header: w32.BitmapInfoHeader{
+			Size:     40,
+			Width:    width,
+			Height:   height,
+			Planes:   1,
+			BitCount: 32,
+		},
+	}
+	var lpBits unsafe.Pointer
+	hBitmap := gdiDll.CreateDIBSection(0, &bmi, w32.DIB_RGB_COLORS, &lpBits, 0, 0)
+
+	// 設定顏色
+	var (
+		r, g, b, a byte
+		x, y       int32
+	)
+	bmpSize := ((width*int32(bmi.Header.BitCount) + 31) / 32) * 4 * height
+
+	// pixels := (*[1 << 30]byte)(unsafe.Pointer(lpBits)) // 這可行，可以直接指到一個大的區塊，理論上如果圖片沒有那麼大是可行的
+	pixels := make([]byte, bmpSize)
+	// pixels = *(*[]byte)(unsafe.Pointer(&lpBits)) // 錯誤，會不知道界線在哪,所以要透過sliceHeader告知長度來幫忙
+	sliceHeader := reflect.SliceHeader{
+		Data: uintptr(lpBits),
+		Len:  int(bmpSize),
+		Cap:  int(bmpSize),
+	}
+	pixels = *(*[]byte)(unsafe.Pointer(&sliceHeader))
+
+	i := int32(0)
+	for y = int32(0); y <= height; y++ {
+		if i >= bmpSize {
+			break
+		}
+		for x = int32(0); x < width; x++ {
+			if y < height/2 {
+				r = 255
+				g = 0
+				b = 0
+				a = 0
+			} else {
+				r = 255
+				g = 255
+				b = 0
+				a = 0
+			}
+			if x > width/2 {
+				b = 128
+			}
+			// copy(pixels[i:i+3], []byte{b, g, r, a}[:]) // 也可以用copy來幫忙
+			pixels[i+0] = b
+			pixels[i+1] = g
+			pixels[i+2] = r
+			pixels[i+3] = a
+			i += 4
+		}
+	}
+
+	// 以下為純檔，一種直接寫入數據資料，另一種透過HBITMAP來存檔(多此一舉)
+	outputFile1Path := "testdata/temp1.png"
+	outputFile2Path := "testdata/temp2.png"
+	{
+		f, err := os.Create(outputFile1Path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			_ = f.Close()
+			_ = os.Remove(outputFile1Path)
+		}()
+		_ = binary.Write(f, binary.LittleEndian, w32.BitmapFileHeader{
+			Type:       0x4D42,
+			Size:       14 + 40 + uint32(bmpSize), // HEADER + INFO + DATA
+			OffsetBits: 14 + 40,
+		})
+		_ = binary.Write(f, binary.LittleEndian, w32.BitmapInfoHeader{
+			Size:        40,
+			Width:       width,
+			Height:      height,
+			Planes:      1,
+			BitCount:    32,
+			Compression: w32.BI_RGB,
+		})
+		_, _ = f.Write(pixels)
+	}
+
+	// 這是另一種存檔方法，不過有點多此一舉，除非您是直接得到HBITMAP的對象才需考慮用以下的存法，否則點集資料都已知的情況下可以直接寫檔即可
+	if err := saveHBitmap(outputFile2Path, hBitmap); err != nil {
+		t.Fatal(err)
+	} else {
+		_ = os.Remove(outputFile2Path)
+	}
 }
 
 // 以鼠標為中心，依據輸入範圍，將矩形框內的範圍複製到剪貼簿之中

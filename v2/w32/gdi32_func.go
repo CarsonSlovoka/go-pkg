@@ -17,6 +17,7 @@ const (
 
 	PNCreateCompatibleBitmap ProcName = "CreateCompatibleBitmap"
 	PNCreateCompatibleDC     ProcName = "CreateCompatibleDC"
+	PNCreateDIBSection       ProcName = "CreateDIBSection"
 	PNCreateFontIndirect     ProcName = "CreateFontIndirectW"
 	PNCreateFont             ProcName = "CreateFontW"
 	PNCreatePen              ProcName = "CreatePen"
@@ -74,6 +75,7 @@ func NewGdi32DLL(procList ...ProcName) *Gdi32DLL {
 
 			PNCreateCompatibleBitmap,
 			PNCreateCompatibleDC,
+			PNCreateDIBSection,
 			PNCreateFontIndirect,
 			PNCreateFont,
 			PNCreatePen,
@@ -290,6 +292,30 @@ func (dll *Gdi32DLL) CreateCompatibleDC(hdc HDC) HDC {
 		uintptr(hdc),
 	)
 	return HDC(r1)
+}
+
+// CreateDIBSection https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createdibsection
+// 這個函數可以在記憶體之中生成出一個HBITMAP的對象
+// 該數據內容取決於 ppvBits
+// 在完成之後，可以找到ppvBits的位址，開始在該區塊內設定您的點集資料
+// 在數據寫完之後，您可以直接開檔將 {BitmapFileHeader, BitmapInfoHeader, 您的圖片數據} 都寫入，即可保存圖片檔案
+// 當然要透過HBITMAP去存也可以，但是多此一舉
+func (dll *Gdi32DLL) CreateDIBSection(hdc HDC, bitmapInfo *BitmapInfo,
+	usage uint32,
+	ppvBits *unsafe.Pointer, // [out]
+	section HANDLE,
+	offset uint32,
+) HBITMAP {
+	proc := dll.mustProc(PNCreateDIBSection)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+		uintptr(unsafe.Pointer(bitmapInfo)),
+		uintptr(usage),
+		uintptr(unsafe.Pointer(ppvBits)),
+		uintptr(section),
+		uintptr(offset),
+	)
+	return HBITMAP(r1)
 }
 
 // CreateFontIndirect https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createfontindirectw
