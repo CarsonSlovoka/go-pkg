@@ -311,7 +311,7 @@ func ExampleUser32DLL_GetIconInfo() {
 
 		sizeofDIB := 14 + uint32(unsafe.Sizeof(bitmapInfoHeader)) + uint32(bmpSize)
 		bitmapFileHeader = w32.BitmapFileHeader{
-			Type:       0x4D42,    // BM. // B: 42, M: 4D  //  All of the integer values are stored in little-endian format
+			Type:       0x4D42,    // BM. // B: 42, M: 4D  //  All the integer values are stored in little-endian format
 			Size:       sizeofDIB, // HEADER + INFO + DATA
 			OffsetBits: 14 + uint32(unsafe.Sizeof(bitmapInfoHeader)),
 		}
@@ -356,9 +356,8 @@ func ExampleUser32DLL_GetIconInfo() {
 			_ = binary.Write(f, binary.LittleEndian, bitmapInfoHeader)
 
 			// bitmapData
-			bmpDatas := make([]byte, sizeofDIB)
-			var offset uint32 = 0
-			for offset = 0; offset < sizeofDIB; offset += 1 {
+			bmpDatas := make([]byte, bmpSize)
+			for offset := uint32(0); offset < uint32(bmpSize); offset += 1 {
 				curByteAddr := unsafe.Pointer(uintptr(lpBitmap) + uintptr(offset))
 				bmpDatas[offset] = *(*byte)(curByteAddr)
 			}

@@ -269,9 +269,9 @@ func ExampleGdi32DLL_CreateCompatibleBitmap() {
 		// 其實可以直接透過以下這段把數值也順便寫入，即可完成。但我們因為要展示kernel32dll.CreateFile，所以寫入data的部分還是交由它去完成
 		if false {
 			// bitmapData
-			bmpData := make([]byte, sizeofDIB)
+			bmpData := make([]byte, bmpSize)
 			var offset uint32
-			for offset = 0; offset < sizeofDIB; offset++ {
+			for offset = 0; offset < uint32(bmpSize); offset++ {
 				curByteAddr := unsafe.Pointer(uintptr(lpBitmap) + uintptr(offset)) // 計算當前要寫入的byte位址在哪 // 我們是一個byte一個byte寫入，所以大小都是1
 				bmpData[offset] = *(*byte)(curByteAddr)
 			}
@@ -279,8 +279,8 @@ func ExampleGdi32DLL_CreateCompatibleBitmap() {
 			/* 如果不想要用for慢慢一個一個給，可以用以下的方法一次賦值完畢
 			sliceHeader := reflect.SliceHeader{
 				Data: uintptr(lpBitmap),
-				Len:  int(sizeofDIB),
-				Cap:  int(sizeofDIB),
+				Len:  int(bmpSize),
+				Cap:  int(bmpSize),
 			}
 			bmpData := *(*[]byte)(unsafe.Pointer(&sliceHeader))
 			*/
@@ -323,7 +323,7 @@ func ExampleGdi32DLL_CreateCompatibleBitmap() {
 	// DIP HEADER 不行用以下的方法寫，會有endian的問題
 	// _, _ = kernel32dll.WriteFile(hFile, uintptr(unsafe.Pointer(&bitmapInfoHeader)), uint32(unsafe.Sizeof(bitmapInfoHeader)), &dwBytesWritten, nil)
 	// DATA
-	_ = kernel32dll.WriteFile(hFile, uintptr(lpBitmap), sizeofDIB, &dwBytesWritten, nil)
+	_ = kernel32dll.WriteFile(hFile, uintptr(lpBitmap), uint32(bmpSize), &dwBytesWritten, nil)
 	_ = kernel32dll.CloseHandle(hFile)
 
 	fmt.Println("ok")
@@ -446,7 +446,7 @@ func Example_saveFileIconAsBitmap() {
 
 		sizeofDIB := 14 + uint32(unsafe.Sizeof(bitmapInfoHeader)) + uint32(bmpSize)
 		bitmapFileHeader = w32.BitmapFileHeader{
-			Type:       0x4D42,    // BM. // B: 42, M: 4D  //  All of the integer values are stored in little-endian format
+			Type:       0x4D42,    // BM. // B: 42, M: 4D  //  All the integer values are stored in little-endian format
 			Size:       sizeofDIB, // HEADER + INFO + DATA
 			OffsetBits: 14 + uint32(unsafe.Sizeof(bitmapInfoHeader)),
 		}
@@ -483,13 +483,12 @@ func Example_saveFileIconAsBitmap() {
 			_ = binary.Write(f, binary.LittleEndian, bitmapInfoHeader)
 
 			// bitmapData
-			bmpDatas := make([]byte, sizeofDIB)
-			var offset uint32
-			for offset = 0; offset < sizeofDIB; offset += 1 {
+			bmpData := make([]byte, bmpSize)
+			for offset := uint32(0); offset < uint32(bmpSize); offset += 1 {
 				curByteAddr := unsafe.Pointer(uintptr(lpBitmap) + uintptr(offset))
-				bmpDatas[offset] = *(*byte)(curByteAddr)
+				bmpData[offset] = *(*byte)(curByteAddr)
 			}
-			_ = binary.Write(f, binary.LittleEndian, bmpDatas)
+			_ = binary.Write(f, binary.LittleEndian, bmpData)
 
 			_ = f.Close()
 		}
