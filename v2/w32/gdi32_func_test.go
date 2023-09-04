@@ -256,7 +256,7 @@ func ExampleGdi32DLL_CreateCompatibleBitmap() {
 	}
 
 	outputBmpPath := "testdata/captureNotepad.bmp"
-	// 寫檔，寫入FileHeader, DIPHeader, bitmapData
+	// 寫檔，寫入FileHeader, DIBHeader (Device Independent Bitmap), bitmapData
 	{
 		f, err := os.Create(outputBmpPath)
 		if err != nil {
@@ -265,7 +265,7 @@ func ExampleGdi32DLL_CreateCompatibleBitmap() {
 		// FileHeader
 		_ = binary.Write(f, binary.LittleEndian, bitmapFileHeader)
 
-		// DIP Header
+		// DIB Header
 		_ = binary.Write(f, binary.LittleEndian, bitmapInfoHeader)
 
 		// 其實可以直接透過以下這段把數值也順便寫入，即可完成。但我們因為要展示kernel32dll.CreateFile，所以寫入data的部分還是交由它去完成
@@ -322,7 +322,7 @@ func ExampleGdi32DLL_CreateCompatibleBitmap() {
 	var dwBytesWritten uint32
 	// FILE HEADER 不行用以下的方法寫，會有endian的問題
 	// _, _ = kernel32dll.WriteFile(hFile, uintptr(unsafe.Pointer(&bitmapFileHeader)), 14, &dwBytesWritten, nil)
-	// DIP HEADER 不行用以下的方法寫，會有endian的問題
+	// DIB HEADER 不行用以下的方法寫，會有endian的問題
 	// _, _ = kernel32dll.WriteFile(hFile, uintptr(unsafe.Pointer(&bitmapInfoHeader)), uint32(unsafe.Sizeof(bitmapInfoHeader)), &dwBytesWritten, nil)
 	// DATA
 	_ = kernel32dll.WriteFile(hFile, uintptr(lpBitmap), uint32(bmpSize), &dwBytesWritten, nil)
@@ -710,7 +710,7 @@ func Example_saveFileIconAsBitmap() {
 			w32.DIB_RGB_COLORS,
 		)
 		outputBmpPath := "testdata/temp001.bmp"
-		// Write: FileHeader, DIPHeader, bitmapData
+		// Write: FileHeader, DIBHeader, bitmapData
 		{
 			f, _ := os.Create(outputBmpPath)
 			defer func() {
@@ -720,7 +720,7 @@ func Example_saveFileIconAsBitmap() {
 			// FileHeader
 			_ = binary.Write(f, binary.LittleEndian, bitmapFileHeader)
 
-			// DIP Header
+			// DIB Header
 			_ = binary.Write(f, binary.LittleEndian, bitmapInfoHeader)
 
 			// bitmapData

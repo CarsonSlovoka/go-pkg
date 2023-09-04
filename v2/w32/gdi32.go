@@ -954,7 +954,7 @@ type CIEXYZTRIPLE struct {
 
 // BitmapFileHeader https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmapfileheader
 // https://upload.wikimedia.org/wikipedia/commons/7/75/BMPfileFormat.svg
-// ★ https://learn.microsoft.com/en-us/windows/win32/gdi/bitmap-header-types 有正規文檔紀錄的DIP文件就只有4個類型
+// ★ https://learn.microsoft.com/en-us/windows/win32/gdi/bitmap-header-types 有正規文檔紀錄的DIB文件就只有4個類型
 // ★ all the integer values are stored in "little-endian" format
 // Size: 14
 type BitmapFileHeader struct { // 14bytes
@@ -962,7 +962,7 @@ type BitmapFileHeader struct { // 14bytes
 	Size       uint32 // The size, in bytes, of the bitmap file. // BitmapFileHeader + BitmapInfoHeader + DATA
 	Reserved1  uint16
 	Reserved2  uint16
-	OffsetBits uint32 // raw data(bitmap bits)從哪裡開始寫起 即Sizeof(FileHeader)+Sizeof(DIPHeader)
+	OffsetBits uint32 // raw data(bitmap bits)從哪裡開始寫起 即Sizeof(FileHeader)+Sizeof(DIBHeader)
 }
 
 // ----
@@ -970,8 +970,8 @@ type BitmapFileHeader struct { // 14bytes
 
 // BitmapCoreHeader
 // Size: 12
-// Bitmap有很多種格式，其中不一樣的地方在於DIP Header，
-// 而區分DIP Header的方式就是讀取每一個DIP的前4byte，他的前4碼表示大小，又由於不同的DIP表頭，有不同的大小，所以透過大小，我們就能得到它到底用哪一個版本的DIP表頭
+// Bitmap有很多種格式，其中不一樣的地方在於DIB Header，
+// 而區分DIB Header的方式就是讀取每一個DIB的前4byte，他的前4碼表示大小，又由於不同的DIB表頭，有不同的大小，所以透過大小，我們就能得到它到底用哪一個版本的DIP表頭
 type BitmapCoreHeader struct {
 	Size     uint32 // 這個很重要因為DIB的表頭，有很多種格式，所以我們要透過Size來得知，當前的bitmap的DIB HEADER用的是哪一個表
 	Width    uint16

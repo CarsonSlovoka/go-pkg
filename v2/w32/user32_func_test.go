@@ -336,7 +336,7 @@ func ExampleUser32DLL_GetIconInfo() {
 			w32.DIB_RGB_COLORS,
 		)
 		outputBmpPath := "testdata/info.bmp"
-		// Write: FileHeader, DIPHeader, bitmapData
+		// Write: FileHeader, DIBHeader, bitmapData
 		{
 			f, err := os.Create(outputBmpPath)
 			if err != nil {
@@ -352,7 +352,7 @@ func ExampleUser32DLL_GetIconInfo() {
 			// FileHeader
 			_ = binary.Write(f, binary.LittleEndian, bitmapFileHeader)
 
-			// DIP Header
+			// DIB Header
 			_ = binary.Write(f, binary.LittleEndian, bitmapInfoHeader)
 
 			// bitmapData
