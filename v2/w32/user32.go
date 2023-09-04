@@ -1333,7 +1333,7 @@ const (
 // Standard clipboard formats
 const (
 	CF_BITMAP          = 2
-	CF_DIB             = 8
+	CF_DIB             = 8 // 共有兩部份資料 {DIB Header, pixels} <=> { BitmapInfoHeader, []byte } 其中點集的大小需要平面化，例如 [][] COLORREF => [height*width*4]byte , 4為假設資料為RGBA
 	CF_DIBV5           = 17
 	CF_DIF             = 5
 	CF_DSPBITMAP       = 0x0082
