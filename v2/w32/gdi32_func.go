@@ -125,17 +125,29 @@ func RGB(r, g, b byte) COLORREF {
 
 func GetRValue[T uint32 | COLORREF](rgb T) byte {
 	// return LOBYTE(uintptr(rgb)) // 不需要再透過一個函數再計算結果
-	return byte(rgb & 0xff)
+	return byte(rgb)
 }
 
 func GetGValue[T uint32 | COLORREF](rgb T) byte {
 	// return LOBYTE(uintptr(uint16(rgb) >> 8))
-	return byte((rgb >> 8) & 0xff)
+	return byte(rgb >> 8)
 }
 
 func GetBValue[T uint32 | COLORREF](rgb T) byte {
 	// return LOBYTE(uintptr(rgb >> 16))
-	return byte((rgb >> 16) & 0xff)
+	return byte(rgb >> 16)
+}
+
+func (c *COLORREF) R() byte {
+	return byte(*c)
+}
+
+func (c *COLORREF) G() byte {
+	return byte(*c >> 8)
+}
+
+func (c *COLORREF) B() byte {
+	return byte(*c >> 16)
 }
 
 // NewFontMemResource 這不是屬於winapi正統的函數，是一個包裝，方便使用AddFontMemResourceEx

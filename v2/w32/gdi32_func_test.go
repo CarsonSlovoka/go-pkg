@@ -17,9 +17,12 @@ import (
 
 func ExampleRGB() {
 	rgb := w32.RGB(0xff, 0x80, 0x40) // 255, 128, 64
+	fmt.Println(rgb.R(), rgb.G(), rgb.B())
 	fmt.Println(0x4080ff == rgb)
 	fmt.Println(w32.GetRValue(rgb), w32.GetGValue(rgb), w32.GetBValue(rgb))
+
 	// Output:
+	// 255 128 64
 	// true
 	// 255 128 64
 }
