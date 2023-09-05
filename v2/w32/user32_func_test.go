@@ -1898,9 +1898,9 @@ func ExampleUser32DLL_RegisterHotKey_clipboard() {
 			}
 			// userDll.RegisterHotKey(0, HokeyIDTest, 0, w32.VK_F1) // 可以只單個按鍵: 例如F1 (輔助鍵不需要可以給NULL)，
 			go func() {
-				// <-time.After(2 * time.Second)
-				// log.Println("2秒已到，自動關閉程式. (如果要測試，可以自行延長秒數)")
-				// _, _, _ = userDll.SendMessage(hwnd, w32.WM_CLOSE, 0, 0)
+				<-time.After(2 * time.Second)
+				log.Println("2秒已到，自動關閉程式. (如果要測試，可以自行延長秒數)")
+				_, _, _ = userDll.SendMessage(hwnd, w32.WM_CLOSE, 0, 0)
 			}()
 
 		case w32.WM_DESTROY:
