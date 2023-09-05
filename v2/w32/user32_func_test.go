@@ -323,10 +323,8 @@ func ExampleUser32DLL_GetIconInfo() {
 		var lpBitmap w32.LPVOID
 		hDIB, _ := kernel32dll.GlobalAlloc(w32.GHND, w32.SIZE_T(bmpSize))
 		lpBitmap, _ = kernel32dll.GlobalLock(hDIB)
-		defer func() {
-			kernel32dll.GlobalUnlock(hDIB)
-			kernel32dll.GlobalFree(hDIB)
-		}()
+		defer kernel32dll.GlobalFree(hDIB)
+
 		gdi32dll.GetDIBits(
 			hdc, iInfo.HbmColor,
 			0,
@@ -335,6 +333,7 @@ func ExampleUser32DLL_GetIconInfo() {
 			&w32.BitmapInfo{Header: bitmapInfoHeader},
 			w32.DIB_RGB_COLORS,
 		)
+		_, _ = kernel32dll.GlobalUnlock(hDIB)
 		outputBmpPath := "testdata/info.bmp"
 		// Write: FileHeader, DIBHeader, bitmapData
 		{
@@ -1835,10 +1834,10 @@ func ExampleUser32DLL_RegisterHotKey_clipboard() {
 		size := len(data) * int(unsafe.Sizeof(data[0]))
 		hMem, eno := kernelDll.GlobalAlloc(w32.GMEM_MOVEABLE, w32.SIZE_T(size))
 		if eno == 0 {
+			defer kernelDll.GlobalFree(hMem)
 			lpMemData, _ := kernelDll.GlobalLock(hMem)
 			kernelDll.StrCpyW(uintptr(lpMemData), &data[0])
 			if _, eno = kernelDll.GlobalUnlock(hMem); eno == 0 {
-				defer kernelDll.GlobalFree(hMem)
 				if _, eno = userDll.SetClipboardData(w32.CF_UNICODETEXT, w32.HANDLE(hMem)); eno != 0 {
 					log.Printf("SetClipboardData error: %s\n", eno)
 				}
@@ -1899,9 +1898,9 @@ func ExampleUser32DLL_RegisterHotKey_clipboard() {
 			}
 			// userDll.RegisterHotKey(0, HokeyIDTest, 0, w32.VK_F1) // 可以只單個按鍵: 例如F1 (輔助鍵不需要可以給NULL)，
 			go func() {
-				<-time.After(2 * time.Second)
-				log.Println("2秒已到，自動關閉程式. (如果要測試，可以自行延長秒數)")
-				_, _, _ = userDll.SendMessage(hwnd, w32.WM_CLOSE, 0, 0)
+				// <-time.After(2 * time.Second)
+				// log.Println("2秒已到，自動關閉程式. (如果要測試，可以自行延長秒數)")
+				// _, _, _ = userDll.SendMessage(hwnd, w32.WM_CLOSE, 0, 0)
 			}()
 
 		case w32.WM_DESTROY:
@@ -2510,6 +2509,8 @@ Hello World 您好 世界
 	size := len(data) * int(unsafe.Sizeof(data[0]))
 	hMem, eno := kernelDll.GlobalAlloc(w32.GMEM_MOVEABLE, w32.SIZE_T(size))
 	if eno == 0 {
+		defer kernelDll.GlobalFree(hMem)
+
 		// 鎖定內存
 		lpMemData, _ := kernelDll.GlobalLock(hMem)
 
@@ -2520,7 +2521,6 @@ Hello World 您好 世界
 		if _, eno = kernelDll.GlobalUnlock(hMem); eno != 0 {
 			log.Println(eno)
 		}
-		defer kernelDll.GlobalFree(hMem)
 	}
 
 	if _, eno = userDll.SetClipboardData(w32.CF_UNICODETEXT, w32.HANDLE(hMem)); eno != 0 {
@@ -2625,6 +2625,7 @@ func TestUser32DLL_SetClipboardData(t *testing.T) {
 			t.Fatal("GlobalAlloc error")
 			return
 		}
+		defer kernelDll.GlobalFree(hDIB2)
 		var lpDIB w32.LPVOID
 		lpDIB, _ = kernelDll.GlobalLock(hDIB2)
 

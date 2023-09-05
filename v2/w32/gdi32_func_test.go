@@ -230,10 +230,7 @@ func ExampleGdi32DLL_CreateCompatibleBitmap() {
 
 	hDIB, _ := kernel32dll.GlobalAlloc(w32.GHND, w32.SIZE_T(bmpSize))
 	// Unlock and Free the DIB from the heap.
-	defer func() {
-		kernel32dll.GlobalUnlock(hDIB)
-		kernel32dll.GlobalFree(hDIB)
-	}()
+	defer kernel32dll.GlobalFree(hDIB)
 
 	// 找到bitmap的資料起始位置lpBitmap
 	var lpBitmap w32.LPVOID
@@ -247,6 +244,7 @@ func ExampleGdi32DLL_CreateCompatibleBitmap() {
 		&w32.BitmapInfo{Header: bitmapInfoHeader},
 		w32.DIB_RGB_COLORS,
 	)
+	_, _ = kernel32dll.GlobalUnlock(hDIB)
 
 	// Add the size of the headers to the size of the bitmap to get the total file size.
 	var bitmapFileHeader w32.BitmapFileHeader
@@ -349,10 +347,8 @@ func saveHBitmap(outputPath string, hBitmap w32.HBITMAP) error {
 	bitCount := uint16(32)
 	bmpSize := ((bitmap.Width*int32(bitCount) + 31) / 32) * 4 * bitmap.Height
 	hDIB, _ := kernelDll.GlobalAlloc(w32.GHND, w32.SIZE_T(bmpSize))
-	defer func() {
-		_, _ = kernelDll.GlobalUnlock(hDIB)
-		kernelDll.GlobalFree(hDIB)
-	}()
+	defer kernelDll.GlobalFree(hDIB)
+
 	var lpBitmap w32.LPVOID
 	lpBitmap, _ = kernelDll.GlobalLock(hDIB)
 
@@ -371,6 +367,7 @@ func saveHBitmap(outputPath string, hBitmap w32.HBITMAP) error {
 		bitmapInfo,
 		w32.DIB_RGB_COLORS,
 	)
+	_, _ = kernelDll.GlobalUnlock(hDIB)
 
 	f, err := os.Create(outputPath)
 	if err != nil {
@@ -700,10 +697,8 @@ func Example_saveFileIconAsBitmap() {
 		var lpBitmap w32.LPVOID
 		hDIB, _ := kernel32dll.GlobalAlloc(w32.GHND, w32.SIZE_T(bmpSize))
 		lpBitmap, _ = kernel32dll.GlobalLock(hDIB)
-		defer func() {
-			kernel32dll.GlobalUnlock(hDIB)
-			kernel32dll.GlobalFree(hDIB)
-		}()
+		defer kernel32dll.GlobalFree(hDIB)
+
 		gdi32dll.GetDIBits(
 			hdc, iInfo.HbmColor,
 			0,
@@ -712,6 +707,8 @@ func Example_saveFileIconAsBitmap() {
 			&w32.BitmapInfo{Header: bitmapInfoHeader},
 			w32.DIB_RGB_COLORS,
 		)
+		count, _ := kernel32dll.GlobalUnlock(hDIB)
+		_ = count
 		outputBmpPath := "testdata/temp001.bmp"
 		// Write: FileHeader, DIBHeader, bitmapData
 		{

@@ -448,6 +448,7 @@ func (dll *Kernel32DLL) GetUserDefaultLCID() LCID {
 }
 
 // GlobalAlloc https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-globalalloc
+// 🧙 To free the memory, use the GlobalFree function. It is not safe to free memory allocated with GlobalAlloc using LocalFree.
 // If the function fails, the return value is NULL.
 func (dll *Kernel32DLL) GlobalAlloc(uFlags UINT, dwBytes SIZE_T) (HGLOBAL, syscall.Errno) {
 	proc := dll.mustProc(PNGlobalAlloc)
@@ -470,6 +471,7 @@ func (dll *Kernel32DLL) GlobalFree(hMem HGLOBAL) HGLOBAL {
 }
 
 // GlobalLock https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-globallock
+// For movable memory objects, GlobalLock increments the count by one, and the GlobalUnlock function decrements the count by one.
 // If the function fails, the return value is NULL.
 func (dll *Kernel32DLL) GlobalLock(hMem HGLOBAL) (LPVOID, syscall.Errno) {
 	proc := dll.mustProc(PNGlobalLock)
