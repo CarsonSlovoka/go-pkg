@@ -180,6 +180,17 @@ func ExampleKernel32DLL_GetNativeSystemInfo() {
 	// Output:
 }
 
+func ExampleKernel32DLL_GetSystemPreferredUILanguages() {
+	s1, err := kernelDll.GetSystemPreferredUILanguages(w32.MUI_LANGUAGE_ID, 64)                 // []string{"0404", "0409"}
+	s2, err := kernelDll.GetSystemPreferredUILanguages(w32.MUI_LANGUAGE_NAME, 64)               // []string{"zh-TW", "en-US"}
+	s3, err := kernelDll.GetSystemPreferredUILanguages(w32.MUI_MACHINE_LANGUAGE_SETTINGS, 64)   // 通常是: []string{"zh-TW", "en-US"}
+	if _, err = kernelDll.GetSystemPreferredUILanguages(w32.MUI_LANGUAGE_NAME, 1); err != nil { // 故意給比較小的緩存空間，所以會發生錯誤
+		// log.Printf("%s", err) //  The data area passed to a system call is too small. [ERROR_INSUFFICIENT_BUFFER (122)]
+	}
+	log.Println(s1, s2, s3)
+	// Output:
+}
+
 func ExampleKernel32DLL_CreateFile() {
 	kernel32dll := w32.NewKernel32DLL(
 		w32.PNCreateFile,

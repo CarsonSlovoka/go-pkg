@@ -28,17 +28,18 @@ const (
 	PNFreeConsole ProcName = "FreeConsole"
 	PNFreeLibrary ProcName = "FreeLibrary"
 
-	PNGetConsoleWindow     ProcName = "GetConsoleWindow"
-	PNGetCurrentProcess    ProcName = "GetCurrentProcess"
-	PNGetCurrentThread     ProcName = "GetCurrentThread"
-	PNGetCurrentThreadId   ProcName = "GetCurrentThreadId"
-	PNGetExitCodeProcess   ProcName = "GetExitCodeProcess"
-	PNGetLastError         ProcName = "GetLastError"
-	PNGetModuleFileName    ProcName = "GetModuleFileNameW"
-	PNGetModuleHandle      ProcName = "GetModuleHandleW"
-	PNGetNativeSystemInfo  ProcName = "GetNativeSystemInfo"
-	PNGetThreadDescription ProcName = "GetThreadDescription"
-	PNGetUserDefaultLCID   ProcName = "GetUserDefaultLCID"
+	PNGetConsoleWindow              ProcName = "GetConsoleWindow"
+	PNGetCurrentProcess             ProcName = "GetCurrentProcess"
+	PNGetCurrentThread              ProcName = "GetCurrentThread"
+	PNGetCurrentThreadId            ProcName = "GetCurrentThreadId"
+	PNGetExitCodeProcess            ProcName = "GetExitCodeProcess"
+	PNGetLastError                  ProcName = "GetLastError"
+	PNGetModuleFileName             ProcName = "GetModuleFileNameW"
+	PNGetModuleHandle               ProcName = "GetModuleHandleW"
+	PNGetNativeSystemInfo           ProcName = "GetNativeSystemInfo"
+	PNGetSystemPreferredUILanguages ProcName = "GetSystemPreferredUILanguages"
+	PNGetThreadDescription          ProcName = "GetThreadDescription"
+	PNGetUserDefaultLCID            ProcName = "GetUserDefaultLCID"
 
 	PNGlobalAlloc  ProcName = "GlobalAlloc"
 	PNGlobalFree   ProcName = "GlobalFree"
@@ -115,6 +116,7 @@ func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 			PNGetModuleFileName,
 			PNGetModuleHandle,
 			PNGetNativeSystemInfo,
+			PNGetSystemPreferredUILanguages,
 			PNGetThreadDescription,
 			PNGetUserDefaultLCID,
 
@@ -422,6 +424,35 @@ func (dll *Kernel32DLL) GetNativeSystemInfo() *SYSTEM_INFO {
 	// _, _, _ = syscall.SyscallN(proc.Addr(), uintptr(unsafe.Pointer(&info))) // 適用回傳 (info SYSTEM_INFO)
 	_, _, _ = syscall.SyscallN(proc.Addr(), uintptr(unsafe.Pointer(info)))
 	return info
+}
+
+// GetSystemPreferredUILanguages https://learn.microsoft.com/en-us/windows/win32/api/winnls/nf-winnls-getsystempreferreduilanguages
+// Returns TRUE if successful or FALSE otherwise.
+func (dll *Kernel32DLL) GetSystemPreferredUILanguages(flags, bufferSize uint32 /* 輸出結果的緩存區大小，如果太小就會發生錯誤 */) ([]string, error) {
+	proc := dll.mustProc(PNGetSystemPreferredUILanguages)
+	pwszLanguagesBuffer := make([]uint16, bufferSize)
+	var numLang uint32 // out
+	r1, _, err := syscall.SyscallN(proc.Addr(),
+		uintptr(flags),
+		uintptr(unsafe.Pointer(&numLang)),
+		uintptr(unsafe.Pointer(&pwszLanguagesBuffer[0])),
+		uintptr(unsafe.Pointer(&bufferSize)),
+	)
+	if r1 == 0 {
+		return nil, err // 可能的錯誤 ERROR_INSUFFICIENT_BUFFER (122)
+	}
+	var languages []string
+	var langStart int
+	for i, c := range pwszLanguagesBuffer { // 這個裡面放了很多語言，例如: [lang1, 0, lang2, 0,...lang3, 0]
+		if c == 0 { // 每一個語言結束之後都會接一個0，因此再次讀到0，我們就知道這是一個完整的語言
+			if i == langStart {
+				break // 表示已經沒有任何資料了
+			}
+			languages = append(languages, syscall.UTF16ToString(pwszLanguagesBuffer[langStart:i])) // 將目前的語言推入
+			langStart = i + 1                                                                      // 尋找下一個語言
+		}
+	}
+	return languages, nil
 }
 
 // GetThreadDescription https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getthreaddescription
