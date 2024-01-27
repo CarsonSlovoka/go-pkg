@@ -12,32 +12,50 @@ import (
 )
 
 func ExampleTaskKill() {
-	testApp := "powershell.exe"                           // 如果用taskmgr.exe(Task manager)會需要提升管理權限才有辦法運行，否則會有錯誤: The requested operation requires elevation.
-	if err := exec.Command(testApp).Start(); err != nil { // please run with admin
-		panic(err) // The requested operation requires elevation.
+	testApp := "powershell.exe" // 如果用taskmgr.exe(Task manager)會需要提升管理權限才有辦法運行，否則會有錯誤: The requested operation requires elevation.
+
+	var err error
+
+	defer func() {
+		if err != nil {
+			log.Println(err)
+		}
+	}()
+
+	if err = exec.Command(testApp).Start(); err != nil { // please run with admin
+		return // The requested operation requires elevation.
 	}
 	time.Sleep(250 * time.Millisecond)
-	if err := TaskKill(testApp); err != nil {
-		panic(err)
+	if err = TaskKill(testApp); err != nil {
+		return
 	}
 	if IsTaskRunning(testApp) {
-		panic("The program was still alive.")
+		err = fmt.Errorf("the program was still alive")
 	}
 
 	// Output:
 }
 
 func ExampleIsTaskRunning() {
-	testApp := "taskmgr.exe"                              // Task manager
-	if err := exec.Command(testApp).Start(); err != nil { // please run with admin
-		panic(err) // The requested operation requires elevation.
+	testApp := "taskmgr.exe" // Task manager
+
+	var err error
+	defer func() {
+		if err != nil {
+			log.Println(err)
+		}
+	}()
+
+	if err = exec.Command(testApp).Start(); err != nil { // please run with admin
+		return // The requested operation requires elevation.
 	}
 	time.Sleep(250 * time.Millisecond)
-	if err := TaskKill(testApp); err != nil {
-		panic(err)
+	if err = TaskKill(testApp); err != nil {
+		return
 	}
 	if IsTaskRunning(testApp) {
-		panic("The program was still alive.")
+		err = fmt.Errorf("the program was still alive")
+		return
 	}
 }
 
