@@ -788,3 +788,73 @@ func ExampleKernel32DLL_WriteProcessMemory() {
 	// Output:
 	// Data written successfully
 }
+
+// 模擬A程式寫在記憶體的內容, 由B程式去找到該記憶體內容，讀取並且修改, 最後A程式再次檢驗確實已經被B程式修改
+func TestKernel32DLL_ReadProcessMemory(t *testing.T) {
+	// 模擬A程式，在記憶體中寫入了這些資料
+	targetPID := kernelDll.GetCurrentProcessID() // 由於其他軟體需要知道程式的PID，所以要先取得
+	data := make([]byte, 8)                      // 假設我全部的資料為4個uint16的資料
+	binary.BigEndian.PutUint16(data[:], 0xabcd)
+	binary.BigEndian.PutUint16(data[2:], 0x1234)
+	address := unsafe.Pointer(&data[0])
+
+	// 以下模擬其他軟體(B程式)，去查找該程式的記憶體內容，並且修改
+	// 首先要先獲得能訪問該PID資源權限的handle(句炳)
+	processHandle, eno := kernelDll.OpenProcess(w32.PROCESS_ALL_ACCESS, false, targetPID)
+	if eno != 0 {
+		t.Fatal(eno)
+	}
+	defer func() {
+		_ = kernelDll.CloseHandle(processHandle)
+	}()
+
+	// 模擬B讀取該記憶體的內容
+	size := w32.SIZE_T(20)
+	buf := make([]byte, size)
+	// var outSize w32.SIZE_T
+	if eno = kernelDll.ReadProcessMemory(processHandle, uintptr(address),
+		uintptr(unsafe.Pointer(&buf[0])), size,
+		nil, /* &outSize */ // 如果讀了多少內容，您不是很在意，可以給nil
+	); eno != 0 {
+		t.Fatal(eno)
+		return
+	}
+
+	// 檢驗其正確性
+	v := binary.BigEndian.Uint16(buf[2:])
+	if v != 0x1234 {
+		t.Fail()
+	}
+
+	// 模擬B在此段記憶體新增內容
+	data2Address := unsafe.Add(address, 2) // 假設我們想在修改data[2:4], 並且data[4:6], data[6:8]新增2筆資料，也就是從原位址之後偏離2byte開始
+	// 產生要輸入的資料內容
+	newData := make([]byte, 6)
+	binary.BigEndian.PutUint16(newData[:], 0x3344)
+	binary.BigEndian.PutUint16(newData[2:], 0x5678)
+	binary.BigEndian.PutUint16(newData[4:], 0x9999)
+
+	var byteWritten w32.SIZE_T
+	if eno = kernelDll.WriteProcessMemory(processHandle, uintptr(data2Address), uintptr(unsafe.Pointer(&newData[0])), 6,
+		&byteWritten, // 如果不在意，其實可以給nil也行
+	); eno != 0 {
+		t.Fatal(eno)
+	}
+	if byteWritten != 6 {
+		t.Fail()
+	}
+
+	// 寫入完成之後，模擬查看原來的程式(A)，查看該變數的資料，是否有真的被更改和新增
+	v1 := binary.BigEndian.Uint16(data[2:])
+	v2 := binary.BigEndian.Uint16(data[4:])
+	v3 := binary.BigEndian.Uint16(data[6:])
+	if v1 != 0x3344 {
+		t.Fail()
+	}
+	if v2 != 0x5678 {
+		t.Fail()
+	}
+	if v3 != 0x9999 {
+		t.Fail()
+	}
+}

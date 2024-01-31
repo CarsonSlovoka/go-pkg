@@ -30,6 +30,7 @@ const (
 
 	PNGetConsoleWindow              ProcName = "GetConsoleWindow"
 	PNGetCurrentProcess             ProcName = "GetCurrentProcess"
+	PNGetCurrentProcessID           ProcName = "GetCurrentProcessId"
 	PNGetCurrentThread              ProcName = "GetCurrentThread"
 	PNGetCurrentThreadId            ProcName = "GetCurrentThreadId"
 	PNGetExitCodeProcess            ProcName = "GetExitCodeProcess"
@@ -109,6 +110,7 @@ func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 
 			PNGetConsoleWindow,
 			PNGetCurrentProcess,
+			PNGetCurrentProcessID,
 			PNGetCurrentThread,
 			PNGetCurrentThreadId,
 			PNGetExitCodeProcess,
@@ -348,10 +350,21 @@ func (dll *Kernel32DLL) GetConsoleWindow() HWND {
 }
 
 // GetCurrentProcess https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getcurrentprocess
+// 得到的是一個pseudo-handle
+// 正常的handle(句柄)表是一種資源(檔案、窗口、進程等等)的指標
+// 所以當您取得到該handle的時候，不用的時候要使用 CloseHandle 來關閉訪問，來將資源釋放
+// 而pseudo-handle不需要開啟與關閉，但是它只能在該進程的上下文中有效
 func (dll *Kernel32DLL) GetCurrentProcess() HANDLE {
 	proc := dll.mustProc(PNGetCurrentProcess)
 	r1, _, _ := syscall.SyscallN(proc.Addr())
 	return HANDLE(r1)
+}
+
+// GetCurrentProcessID https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getcurrentprocessid
+func (dll *Kernel32DLL) GetCurrentProcessID() uint32 {
+	proc := dll.mustProc(PNGetCurrentProcessID)
+	r1, _, _ := syscall.SyscallN(proc.Addr())
+	return uint32(r1)
 }
 
 // GetCurrentThread https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getcurrentthread
@@ -630,10 +643,10 @@ func (dll *Kernel32DLL) ReadDirectoryChanges(hDirectory HANDLE,
 // ReadProcessMemory https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-readprocessmemory
 func (dll *Kernel32DLL) ReadProcessMemory(
 	hProcess HANDLE,
-	lpBaseAddress uintptr,
-	lpBuffer uintptr,
-	size SIZE_T,
-	lpNumberOfBytesRead *SIZE_T, // [out]
+	lpBaseAddress uintptr, // 讀取目標的記憶體位址
+	lpBuffer uintptr, // 輸出的記憶體位址
+	size SIZE_T, // 讀取多少個byte
+	lpNumberOfBytesRead *SIZE_T, // [out] if lpNumberOfBytesRead is NULL, the parameter is ignored. 通常會和size相同，如果不是很在意可以給傳nil即可
 ) syscall.Errno {
 	proc := dll.mustProc(PNReadProcessMemory)
 	_, _, eno := syscall.SyscallN(proc.Addr(),
@@ -641,7 +654,7 @@ func (dll *Kernel32DLL) ReadProcessMemory(
 		lpBaseAddress,
 		lpBuffer,
 		uintptr(size),
-		uintptr(unsafe.Pointer(&lpNumberOfBytesRead)),
+		uintptr(unsafe.Pointer(lpNumberOfBytesRead)),
 	)
 	return eno
 }
@@ -800,9 +813,9 @@ func (dll *Kernel32DLL) WriteFile(hFile HANDLE,
 // If the function succeeds, the return value is nonzero.
 // Writes data to an area of memory in a specified process. The entire area to be written to must be accessible or the operation fails.
 func (dll *Kernel32DLL) WriteProcessMemory(hProcess HANDLE, // The handle must have PROCESS_VM_WRITE and PROCESS_VM_OPERATION access to the process.
-	lpBaseAddress uintptr,
-	lpBuffer uintptr,
-	size SIZE_T,
+	lpBaseAddress uintptr, // 開始寫入的記憶體位址
+	lpBuffer uintptr, // 寫入的資料的記憶體位址
+	size SIZE_T, // 寫入資料內容大小
 	lpNumberOfBytesWritten *SIZE_T, // [out] This parameter is optional. If lpNumberOfBytesWritten is NULL, the parameter is ignored.
 ) syscall.Errno {
 	proc := dll.mustProc(PNWriteProcessMemory)
@@ -811,7 +824,7 @@ func (dll *Kernel32DLL) WriteProcessMemory(hProcess HANDLE, // The handle must h
 		lpBaseAddress,
 		lpBuffer,
 		uintptr(size),
-		uintptr(unsafe.Pointer(&lpNumberOfBytesWritten)),
+		uintptr(unsafe.Pointer(lpNumberOfBytesWritten)),
 	)
 	return eno
 }
