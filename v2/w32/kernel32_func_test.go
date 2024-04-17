@@ -858,3 +858,44 @@ func TestKernel32DLL_ReadProcessMemory(t *testing.T) {
 		t.Fail()
 	}
 }
+
+// 找尋某一個PID所用到的所有記憶體內容
+// todo 範例有待改進，此範例目前沒有什麼實際的功用
+func ExampleKernel32DLL_VirtualQueryEx() {
+	targetPID := kernelDll.GetCurrentProcessID()
+	data := []byte("hello world VirtualQueryEx 123!!!") // 原本是想找出此段文字的內容，不過似乎沒那麼好找
+	_ = data
+
+	processHandle, eno := kernelDll.OpenProcess(w32.PROCESS_ALL_ACCESS, false, targetPID)
+	if eno != 0 {
+		return
+	}
+	defer func() {
+		_ = kernelDll.CloseHandle(processHandle)
+	}()
+
+	var mbi w32.MemoryBasicInformation
+	var curAddress uintptr
+	for {
+		nBuffer, eno := kernelDll.VirtualQueryEx(processHandle, curAddress, &mbi,
+			w32.SIZE_T(unsafe.Sizeof(mbi)), // 每次讀取此結構的大小
+		)
+		if eno != 0 || nBuffer != w32.SIZE_T(unsafe.Sizeof(mbi)) {
+			return
+		}
+
+		if mbi.State == w32.MEM_COMMIT && (mbi.Protect&(w32.PAGE_READWRITE|w32.PAGE_READONLY)) > 0 {
+			buf := make([]byte, mbi.RegionSize)
+			var nBytes w32.SIZE_T
+			if eno = kernelDll.ReadProcessMemory(processHandle, curAddress, uintptr(unsafe.Pointer(&buf[0])), mbi.RegionSize, &nBytes); eno != 0 {
+				// log.Println(eno) // Only part of a ReadProcessMemory or WriteProcessMemory request was completed. 也就是讀的內容可能超過，有些內容是屬於受保護的記憶體，不給讀取
+			} else {
+				log.Println(string(buf[:]))
+				return // 讀一筆就好
+			}
+		}
+		curAddress += uintptr(mbi.RegionSize)
+	}
+
+	// Output:
+}

@@ -73,6 +73,7 @@ const (
 
 	PNVirtualAllocEx ProcName = "VirtualAllocEx"
 	PNVirtualFreeEx  ProcName = "VirtualFreeEx"
+	PNVirtualQueryEx ProcName = "VirtualQueryEx"
 
 	PNWaitForSingleObject ProcName = "WaitForSingleObject"
 
@@ -153,6 +154,7 @@ func NewKernel32DLL(procList ...ProcName) *Kernel32DLL {
 
 			PNVirtualAllocEx,
 			PNVirtualFreeEx,
+			PNVirtualQueryEx,
 
 			PNWaitForSingleObject,
 
@@ -777,6 +779,23 @@ func (dll *Kernel32DLL) VirtualFreeEx(hProcess HANDLE, // The handle must have t
 		uintptr(dwFreeType),
 	)
 	return eno
+}
+
+// VirtualQueryEx https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualqueryex
+// The return value is the actual number of bytes returned in the information buffer.
+func (dll *Kernel32DLL) VirtualQueryEx(hProcess HANDLE,
+	lpAddress uintptr, // [in, optional]
+	lpBuffer *MemoryBasicInformation, // [out]
+	dwLength SIZE_T,
+) (SIZE_T, syscall.Errno) {
+	proc := dll.mustProc(PNVirtualQueryEx)
+	r1, _, eno := syscall.SyscallN(proc.Addr(),
+		uintptr(hProcess),
+		lpAddress,
+		uintptr(unsafe.Pointer(lpBuffer)),
+		uintptr(dwLength),
+	)
+	return SIZE_T(r1), eno
 }
 
 // WaitForSingleObject https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitforsingleobject

@@ -863,3 +863,14 @@ const (
 	PAGE_NOCACHE      = 0x200
 	PAGE_WRITECOMBINE = 0x400
 )
+
+type MemoryBasicInformation struct {
+	BaseAddress       uintptr // PVOID
+	AllocationBase    uintptr // PVOID
+	AllocationProtect uint32  // DWORD
+	PartitionId       uint16  // WORD
+	RegionSize        SIZE_T
+	State             uint32 // DWORD
+	Protect           uint32
+	Type              uint32
+}
