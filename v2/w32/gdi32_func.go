@@ -32,9 +32,10 @@ const (
 
 	PNFillRgn ProcName = "FillRgn"
 
-	PNGetDIBits ProcName = "GetDIBits"
-	PNGetObject ProcName = "GetObjectW"
-	PNGetPixel  ProcName = "GetPixel"
+	PNGetBitmapBits ProcName = "GetBitmapBits"
+	PNGetDIBits     ProcName = "GetDIBits"
+	PNGetObject     ProcName = "GetObjectW"
+	PNGetPixel      ProcName = "GetPixel"
 
 	PNLineTo ProcName = "LineTo"
 
@@ -90,6 +91,7 @@ func NewGdi32DLL(procList ...ProcName) *Gdi32DLL {
 
 			PNFillRgn,
 
+			PNGetBitmapBits,
 			PNGetDIBits,
 			PNGetObject,
 			PNGetPixel,
@@ -331,7 +333,7 @@ func (dll *Gdi32DLL) CreateDIBSection(hdc HDC, bitmapInfo *BitmapInfo,
 
 // CreateFontIndirect https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createfontindirectw
 // If the function fails, the return value is NULL.
-func (dll *Gdi32DLL) CreateFontIndirect(logFont *LOGFONT) HFONT {
+func (dll *Gdi32DLL) CreateFontIndirect(logFont *LogFont) HFONT {
 	proc := dll.mustProc(PNCreateFontIndirect)
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(unsafe.Pointer(logFont)),
@@ -451,7 +453,7 @@ func (dll *Gdi32DLL) EnumFontFamilies(hdc HDC,
 }
 
 // EnumFonts https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-enumfontsw
-// LOGFONT
+// LogFont
 // The return value is the last value returned by the callback function. Its meaning is defined by the application
 func (dll *Gdi32DLL) EnumFonts(hdc HDC,
 	lpLogfont string, // If NULL => enumerates one font of "each" available typeface.
@@ -459,7 +461,7 @@ func (dll *Gdi32DLL) EnumFonts(hdc HDC,
 	proc := dll.mustProc(PNEnumFonts)
 
 	// https://learn.microsoft.com/en-us/previous-versions/dd162623(v=vs.85)
-	lpProcCallback := syscall.NewCallback(func(logFont *LOGFONT, textMetric *TEXTMETRIC, fontType uint32, lpData LPARAM) uintptr {
+	lpProcCallback := syscall.NewCallback(func(logFont *LogFont, textMetric *TEXTMETRIC, fontType uint32, lpData LPARAM) uintptr {
 		ret := lpProc(logFont, textMetric, fontType, lpData)
 		return uintptr(ret)
 	})
@@ -482,6 +484,21 @@ func (dll *Gdi32DLL) FillRgn(hdc HDC, hrgn HRGN, hbr HBRUSH) bool {
 		uintptr(hrgn),
 		uintptr(hbr))
 	return ret1 != 0
+}
+
+// GetBitmapBits https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-getbitmapbits
+
+func (dll *Gdi32DLL) GetBitmapBits(hBit HBITMAP,
+	cb int32, // The number of bytes to copy from the bitmap into the buffer.
+	lpbBits uintptr, // LPVOID // A pointer to a buffer to receive the bitmap bits. The bits are stored as an array of byte values.
+) int32 {
+	proc := dll.mustProc(PNGetBitmapBits)
+	ret1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hBit),
+		uintptr(cb),
+		lpbBits,
+	)
+	return int32(ret1)
 }
 
 // GetDIBits https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-getdibits

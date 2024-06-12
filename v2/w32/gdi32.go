@@ -327,6 +327,7 @@ const (
 )
 
 // Font output quality constants
+// https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-wmf/9518fece-d2f2-4799-9df6-ba3db1d73371
 const (
 	DEFAULT_QUALITY        = 0
 	DRAFT_QUALITY          = 1
@@ -633,7 +634,7 @@ const (
 // https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-setbkmode#parameters
 const (
 	TRANSPARENT = 1 // Background remains untouched.
-	OPAQUE      = 2 // 	Background is filled with the current background color before the text, hatched brush, or pen is drawn.
+	OPAQUE      = 2 // Background is filled with the current background color before the text, hatched brush, or pen is drawn.
 )
 
 // Ternary raster operations
@@ -810,8 +811,8 @@ type PIXELFORMATDESCRIPTOR struct {
 	DwDamageMask    uint32
 }
 
-// LOGFONT https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-logfontw
-type LOGFONT struct {
+// LogFont https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-logfontw
+type LogFont struct {
 	Height         int32
 	Width          int32
 	Escapement     int32
@@ -828,19 +829,19 @@ type LOGFONT struct {
 	FaceName       [LF_FACESIZE]uint16
 }
 
-func (f *LOGFONT) IsItalic() bool {
+func (f *LogFont) IsItalic() bool {
 	return f.Italic == 1
 }
 
-func (f *LOGFONT) IsStrikeOut() bool {
+func (f *LogFont) IsStrikeOut() bool {
 	return f.StrikeOut == 1
 }
 
-func (f *LOGFONT) IsUnderline() bool {
+func (f *LogFont) IsUnderline() bool {
 	return f.Underline == 1
 }
 
-func (f *LOGFONT) GetFaceName() string {
+func (f *LogFont) GetFaceName() string {
 	return syscall.UTF16ToString(f.FaceName[:])
 }
 

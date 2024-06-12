@@ -1673,15 +1673,15 @@ type NONCLIENTMETRICS struct {
 	IScrollHeight    int32
 	ICaptionWidth    int32
 	ICaptionHeight   int32
-	LfCaptionFont    LOGFONT
+	LfCaptionFont    LogFont
 	ISmCaptionWidth  int32
 	ISmCaptionHeight int32
-	LfSmCaptionFont  LOGFONT
+	LfSmCaptionFont  LogFont
 	IMenuWidth       int32
 	IMenuHeight      int32
-	LfMenuFont       LOGFONT
-	LfStatusFont     LOGFONT
-	LfMessageFont    LOGFONT
+	LfMenuFont       LogFont
+	LfStatusFont     LogFont
+	LfMessageFont    LogFont
 }
 
 type MEASUREITEMSTRUCT struct {

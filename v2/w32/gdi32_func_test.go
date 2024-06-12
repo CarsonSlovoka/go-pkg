@@ -4,6 +4,9 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/CarsonSlovoka/go-pkg/v2/w32"
+	"image"
+	"image/color"
+	"image/png"
 	"log"
 	"os"
 	"os/exec"
@@ -741,7 +744,7 @@ func ExampleGdi32DLL_EnumFonts() {
 	gdi32dll := w32.NewGdi32DLL()
 	user32dll := w32.NewUser32DLL()
 	var fontEnumProc w32.FONTENUMPROC
-	fontEnumProc = func(lpLF *w32.LOGFONT, lpTM *w32.TEXTMETRIC, dwType uint32, lpData w32.LPARAM) int32 {
+	fontEnumProc = func(lpLF *w32.LogFont, lpTM *w32.TEXTMETRIC, dwType uint32, lpData w32.LPARAM) int32 {
 		log.Println(lpLF.GetFaceName())
 		return 1
 	}
@@ -822,10 +825,10 @@ func ExampleGdi32DLL_CreateFont() {
 
 	// hFont: Arial 使用CreateFontIndirect來建立
 	{
-		var logFont w32.LOGFONT
+		var logFont w32.LogFont
 		{
 			gdi32dll.EnumFonts(hdc, "Arial",
-				func(lpLF *w32.LOGFONT, lpTM *w32.TEXTMETRIC, dwType uint32, lpData w32.LPARAM) int32 {
+				func(lpLF *w32.LogFont, lpTM *w32.TEXTMETRIC, dwType uint32, lpData w32.LPARAM) int32 {
 					logFont = *lpLF
 					return 0 // DO NOT CONTINUE // 找到一個就停止
 				},
@@ -1271,4 +1274,114 @@ func ExampleGdi32DLL_MoveToEx() {
 	// Output:
 	// {0 0}
 	// {100 200}
+}
+
+// 可以取得到HBITMAP的資料
+func ExampleGdi32DLL_GetBitmapBits() {
+	hdcScreen := userDll.GetDC(0)
+	defer userDll.ReleaseDC(0, hdcScreen)
+
+	const width, height int32 = 600, 72
+	hBitmap := gdiDll.CreateCompatibleBitmap(hdcScreen, width, height)
+	defer gdiDll.DeleteObject(w32.HGDIOBJ(hBitmap))
+	bitmapBits := make([]byte, width*height*4) // 資料是用BGRA
+	gdiDll.GetBitmapBits(hBitmap, int32(len(bitmapBits)), uintptr(unsafe.Pointer(&bitmapBits[0])))
+}
+
+func TestGdi32DLL_TextOut(t *testing.T) {
+	hdcScreen := userDll.GetDC(0)
+	defer userDll.ReleaseDC(0, hdcScreen)
+	hMemDC := gdiDll.CreateCompatibleDC(hdcScreen)
+	defer gdiDll.DeleteObject(w32.HGDIOBJ(hMemDC))
+
+	const width, height int32 = 600, 72
+	hBitmap := gdiDll.CreateCompatibleBitmap(hdcScreen, width, height)
+	defer gdiDll.DeleteObject(w32.HGDIOBJ(hBitmap))
+
+	hObjOld := gdiDll.SelectObject(hMemDC, w32.HGDIOBJ(hBitmap))
+	defer gdiDll.SelectObject(hMemDC, hObjOld) // 不用之後可以考慮選回之前的物件
+
+	gdiDll.SetTextColor(hMemDC, w32.RGB(0, 1, 0))   // 全為0為黑色 // 我們故意把g改成1，來藉此判斷該元素需不需要被畫
+	gdiDll.SetBkColor(hMemDC, w32.RGB(0, 255, 255)) // 如果你的SetBkMode是TRANSPARENT，那麼這個顏色就看不出來了
+	// gdiDll.SetBkMode(hMemDC, w32.TRANSPARENT)
+
+	// 不一定要創建此結構，也可以直接把數值寫入到CreateFont
+	lf := w32.LogFont{
+		Height:         -64,
+		Width:          0,
+		Escapement:     0,
+		Orientation:    0,
+		Weight:         400,
+		Italic:         0,
+		Underline:      0,
+		StrikeOut:      0,
+		CharSet:        w32.DEFAULT_CHARSET,
+		OutPrecision:   w32.OUT_TT_PRECIS,
+		ClipPrecision:  w32.CLIP_DEFAULT_PRECIS,
+		Quality:        w32.ANTIALIASED_QUALITY,
+		PitchAndFamily: w32.FF_DONTCARE,
+	}
+	// copy(lf.FaceName[:], utf16.Encode([]rune("Arial"+"\x00")))
+
+	hFont := gdiDll.CreateFont(
+		lf.Height,
+		lf.Width,
+		lf.Escapement,
+		lf.Orientation,
+		lf.Weight,
+		uint32(lf.Italic),
+		uint32(lf.Underline),
+		uint32(lf.StrikeOut),
+		uint32(lf.CharSet),
+		uint32(lf.OutPrecision),
+		uint32(lf.ClipPrecision),
+		uint32(lf.Quality),
+		uint32(lf.PitchAndFamily),
+		"Arial", // 安裝到你電腦的字型 FontFamilyName, name.ID=1 都可以指定
+	)
+	defer gdiDll.DeleteObject(w32.HGDIOBJ(hFont))
+
+	oldFont := gdiDll.SelectObject(hMemDC, w32.HGDIOBJ(hFont))
+	defer gdiDll.SelectObject(hMemDC, oldFont)
+
+	text := "Hello! 世界"
+	gdiDll.TextOut(hMemDC, 5, 5, text, int32(len(text)))
+
+	bitmapBits := make([]byte, width*height*4)
+	gdiDll.GetBitmapBits(hBitmap, int32(len(bitmapBits)), uintptr(unsafe.Pointer(&bitmapBits[0])))
+
+	// Create an image from the bitmap bits
+	img := image.NewRGBA(image.Rect(0, 0, int(width), int(height)))
+	var alpha uint8
+	for y := int32(0); y < height; y++ {
+		for x := int32(0); x < width; x++ {
+			idx := (y*width + x) * 4
+			b, g, r := bitmapBits[idx], bitmapBits[idx+1], bitmapBits[idx+2]
+			// alpha = bitmapBits[idx+3] // 這個都會是0
+			if g == 1 {
+				alpha = uint8(255) // a為255表示不透明
+				g = 0
+			} else if g == 255 || b == 255 { // 我們訂的背景顏色
+				alpha = uint8(255)
+			} else {
+				alpha = 0
+			}
+			img.Set(int(x), int(y), color.RGBA{R: r, G: g, B: b, A: alpha})
+			// img.Set(int(x), int(y), color.RGBA{R: r, G: g, B: b, A: 255}) // 如果你要顯示背景顏色，要改這樣
+		}
+	}
+
+	if false {
+		file, err := os.Create("output.png")
+		if err != nil {
+			fmt.Println("Error creating file:", err)
+			return
+		}
+		defer func() {
+			_ = file.Close()
+		}()
+		if err = png.Encode(file, img); err != nil {
+			t.Fatal(err)
+		}
+	}
 }

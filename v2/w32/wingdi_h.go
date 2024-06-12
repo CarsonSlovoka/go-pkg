@@ -3,14 +3,14 @@ package w32
 import "syscall"
 
 // FONTENUMPROC https://learn.microsoft.com/en-us/previous-versions/dd162623(v=vs.85)
-type FONTENUMPROC func(logFont *LOGFONT, textmetric *TEXTMETRIC, fontType uint32, lParam LPARAM) int32
+type FONTENUMPROC func(logFont *LogFont, textmetric *TEXTMETRIC, fontType uint32, lParam LPARAM) int32
 
 // EnumFontFamProc https://learn.microsoft.com/en-us/previous-versions/dd162621(v=vs.85)
 type EnumFontFamProc func(logFont *ENUMLOGFONT, textmetric *TEXTMETRIC, fontType uint32, lparam LPARAM) int32
 
 // ENUMLOGFONT https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-enumlogfontw?redirectedfrom=MSDN
 type ENUMLOGFONT struct {
-	LogFont  LOGFONT
+	LogFont  LogFont
 	FullName [LF_FULLFACESIZE]uint16 // For example, ABCD Font Company TrueType Bold Italic Sans Serif. // NameID=4
 	Style    [LF_FACESIZE]uint16     // For example, Bold Italic.
 }
@@ -26,7 +26,7 @@ func (e *ENUMLOGFONT) GetStyle() string {
 /*
 // ENUMLOGFONTEX https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-enumlogfontexw
 type ENUMLOGFONTEX struct {
-	LogFont  LOGFONT
+	LogFont  LogFont
 	FullName [LF_FULLFACESIZE]uint16
 	Style    [LF_FACESIZE]uint16
 	Script   [LF_FACESIZE]uint16 // The script, that is, the character set, of the font. For example, Cyrillic.
