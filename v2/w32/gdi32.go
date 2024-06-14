@@ -769,6 +769,7 @@ const (
 )
 
 type (
+	// COLORREF BGR
 	COLORREF     uint32
 	HBITMAP      HGDIOBJ
 	HBRUSH       HGDIOBJ

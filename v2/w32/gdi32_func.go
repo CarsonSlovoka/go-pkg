@@ -5,6 +5,7 @@ package w32
 import (
 	"fmt"
 	"syscall"
+	"unicode/utf16"
 	"unsafe"
 )
 
@@ -32,10 +33,11 @@ const (
 
 	PNFillRgn ProcName = "FillRgn"
 
-	PNGetBitmapBits ProcName = "GetBitmapBits"
-	PNGetDIBits     ProcName = "GetDIBits"
-	PNGetObject     ProcName = "GetObjectW"
-	PNGetPixel      ProcName = "GetPixel"
+	PNGetBitmapBits        ProcName = "GetBitmapBits"
+	PNGetDIBits            ProcName = "GetDIBits"
+	PNGetObject            ProcName = "GetObjectW"
+	PNGetPixel             ProcName = "GetPixel"
+	PNGetTextExtentPoint32 ProcName = "GetTextExtentPoint32W"
 
 	PNLineTo ProcName = "LineTo"
 
@@ -95,6 +97,7 @@ func NewGdi32DLL(procList ...ProcName) *Gdi32DLL {
 			PNGetDIBits,
 			PNGetObject,
 			PNGetPixel,
+			PNGetTextExtentPoint32,
 
 			PNLineTo,
 
@@ -559,6 +562,28 @@ func (dll *Gdi32DLL) GetPixel(hdc HDC, x int32, y int32) COLORREF {
 	return COLORREF(r1)
 }
 
+// GetTextExtentPoint32 https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-gettextextentpoint32w
+// 你可以測量到輸出到此dc裝置上所被使用的寬和高
+//
+// GetTextExtentPoint32 doesn't consider "\n" (new line) or "\r\n" (carriage return and new line) characters
+// when it computes the height of a text string.
+//
+// If the function succeeds, the return value is nonzero.
+func (dll *Gdi32DLL) GetTextExtentPoint32(hdc HDC, str string) (*SIZE, bool) {
+	// fmt.Println(utf16.Encode([]rune("𫟅"))) // [55405 57285]
+	//pp, _ := syscall.UTF16FromString("𫟅") // [55405 57285 0]
+	var size SIZE
+	proc := dll.mustProc(PNGetTextExtentPoint32)
+	u16 := utf16.Encode([]rune(str)) // 這個沒有包含結尾的 0
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+		uintptr(unsafe.Pointer(&u16[0])),
+		uintptr(len(u16)), // 如果是用syscall.UTF16FromString取得的u16還要再-1(因為他有包含結尾0)
+		uintptr(unsafe.Pointer(&size)),
+	)
+	return &size, r1 != 0
+}
+
 // LineTo https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-lineto
 // If the function succeeds, the return value is nonzero.
 func (dll *Gdi32DLL) LineTo(hdc HDC, x, y int32) bool {
@@ -734,17 +759,15 @@ func (dll *Gdi32DLL) StretchBlt(
 
 // TextOut https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-textoutw
 // If the function fails, the return value is zero.
-func (dll *Gdi32DLL) TextOut(hdc HDC, x int32, y int32, lpString string, length int32) bool {
+func (dll *Gdi32DLL) TextOut(hdc HDC, x int32, y int32, str string) bool {
 	proc := dll.mustProc(PNTextOut)
-	if length == 0 {
-		length = int32((len(lpString) / 2) + 1) // 指的是utf16的個數，非utf8
-	}
+	u16s := utf16.Encode([]rune(str))
 	r1, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(hdc),
 		uintptr(x),
 		uintptr(y),
-		UintptrFromStr(lpString),
-		uintptr(length),
+		uintptr(unsafe.Pointer(&u16s[0])),
+		uintptr(len(u16s)), // 不用包含結尾0
 	)
 	return r1 != 0
 }

@@ -71,6 +71,8 @@ type (
 	PCWSTR  *uint16
 	LPCWSTR *uint16
 	LPWSTR  *uint16
+
+	LPSIZE *SIZE
 )
 
 type HOOKPROC func(code int32, wParam WPARAM, lParam LPARAM) LRESULT

@@ -2011,7 +2011,7 @@ func ExampleUser32DLL_BeginPaint() {
 				gdi32dll.SetTextColor(hdc, w32.RGB(255, 128, 0))
 
 				user32dll.DrawText(hdc, "Hello World 您好 世界", -1, &rect, w32.DT_NOCLIP)
-				gdi32dll.TextOut(hdc, 100, 200, "Hi, 您好", 0)
+				gdi32dll.TextOut(hdc, 100, 200, "Hi, 您好")
 				user32dll.EndPaint(hwnd, &paintStruct)
 			}
 			return user32dll.DefWindowProc(hwnd, uMsg, wParam, lParam) // default window proc

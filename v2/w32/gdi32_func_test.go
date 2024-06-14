@@ -117,10 +117,25 @@ func ExampleNewFontMemResource() {
 	// ok
 }
 
+func ExampleGdi32DLL_CreateCompatibleBitmap() {
+	hdcScreen := userDll.GetDC(0)
+	defer userDll.ReleaseDC(0, hdcScreen)
+
+	hMemDC := gdiDll.CreateCompatibleDC(hdcScreen)
+	defer gdiDll.DeleteObject(w32.HGDIOBJ(hMemDC))
+
+	var width, height int32
+	hMemBM := gdiDll.CreateCompatibleBitmap(hdcScreen, width, height)
+	defer gdiDll.DeleteObject(w32.HGDIOBJ(hMemBM))
+
+	hObjOld := gdiDll.SelectObject(hMemDC, w32.HGDIOBJ(hMemBM))
+	defer gdiDll.SelectObject(hMemDC, hObjOld)
+}
+
 // CaptureAnImage https://learn.microsoft.com/en-us/windows/win32/gdi/capturing-an-image
 // https://zh.wikipedia.org/zh-tw/BMP
 // 本範例簡述: 抓取當前的視窗，畫在notepad上，之後再保存在檔案之中，完成後檔案(testdata/captureNotepad.bmp)會刪除
-func ExampleGdi32DLL_CreateCompatibleBitmap() {
+func ExampleGdi32DLL_CreateCompatibleBitmap2() {
 	user32dll := w32.NewUser32DLL()
 	gdi32dll := w32.NewGdi32DLL()
 	kernel32dll := w32.NewKernel32DLL()
@@ -1289,19 +1304,37 @@ func ExampleGdi32DLL_GetBitmapBits() {
 }
 
 func TestGdi32DLL_TextOut(t *testing.T) {
+	// 取得螢幕的dc設備
 	hdcScreen := userDll.GetDC(0)
 	defer userDll.ReleaseDC(0, hdcScreen)
+
+	// clone出新的一份dc設備
 	hMemDC := gdiDll.CreateCompatibleDC(hdcScreen)
 	defer gdiDll.DeleteObject(w32.HGDIOBJ(hMemDC))
 
-	const width, height int32 = 600, 72
+	const width, height int32 = 1000, 72
+	// 利用螢幕的dc取得到
 	hBitmap := gdiDll.CreateCompatibleBitmap(hdcScreen, width, height)
 	defer gdiDll.DeleteObject(w32.HGDIOBJ(hBitmap))
 
+	// 選擇此bitmap
 	hObjOld := gdiDll.SelectObject(hMemDC, w32.HGDIOBJ(hBitmap))
 	defer gdiDll.SelectObject(hMemDC, hObjOld) // 不用之後可以考慮選回之前的物件
 
-	gdiDll.SetTextColor(hMemDC, w32.RGB(0, 1, 0))   // 全為0為黑色 // 我們故意把g改成1，來藉此判斷該元素需不需要被畫
+	var fgColor w32.COLORREF = 0x000000 // black
+	var bgColor w32.COLORREF = 0xffff00 // b: 255
+	fgColorR := fgColor.R()
+	fgColorG := fgColor.G()
+	fgColorB := fgColor.B()
+	bgColorR := bgColor.R()
+	bgColorG := bgColor.G()
+	bgColorB := bgColor.B()
+
+	if fgColor == 0 { // 全為0為純黑色
+		// 我們故意把g改成1，來藉此判斷該元素需不需要被畫
+		fgColorG = 1 // 由於創建的bitmapBits預設都是0，為了能區分出背景與前景，故意調整g數值
+	}
+	gdiDll.SetTextColor(hMemDC, w32.RGB(fgColorR, fgColorG, fgColorB))
 	gdiDll.SetBkColor(hMemDC, w32.RGB(0, 255, 255)) // 如果你的SetBkMode是TRANSPARENT，那麼這個顏色就看不出來了
 	// gdiDll.SetBkMode(hMemDC, w32.TRANSPARENT)
 
@@ -1344,10 +1377,16 @@ func TestGdi32DLL_TextOut(t *testing.T) {
 	oldFont := gdiDll.SelectObject(hMemDC, w32.HGDIOBJ(hFont))
 	defer gdiDll.SelectObject(hMemDC, oldFont)
 
-	text := "Hello! 世界"
-	gdiDll.TextOut(hMemDC, 5, 5, text, int32(len(text)))
+	const text = "Hello! 世界"
 
-	bitmapBits := make([]byte, width*height*4)
+	// 都字形選好之後，我們給入輸入的文字，測量此文字會用到的寬、高
+	textSize, _ := gdiDll.GetTextExtentPoint32(hMemDC, text)
+	gdiDll.TextOut(hMemDC,
+		(width-textSize.CX)/2, (height-textSize.CY)/2, // 畫的位置用居中的方式
+		text,
+	)
+
+	bitmapBits := make([]byte, width*height*4) // 保存hBitmap所提供的 `前景` 與 `背景` 顏色
 	gdiDll.GetBitmapBits(hBitmap, int32(len(bitmapBits)), uintptr(unsafe.Pointer(&bitmapBits[0])))
 
 	// Create an image from the bitmap bits
@@ -1358,10 +1397,10 @@ func TestGdi32DLL_TextOut(t *testing.T) {
 			idx := (y*width + x) * 4
 			b, g, r := bitmapBits[idx], bitmapBits[idx+1], bitmapBits[idx+2]
 			// alpha = bitmapBits[idx+3] // 這個都會是0
-			if g == 1 {
+			if r == fgColorR && g == fgColorG && b == fgColorB {
 				alpha = uint8(255) // a為255表示不透明
 				g = 0
-			} else if g == 255 || b == 255 { // 我們訂的背景顏色
+			} else if r == bgColorR && g == bgColorG && b == bgColorB {
 				alpha = uint8(255)
 			} else {
 				alpha = 0
@@ -1372,7 +1411,7 @@ func TestGdi32DLL_TextOut(t *testing.T) {
 	}
 
 	if false {
-		file, err := os.Create("output.png")
+		file, err := os.Create("output.png") // 建議用瀏覽器(chrome)來查看，可以觀察到alpha
 		if err != nil {
 			fmt.Println("Error creating file:", err)
 			return
