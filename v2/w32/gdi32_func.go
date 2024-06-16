@@ -490,7 +490,7 @@ func (dll *Gdi32DLL) FillRgn(hdc HDC, hrgn HRGN, hbr HBRUSH) bool {
 }
 
 // GetBitmapBits https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-getbitmapbits
-
+// 與 GetDIBits 很像，差別是 GetDIBits 提供稍微多樣的功能，也能決定畫的方向
 func (dll *Gdi32DLL) GetBitmapBits(hBit HBITMAP,
 	cb int32, // The number of bytes to copy from the bitmap into the buffer.
 	lpbBits uintptr, // LPVOID // A pointer to a buffer to receive the bitmap bits. The bits are stored as an array of byte values.
@@ -520,11 +520,11 @@ func (dll *Gdi32DLL) GetBitmapBits(hBit HBITMAP,
 func (dll *Gdi32DLL) GetDIBits(
 	hdc HDC,
 	hbm HBITMAP, // A handle to the bitmap. This must be a compatible bitmap (DDB).
-	start UINT,
-	cLines UINT, // cLines - start 即為height
+	start uint32,
+	cLines uint32, // cLines - start 即為height
 	lpvBits LPVOID,
-	lpbmi *BitmapInfo, // A pointer to a BitmapInfo structure that specifies the desired format for the DIB data.
-	usage UINT,
+	lpbmi *BitmapInfo, // A pointer to a BitmapInfo structure that specifies the desired format for the DIB data. // 其高度為負，則畫的方向會相反，正的情況下同 GetBitmapBits
+	usage uint32,
 ) int32 {
 	proc := dll.mustProc(PNGetDIBits)
 	ret1, _, _ := syscall.SyscallN(proc.Addr(),

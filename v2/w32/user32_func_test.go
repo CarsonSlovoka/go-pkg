@@ -328,7 +328,7 @@ func ExampleUser32DLL_GetIconInfo() {
 		gdi32dll.GetDIBits(
 			hdc, iInfo.HbmColor,
 			0,
-			w32.UINT(bmp.Height),
+			uint32(bmp.Height),
 			lpBitmap, // [out]
 			&w32.BitmapInfo{Header: bitmapInfoHeader},
 			w32.DIB_RGB_COLORS,
@@ -2604,7 +2604,7 @@ func TestUser32DLL_SetClipboardData(t *testing.T) {
 
 		gdiDll.GetDIBits(
 			hMemDC, hBitmap, 0,
-			w32.UINT(bitmap.Height),
+			uint32(bitmap.Height),
 			lpBitmap, // [out]
 			&w32.BitmapInfo{Header: bitmapInfoHeader},
 			w32.DIB_RGB_COLORS,

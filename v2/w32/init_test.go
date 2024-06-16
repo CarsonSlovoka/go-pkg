@@ -3,7 +3,10 @@ package w32_test
 import (
 	"fmt"
 	"github.com/CarsonSlovoka/go-pkg/v2/w32"
+	"image"
+	"image/png"
 	"log"
+	"os"
 	"syscall"
 )
 
@@ -147,4 +150,17 @@ func createWindow(title string, opt *w32.WindowOptions) (*exampleWindow, error) 
 		return nil, errno
 	}
 	return &exampleWindow{hwnd}, nil
+}
+
+func saveImg(outputPath string, img *image.RGBA) {
+	file, err := os.Create(outputPath) // 建議用瀏覽器(chrome)來查看，可以觀察到alpha
+	if err != nil {
+		panic(err)
+	}
+	defer func() {
+		_ = file.Close()
+	}()
+	if err = png.Encode(file, img); err != nil {
+		panic(err)
+	}
 }

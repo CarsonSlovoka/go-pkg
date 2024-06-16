@@ -257,7 +257,7 @@ func ExampleGdi32DLL_CreateCompatibleBitmap2() {
 	// that's pointed to by lpbitmap.
 	gdi32dll.GetDIBits(
 		hdcNotepad, hbmNotepad, 0,
-		w32.UINT(bmpNotepad.Height),
+		uint32(bmpNotepad.Height),
 		lpBitmap, // [out]
 		&w32.BitmapInfo{Header: bitmapInfoHeader},
 		w32.DIB_RGB_COLORS,
@@ -380,7 +380,7 @@ func saveHBitmap(outputPath string, hBitmap w32.HBITMAP) error {
 
 	gdiDll.GetDIBits(
 		hdcMem, hBitmap, 0,
-		w32.UINT(bitmap.Height),
+		uint32(bitmap.Height),
 		lpBitmap, // [out]
 		bitmapInfo,
 		w32.DIB_RGB_COLORS,
@@ -720,7 +720,7 @@ func Example_saveFileIconAsBitmap() {
 		gdi32dll.GetDIBits(
 			hdc, iInfo.HbmColor,
 			0,
-			w32.UINT(bmp.Height),
+			uint32(bmp.Height),
 			lpBitmap, // [out]
 			&w32.BitmapInfo{Header: bitmapInfoHeader},
 			w32.DIB_RGB_COLORS,
@@ -1143,7 +1143,7 @@ func ExampleGdi32DLL_BitBlt() {
 
 		// 第二次呼叫GetDIBits取得圖的資料內容
 		var lpBitmapData w32.LPVOID // 這個資料包含三樣東西{BitmapFileHeader, BitmapInfoHeader, 點集資料}
-		gdi32dll.GetDIBits(hdcMemN, hbitmapMemN, 0, w32.UINT(bitmapInfo.Header.Height), lpBitmapData, &bitmapInfo, w32.DIB_RGB_COLORS)
+		gdi32dll.GetDIBits(hdcMemN, hbitmapMemN, 0, uint32(bitmapInfo.Header.Height), lpBitmapData, &bitmapInfo, w32.DIB_RGB_COLORS)
 
 		// 以下我們只對點集的資料數據有興趣，header, info都不是我們所關心的
 		{
@@ -1291,6 +1291,68 @@ func ExampleGdi32DLL_MoveToEx() {
 	// {100 200}
 }
 
+func ExampleGdi32DLL_GetDIBits() {
+	hdcScreen := userDll.GetDC(0)
+	defer userDll.ReleaseDC(0, hdcScreen)
+
+	hMemDC := gdiDll.CreateCompatibleDC(hdcScreen)
+	defer gdiDll.DeleteObject(w32.HGDIOBJ(hMemDC))
+
+	var rect w32.RECT
+	_ = userDll.GetWindowRect(userDll.GetDesktopWindow(), &rect)
+	screenWidth := rect.Width()
+	screenHeight := rect.Height()
+
+	hMemBM := gdiDll.CreateCompatibleBitmap(hdcScreen, screenWidth, screenHeight)
+	defer gdiDll.DeleteObject(w32.HGDIOBJ(hMemBM))
+
+	// 選擇hBitmap
+	hObjOld := gdiDll.SelectObject(hMemDC, w32.HGDIOBJ(hMemBM))
+	defer gdiDll.SelectObject(hMemDC, hObjOld)
+
+	// 將hdcScreen的內容畫過去
+	width := int32(600)
+	height := int32(400)
+	x := int32(500)
+	y := int32(200)
+	// 在畫之前你的dc必須要先選擇hBitmap
+	_ = gdiDll.BitBlt(hMemDC, 0, 0, width, height,
+		hdcScreen, x, y, w32.SRCCOPY, // 來源位置從哪裡開始畫, 寬和高由dst的寬高決定
+	)
+
+	start := uint32(0)
+
+	channelCount := 3
+	bitmapData := make([]byte, int(width*height)*(channelCount))
+	gdiDll.GetDIBits(
+		hMemDC, hMemBM,
+		start, uint32(height), // 實際高度為height-start，一般而言start會設定成0
+		w32.LPVOID(unsafe.Pointer(&bitmapData[0])), // [out]
+		&w32.BitmapInfo{Header: w32.BitmapInfoHeader{
+			Size:        40,
+			Width:       width,
+			Height:      -1 * height, // 讓方向相反
+			Planes:      1,
+			BitCount:    8 * uint16(channelCount),
+			Compression: w32.BI_RGB,
+		}},
+		w32.DIB_RGB_COLORS,
+	)
+
+	img := image.NewRGBA(image.Rect(0, 0, int(width), int(height)))
+	for y = int32(0); y < height; y++ {
+		for x = int32(0); x < width; x++ {
+			idx := int(y*width+x) * channelCount
+			b, g, r, a := bitmapData[idx], bitmapData[idx+1], bitmapData[idx+2], uint8(255)
+			img.Set(int(x), int(y), color.RGBA{R: r, G: g, B: b, A: a})
+		}
+	}
+
+	// saveImg("output.png", img)
+
+	// Output:
+}
+
 // 可以取得到HBITMAP的資料
 func ExampleGdi32DLL_GetBitmapBits() {
 	hdcScreen := userDll.GetDC(0)
@@ -1299,8 +1361,30 @@ func ExampleGdi32DLL_GetBitmapBits() {
 	const width, height int32 = 600, 72
 	hBitmap := gdiDll.CreateCompatibleBitmap(hdcScreen, width, height)
 	defer gdiDll.DeleteObject(w32.HGDIOBJ(hBitmap))
-	bitmapBits := make([]byte, width*height*4) // 資料是用BGRA
-	gdiDll.GetBitmapBits(hBitmap, int32(len(bitmapBits)), uintptr(unsafe.Pointer(&bitmapBits[0])))
+
+	hMemDC := gdiDll.CreateCompatibleDC(hdcScreen)
+	defer gdiDll.DeleteObject(w32.HGDIOBJ(hMemDC))
+
+	hObjOld := gdiDll.SelectObject(hMemDC, w32.HGDIOBJ(hBitmap))
+	defer gdiDll.SelectObject(hMemDC, hObjOld)
+
+	_ = gdiDll.BitBlt(hMemDC, 0, 0, width, height,
+		hdcScreen, 100, 200, w32.SRCCOPY,
+	)
+
+	bitmapData := make([]byte, width*height*4) // 資料是用BGRA
+	gdiDll.GetBitmapBits(hBitmap, int32(len(bitmapData)), uintptr(unsafe.Pointer(&bitmapData[0])))
+	img := image.NewRGBA(image.Rect(0, 0, int(width), int(height)))
+	for y := int32(0); y < height; y++ {
+		for x := int32(0); x < width; x++ {
+			idx := int(y*width+x) * 4
+			b, g, r, a := bitmapData[idx], bitmapData[idx+1], bitmapData[idx+2], uint8(255)
+			img.Set(int(x), int(y), color.RGBA{R: r, G: g, B: b, A: a})
+		}
+	}
+	// saveImg("output.png", img)
+
+	// Output:
 }
 
 func TestGdi32DLL_TextOut(t *testing.T) {
