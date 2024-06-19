@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/CarsonSlovoka/go-pkg/v2/w32"
 	"image"
+	"image/color"
 	"image/png"
 	"log"
 	"os"
@@ -152,6 +153,18 @@ func createWindow(title string, opt *w32.WindowOptions) (*exampleWindow, error) 
 	return &exampleWindow{hwnd}, nil
 }
 
+func saveImgEx(output string, width, height int32, bitmapBits []byte) {
+	img := image.NewRGBA(image.Rect(0, 0, int(width), int(height)))
+	for y := int32(0); y < height; y++ {
+		for x := int32(0); x < width; x++ {
+			idx := (y*width + x) * 4
+			b, g, r := bitmapBits[idx], bitmapBits[idx+1], bitmapBits[idx+2]
+			img.Set(int(x), int(y), color.RGBA{R: r, G: g, B: b, A: 255})
+		}
+	}
+	saveImg(output, img)
+}
+
 func saveImg(outputPath string, img *image.RGBA) {
 	file, err := os.Create(outputPath) // 建議用瀏覽器(chrome)來查看，可以觀察到alpha
 	if err != nil {
@@ -163,4 +176,38 @@ func saveImg(outputPath string, img *image.RGBA) {
 	if err = png.Encode(file, img); err != nil {
 		panic(err)
 	}
+}
+
+func newHFont(fontFamily string, height int32) w32.HFONT {
+	lf := w32.LogFont{
+		Height:         height, // 建議用負值
+		Width:          0,
+		Escapement:     0,
+		Orientation:    0,
+		Weight:         400,
+		Italic:         0,
+		Underline:      0,
+		StrikeOut:      0,
+		CharSet:        w32.DEFAULT_CHARSET,
+		OutPrecision:   w32.OUT_TT_PRECIS,
+		ClipPrecision:  w32.CLIP_DEFAULT_PRECIS,
+		Quality:        w32.ANTIALIASED_QUALITY,
+		PitchAndFamily: w32.FF_DONTCARE,
+	}
+	return gdiDll.CreateFont(
+		lf.Height,
+		lf.Width,
+		lf.Escapement,
+		lf.Orientation,
+		lf.Weight,
+		uint32(lf.Italic),
+		uint32(lf.Underline),
+		uint32(lf.StrikeOut),
+		uint32(lf.CharSet),
+		uint32(lf.OutPrecision),
+		uint32(lf.ClipPrecision),
+		uint32(lf.Quality),
+		uint32(lf.PitchAndFamily),
+		fontFamily, // 安裝到你電腦的字型 FontFamilyName, name.ID=1 都可以指定
+	)
 }

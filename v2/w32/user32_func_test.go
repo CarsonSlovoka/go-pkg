@@ -1,6 +1,7 @@
 package w32_test
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"github.com/CarsonSlovoka/go-pkg/v2/w32"
@@ -318,22 +319,16 @@ func ExampleUser32DLL_GetIconInfo() {
 
 		hdc := user32dll.GetDC(0)
 
-		kernel32dll := w32.NewKernel32DLL()
-
-		var lpBitmap w32.LPVOID
-		hDIB, _ := kernel32dll.GlobalAlloc(w32.GHND, w32.SIZE_T(bmpSize))
-		lpBitmap, _ = kernel32dll.GlobalLock(hDIB)
-		defer kernel32dll.GlobalFree(hDIB)
+		bmpDatas := make([]byte, bmpSize)
 
 		gdi32dll.GetDIBits(
 			hdc, iInfo.HbmColor,
 			0,
 			uint32(bmp.Height),
-			lpBitmap, // [out]
+			bmpDatas, // [out]
 			&w32.BitmapInfo{Header: bitmapInfoHeader},
 			w32.DIB_RGB_COLORS,
 		)
-		_, _ = kernel32dll.GlobalUnlock(hDIB)
 		outputBmpPath := "testdata/info.bmp"
 		// Write: FileHeader, DIBHeader, bitmapData
 		{
@@ -355,11 +350,6 @@ func ExampleUser32DLL_GetIconInfo() {
 			_ = binary.Write(f, binary.LittleEndian, bitmapInfoHeader)
 
 			// bitmapData
-			bmpDatas := make([]byte, bmpSize)
-			for offset := uint32(0); offset < uint32(bmpSize); offset += 1 {
-				curByteAddr := unsafe.Pointer(uintptr(lpBitmap) + uintptr(offset))
-				bmpDatas[offset] = *(*byte)(curByteAddr)
-			}
 			_ = binary.Write(f, binary.LittleEndian, bmpDatas)
 
 			_ = f.Close()
@@ -1728,6 +1718,28 @@ func ExampleUser32DLL_RegisterHotKey() {
 	// hello
 }
 
+func ExampleKernel32DLL_GlobalAlloc() {
+	var size w32.SIZE_T
+	var myData []byte
+	hGlobal, eno := kernelDll.GlobalAlloc(w32.GMEM_MOVEABLE, size)
+	if eno == 0 {
+		defer kernelDll.GlobalFree(hGlobal)
+
+		// 鎖定內存
+		lpMemData, _ := kernelDll.GlobalLock(hGlobal)
+
+		// 寫入資料
+		copy((*[1 << 25]byte)(unsafe.Pointer(lpMemData))[:100], myData)
+
+		// 解鎖後才能被調用
+		if _, eno = kernelDll.GlobalUnlock(hGlobal); eno != 0 {
+			log.Println(eno)
+		}
+
+		// userDll.SetClipboardData(w32.CF_DIB, w32.HANDLE(hGlobal))
+	}
+}
+
 // 按下Ctrl+1複製，並保存在變數buf1之中，按下Alt+1可以將buf1變數的內容寫入到剪貼簿並且貼上
 // 熱鍵Ctrl+2複製選取內容到buf2變數; 熱鍵Alt+2將buf2的變數內容複製到剪貼簿並且貼上
 func ExampleUser32DLL_RegisterHotKey_clipboard() {
@@ -2548,10 +2560,14 @@ Hello World 您好 世界
 }
 
 // 複製圖片(點集資料)到剪貼簿去
+// https://gist.github.com/CarsonSlovoka/1f983cc040ae11eedfe3abf61307521a
 func TestUser32DLL_SetClipboardData(t *testing.T) {
 	// 核心:
-	// SetClipboardData(w32.CF_DIB, w32.HANDLE(hDIB))
-	// 其中hDIB要有{DIB HEADER, 點集資料}
+	// 寫入BITMAP到剪貼簿 (這比較簡單)
+	// SetClipboardData(w32.CF_BITMAP, hBitmap) // 效率高，但不力於同設備傳輸
+	// 寫入DIB格式到剪貼簿
+	// SetClipboardData(w32.CF_DIB, w32.HANDLE(hDIB)) // 轉成CF_DIB移植性好，適合跨設備傳輸
+	// 其中hDIB要有{DIB HEADER, 點集資料} // 注意BitmapFileHeader是不需要的
 
 	var x, y, width, height int32
 	x = 100
@@ -2560,100 +2576,87 @@ func TestUser32DLL_SetClipboardData(t *testing.T) {
 	height = 400
 
 	// screenshot
-	var bitmapInfoHeader w32.BitmapInfoHeader
-	size := width * height * 4
 	// 用截圖的方式來模擬點集資料生成
-	pixels := make([]byte, size)
-	{
-		hdc := userDll.GetDC(0)
-		defer userDll.ReleaseDC(0, hdc)
+	hdc := userDll.GetDC(0)
+	defer userDll.ReleaseDC(0, hdc)
 
-		hMemDC := gdiDll.CreateCompatibleDC(hdc)
-		defer gdiDll.DeleteDC(hMemDC)
+	hMemDC := gdiDll.CreateCompatibleDC(hdc)
+	defer gdiDll.DeleteDC(hMemDC)
 
-		hBitmap := gdiDll.CreateCompatibleBitmap(hdc, width, height)
-		defer gdiDll.DeleteObject(w32.HGDIOBJ(hBitmap))
-		hBitmapOld := gdiDll.SelectObject(hMemDC, w32.HGDIOBJ(hBitmap))
-		defer gdiDll.SelectObject(hMemDC, hBitmapOld)
+	hBitmap := gdiDll.CreateCompatibleBitmap(hdc, width, height)
+	defer gdiDll.DeleteObject(w32.HGDIOBJ(hBitmap))
+	hBitmapOld := gdiDll.SelectObject(hMemDC, w32.HGDIOBJ(hBitmap))
+	defer gdiDll.SelectObject(hMemDC, hBitmapOld)
 
-		_ = gdiDll.BitBlt(hMemDC,
-			0, 0,
-			width, height,
-			hdc,
-			x, y,
-			w32.SRCCOPY)
+	_ = gdiDll.BitBlt(hMemDC,
+		0, 0,
+		width, height,
+		hdc,
+		x, y,
+		w32.SRCCOPY)
 
-		var bitmap w32.Bitmap
-		gdiDll.GetObject(w32.HANDLE(hBitmap), int32(unsafe.Sizeof(bitmap)), uintptr(unsafe.Pointer(&bitmap)))
+	// 如果是HBITMAP複製到剪貼簿，可以直接指定成CF_BITMAP就能複製過去
+	_ = userDll.OpenClipboard(0)
+	_ = userDll.EmptyClipboard()
+	if _, eno := userDll.SetClipboardData(w32.CF_BITMAP, w32.HANDLE(hBitmap)); eno != 0 {
+		t.Fatal(eno)
+	}
+	_ = userDll.CloseClipboard()
 
-		bitmapInfoHeader = w32.BitmapInfoHeader{
-			Size:        uint32(unsafe.Sizeof(bitmapInfoHeader)), // 也可以直接寫40
-			Width:       bitmap.Width,
-			Height:      bitmap.Height,
-			Planes:      1,
-			BitCount:    32,
-			Compression: w32.BI_RGB,
-		}
+	var bitmapInfo w32.BitmapInfo
+	bitmapInfo.Header.Size = uint32(unsafe.Sizeof(bitmapInfo.Header))
 
-		bmpSize := ((bitmap.Width*int32(bitmapInfoHeader.BitCount) + 31) / 32) * 4 * bitmap.Height
-		hDIB, _ := kernelDll.GlobalAlloc(w32.GHND, w32.SIZE_T(bmpSize))
-		defer kernelDll.GlobalFree(hDIB)
+	// 將lpvBits指定為null來取得bitmapInfo的完整資訊
+	gdiDll.GetDIBits(hMemDC, hBitmap, 0, 0, nil, &bitmapInfo, w32.DIB_RGB_COLORS)
 
-		var lpBitmap w32.LPVOID
-		lpBitmap, _ = kernelDll.GlobalLock(hDIB)
+	// 取得bmpData
+	bmpData := make([]byte, bitmapInfo.Header.SizeImage)
+	gdiDll.GetDIBits(
+		hMemDC, hBitmap, 0,
+		uint32(bitmapInfo.Header.Height),
+		bmpData, // lpBitmap // [out]
+		&bitmapInfo,
+		w32.DIB_RGB_COLORS,
+	)
 
-		gdiDll.GetDIBits(
-			hMemDC, hBitmap, 0,
-			uint32(bitmap.Height),
-			lpBitmap, // [out]
-			&w32.BitmapInfo{Header: bitmapInfoHeader},
-			w32.DIB_RGB_COLORS,
-		)
-		copy(pixels, (*[1 << 25]byte)(unsafe.Pointer(lpBitmap))[:size])
+	buf := bytes.NewBuffer(nil)
+	// FileHeader的資訊剪貼簿不需要
+	// binary.Write(buf, binary.LittleEndian, w32.BitmapFileHeader{})
+	// 寫入InfoHeader
+	bitmapInfo.Header.Compression = w32.BI_RGB // (0) // 如果是用BI_BITFIELDS (3) 那麼貼上的顏色會不對
+	_ = binary.Write(buf, binary.LittleEndian, bitmapInfo.Header)
+	// 寫入點資料
+	_ = binary.Write(buf, binary.LittleEndian, bmpData)
+	bmpFileBytes := buf.Bytes()
 
-		if _, eno := kernelDll.GlobalUnlock(hDIB); eno != 0 {
-			t.Fatal(eno)
-		}
+	hDIB2, _ := kernelDll.GlobalAlloc(w32.GMEM_MOVEABLE, w32.SIZE_T(len(bmpFileBytes)))
+	if hDIB2 == 0 {
+		t.Fatal("GlobalAlloc error")
+		return
+	}
+	defer kernelDll.GlobalFree(hDIB2)
+	var lpDIB w32.LPVOID
+	lpDIB, _ = kernelDll.GlobalLock(hDIB2)
+
+	// 寫入點集資料
+	// 1GB  1 << 30,
+	// 32MB 1 << 25
+	// 將pixels內容複製到(lpDIB+40)指向的記憶體位置，其可容納內存空間為(32MB)，以確保內容不會被截斷或超出範圍
+	copy((*[1 << 25]byte)(unsafe.Pointer(lpDIB))[:len(bmpFileBytes)], bmpFileBytes)
+
+	// 解鎖後才能被調用
+	if _, eno := kernelDll.GlobalUnlock(hDIB2); eno != 0 {
+		t.Fatal(eno)
 	}
 
-	// SetClipboardData(w32.CF_DIB, w32.HANDLE(hDIB))
-	{
-		hDIB2, _ := kernelDll.GlobalAlloc(w32.GMEM_MOVEABLE,
-			w32.SIZE_T(uint32(unsafe.Sizeof(bitmapInfoHeader))+uint32(height*width)*4), // 如果是rgba就需要*4
-		)
-		if hDIB2 == 0 {
-			t.Fatal("GlobalAlloc error")
-			return
-		}
-		defer kernelDll.GlobalFree(hDIB2)
-		var lpDIB w32.LPVOID
-		lpDIB, _ = kernelDll.GlobalLock(hDIB2)
+	_ = userDll.OpenClipboard(0)
+	defer func() {
+		_ = userDll.CloseClipboard() // 你必須等到剪貼簿被關閉的時候，才能把圖從剪貼簿取出來貼上
+	}()
+	_ = userDll.EmptyClipboard()
 
-		// 寫入DIB HEADER
-		*(*w32.BitmapInfoHeader)(unsafe.Pointer(lpDIB)) = bitmapInfoHeader
-
-		// 寫入點集資料
-		// 1GB  1 << 30,
-		// 32MB 1 << 25
-		// 將pixels內容複製到(lpDIB+40)指向的記憶體位置，其可容納內存空間為(32MB)，以確保內容不會被截斷或超出範圍
-		copy((*[1 << 25]byte)(unsafe.Pointer(uintptr(lpDIB) + unsafe.Sizeof(bitmapInfoHeader)))[:len(pixels)],
-			pixels,
-		)
-
-		// 解鎖後才能被調用
-		if _, eno := kernelDll.GlobalUnlock(hDIB2); eno != 0 {
-			t.Fatal(eno)
-		}
-
-		_ = userDll.OpenClipboard(0)
-		defer func() {
-			_ = userDll.CloseClipboard()
-		}()
-		_ = userDll.EmptyClipboard()
-
-		if _, eno := userDll.SetClipboardData(w32.CF_DIB, w32.HANDLE(hDIB2)); eno != 0 {
-			t.Fatal(eno)
-		}
+	if _, eno := userDll.SetClipboardData(w32.CF_DIB, w32.HANDLE(hDIB2)); eno != 0 {
+		t.Fatal(eno)
 	}
 }
 

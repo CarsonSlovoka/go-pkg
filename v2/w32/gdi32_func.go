@@ -28,15 +28,19 @@ const (
 	PNDeleteDC     ProcName = "DeleteDC"
 	PNDeleteObject ProcName = "DeleteObject"
 
+	PNExtTextOut ProcName = "ExtTextOutW"
+
 	PNEnumFontFamilies ProcName = "EnumFontFamiliesW"
 	PNEnumFonts        ProcName = "EnumFontsW"
 
 	PNFillRgn ProcName = "FillRgn"
 
+	PNGdiFlush             ProcName = "GdiFlush"
 	PNGetBitmapBits        ProcName = "GetBitmapBits"
 	PNGetDIBits            ProcName = "GetDIBits"
 	PNGetObject            ProcName = "GetObjectW"
 	PNGetPixel             ProcName = "GetPixel"
+	PNGetTextAlign         ProcName = "GetTextAlign"
 	PNGetTextExtentPoint32 ProcName = "GetTextExtentPoint32W"
 
 	PNLineTo ProcName = "LineTo"
@@ -53,6 +57,7 @@ const (
 	PNSetBkMode         ProcName = "SetBkMode"
 	PNSetStretchBltMode ProcName = "SetStretchBltMode"
 	PNSetROP2           ProcName = "SetROP2"
+	PNSetTextAlign      ProcName = "SetTextAlign"
 	PNSetTextColor      ProcName = "SetTextColor"
 
 	PNStretchBlt ProcName = "StretchBlt"
@@ -88,15 +93,18 @@ func NewGdi32DLL(procList ...ProcName) *Gdi32DLL {
 			PNDeleteDC,
 			PNDeleteObject,
 
+			PNExtTextOut,
 			PNEnumFontFamilies,
 			PNEnumFonts,
 
 			PNFillRgn,
 
+			PNGdiFlush,
 			PNGetBitmapBits,
 			PNGetDIBits,
 			PNGetObject,
 			PNGetPixel,
+			PNGetTextAlign,
 			PNGetTextExtentPoint32,
 
 			PNLineTo,
@@ -113,6 +121,7 @@ func NewGdi32DLL(procList ...ProcName) *Gdi32DLL {
 			PNSetBkMode,
 			PNSetStretchBltMode,
 			PNSetROP2,
+			PNSetTextAlign,
 			PNSetTextColor,
 
 			PNStretchBlt,
@@ -314,11 +323,11 @@ func (dll *Gdi32DLL) CreateCompatibleDC(hdc HDC) HDC {
 // CreateDIBSection https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createdibsection
 // 這個函數可以在記憶體之中生成出一個HBITMAP的對象
 // 該數據內容取決於 ppvBits
-// 在完成之後，可以找到ppvBits的位址，開始在該區塊內設定您的點集資料
-// 在數據寫完之後，您可以直接開檔將 {BitmapFileHeader, BitmapInfoHeader, 您的圖片數據} 都寫入，即可保存圖片檔案
+// 在完成之後，可以找到ppvBits的位址，開始在該區塊內"設定"您的點集資料
+// 在數據寫完之後，您可以直接開檔將 {BitmapFileHeader, BitmapInfoHeader, 您的圖片數據} 都寫入，即可保存圖片檔案，可參考: saveHBitmap
 func (dll *Gdi32DLL) CreateDIBSection(hdc HDC, bitmapInfo *BitmapInfo,
 	usage uint32,
-	ppvBits *unsafe.Pointer, // [out]
+	ppvBits *[]byte, // [out]
 	section HANDLE,
 	offset uint32,
 ) HBITMAP {
@@ -327,7 +336,7 @@ func (dll *Gdi32DLL) CreateDIBSection(hdc HDC, bitmapInfo *BitmapInfo,
 		uintptr(hdc),
 		uintptr(unsafe.Pointer(bitmapInfo)),
 		uintptr(usage),
-		uintptr(unsafe.Pointer(ppvBits)),
+		uintptr(unsafe.Pointer(&*ppvBits)),
 		uintptr(section),
 		uintptr(offset),
 	)
@@ -421,6 +430,37 @@ func (dll *Gdi32DLL) DeleteObject(hObject HGDIOBJ) bool {
 	return r1 != 0
 }
 
+// ExtTextOut If the function fails, the return value is zero.
+// if the ANSI version of ExtTextOut is called with ETO_GLYPH_INDEX, the function returns TRUE even though the function does nothing.
+func (dll *Gdi32DLL) ExtTextOut(hdc HDC,
+	x, y int32, // 從哪裡開始畫
+	options uint32, // 如果你想用glyphIndex，那麼就選放ETO_GLYPH_INDEX，如果是一般文字，不需要給，只要給0即可
+	lpRect *RECT, // rectangle that is used for clipping, opaquing, or both. 如果options不用 ETO_OPAQUE 或者 ETO_CLIPPED 那麼可以不需要指定rect
+	// lpString string, // The string does not need to be zero-terminated
+	lpString []uint16, // 如果你是用 ETO_GLYPH_INDEX 那麼 []uint16{52, 49} 相當於畫出 glyphIndex 51與49這兩個字
+	// c uint32, // This value may not exceed 8192
+	// lpDx int32,
+) bool {
+	proc := dll.mustProc(PNExtTextOut)
+
+	c := uint32(len(lpString))
+	if c > 8192 {
+		panic("This value may not exceed 8192")
+	}
+
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+		uintptr(x),
+		uintptr(y),
+		uintptr(options),
+		uintptr(unsafe.Pointer(lpRect)),
+		uintptr(unsafe.Pointer(&lpString[0])),
+		uintptr(c),
+		0, // lpDx
+	)
+	return r1 != 0
+}
+
 // CreateSolidBrush https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-createsolidbrush
 // 🧙 Call DeleteObject(HGDIOBJ(hBrush)) when you are not used.
 // If the function fails, the return value is NULL.
@@ -489,6 +529,16 @@ func (dll *Gdi32DLL) FillRgn(hdc HDC, hrgn HRGN, hbr HBRUSH) bool {
 	return ret1 != 0
 }
 
+// GdiFlush If all functions in the current batch succeed, the return value is nonzero.
+// 即時顯示變更:在某些需要立即反映畫面變更的情況下,例如即時預覽或影像編輯器等,可以呼叫GdiFlush()以強制畫面立即重繣
+// 需要注意的是,過度使用GdiFlush()可能會導致效能降低,因為每次呼叫都會導致所有暫存的繪圖指令立即執行,
+// 中斷了繪圖管線的最佳化過程。因此,僅在必要時才應該使用此函數。
+func (dll *Gdi32DLL) GdiFlush() int32 {
+	proc := dll.mustProc(PNGdiFlush)
+	ret1, _, _ := syscall.SyscallN(proc.Addr())
+	return int32(ret1)
+}
+
 // GetBitmapBits https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-getbitmapbits
 // 與 GetDIBits 很像，差別是 GetDIBits 提供稍微多樣的功能，也能決定畫的方向
 func (dll *Gdi32DLL) GetBitmapBits(hBit HBITMAP,
@@ -513,27 +563,34 @@ func (dll *Gdi32DLL) GetBitmapBits(hBit HBITMAP,
 // 而DIB格式就能解決以上問題
 //
 // 通常會呼叫兩次GetDIBits, 第一次取得BitmapInfo的內容, 第二次取得資料內容，如下:
-//  1. GetDIBits(hdc, hbitmap, 0, 0, 0, BitmapInfo, DIB_RGB_COLORS)
+// BitmapInfo.Header.Size = uint32(unsafe.Sizeof(bitmapInfo.Header)) // 要先設定Size，他才知道你的圖資料是要哪一個版本的資料
+//  1. GetDIBits(hdc, hbitmap, 0, 0, 0, BitmapInfo, DIB_RGB_COLORS) // 如果Size沒有設定，會錯誤
 //  2. GetDIBits(hdc, hbitmap, 0, bitmapInfo.Header.Height, lpBitmapData, &BitmapInfo, DIB_RGB_COLORS)
 //
 // If the function fails, the return value is zero.
 func (dll *Gdi32DLL) GetDIBits(
 	hdc HDC,
 	hbm HBITMAP, // A handle to the bitmap. This must be a compatible bitmap (DDB).
-	start uint32,
-	cLines uint32, // cLines - start 即為height
-	lpvBits LPVOID,
+	start uint32, // 從哪一列開始掃秒
+	cLines uint32, // cLines - start 即為height 掃秒多少列
+	lpvBits []byte, // LPVOID, // [out]
 	lpbmi *BitmapInfo, // A pointer to a BitmapInfo structure that specifies the desired format for the DIB data. // 其高度為負，則畫的方向會相反，正的情況下同 GetBitmapBits
 	usage uint32,
 ) int32 {
 	proc := dll.mustProc(PNGetDIBits)
+	var lpv uintptr
+	if lpvBits == nil {
+		lpv = 0
+	} else {
+		lpv = uintptr(unsafe.Pointer(&lpvBits[0]))
+	}
 	ret1, _, _ := syscall.SyscallN(proc.Addr(),
 		uintptr(hdc),
 		uintptr(hbm),
 		uintptr(start),
 		uintptr(cLines),
-		uintptr(lpvBits),               // [out]
-		uintptr(unsafe.Pointer(lpbmi)), // [out]
+		lpv,                            // [out]
+		uintptr(unsafe.Pointer(lpbmi)), // lpbmi, // [in, out]
 		uintptr(usage),
 	)
 	return int32(ret1)
@@ -560,6 +617,15 @@ func (dll *Gdi32DLL) GetPixel(hdc HDC, x int32, y int32) COLORREF {
 		uintptr(y),
 	)
 	return COLORREF(r1)
+}
+
+// GetTextAlign https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-gettextalign
+func (dll *Gdi32DLL) GetTextAlign(hdc HDC) uint32 {
+	proc := dll.mustProc(PNGetTextAlign)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+	)
+	return uint32(r1)
 }
 
 // GetTextExtentPoint32 https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-gettextextentpoint32w
@@ -717,6 +783,19 @@ func (dll *Gdi32DLL) SetROP2(hdc HDC, rop2 int32) int32 {
 		uintptr(rop2),
 	)
 	return int32(r)
+}
+
+// SetTextAlign https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-settextalign
+// If the function fails, the return value is GDI_ERROR .
+func (dll *Gdi32DLL) SetTextAlign(hdc HDC,
+	align uint32, // TA_RTLREADING, TA_CENTER, TA_RIGHT ...
+) uint32 {
+	proc := dll.mustProc(PNSetTextAlign)
+	r1, _, _ := syscall.SyscallN(proc.Addr(),
+		uintptr(hdc),
+		uintptr(align),
+	)
+	return uint32(r1)
 }
 
 // SetTextColor https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-settextcolor

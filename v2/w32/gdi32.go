@@ -768,6 +768,37 @@ const (
 	FR_NOT_ENUM = 0x20 // 任何process(包含自己)都不能列舉此字型。(不能列舉但是如果該字體已經有被載入過，就能被使用。例如AddFontResourceEx(fontPath, 0, 0)，當您選中該字體之後再卸載，選單會看不見該字體，但您如果沒有更換字體，再調用AddFontResourceEx(fontPath, FR_NOT_ENUM, 0)雖然選單中還是沒看到該字體，但字體樣式會改變。
 )
 
+const (
+	// ETO_CLIPPED 以RECT矩形的面積為準，如果不在此矩形內的資料會全部刪除，因此前景如果不在此範圍也會被刪除
+	// 在沒有ETO_CLIPPED的情況下，TextOut所畫出的前景都會被完整顯示
+	ETO_CLIPPED = 0x4
+	// ETO_GLYPH_INDEX 以glyphIndex來畫字，對於沒有cmap對應的字很有用
+	ETO_GLYPH_INDEX    = 0x10
+	ETO_IGNORELANGUAGE = 0x1000
+	ETO_NUMERICSLATIN  = 0x800
+	ETO_NUMERICSLOCAL  = 0x400
+
+	// ETO_OPAQUE 背景為RECT的面積，將其改成不透明
+	ETO_OPAQUE     = 0x2
+	ETO_PDY        = 0x2000
+	ETO_RTLREADING = 0x800
+)
+
+const (
+	TA_TOP        = 0
+	TA_LEFT       = 0
+	TA_NOUPDATECP = 0 // 每次輸出後，不更新當前位置
+	TA_UPDATECP   = 1 // 每次輸出後更新當前位置
+	TA_RIGHT      = 2
+	TA_CENTER     = 6
+	TA_BOTTOM     = 8
+	TA_BASELINE   = 24
+	TA_RTLREADING = 100 // 從右到左來讀
+
+	VTA_BASELINE = TA_BASELINE
+	VTA_CENTER   = TA_CENTER
+)
+
 type (
 	// COLORREF BGR
 	COLORREF     uint32

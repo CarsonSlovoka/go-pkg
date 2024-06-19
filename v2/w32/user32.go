@@ -1332,7 +1332,11 @@ const (
 
 // Standard clipboard formats
 const (
-	CF_BITMAP          = 2
+	// CF_BITMAP // 效率高，但不力於同設備傳輸
+	CF_BITMAP = 2
+
+	// CF_DIB 移植性好，適合跨設備傳輸
+	// DIB其實與BITMAP極其相似，差別在於BITMAP還多了BitmapFileHeader, BITMAP完整結構 {BitmapFileHeader, BitmapInfoHeader, []byte}
 	CF_DIB             = 8 // 共有兩部份資料 {DIB Header, pixels} <=> { BitmapInfoHeader, []byte } 其中點集的大小需要平面化，例如 [][] COLORREF => [height*width*4]byte , 4為假設資料為RGBA
 	CF_DIBV5           = 17
 	CF_DIF             = 5

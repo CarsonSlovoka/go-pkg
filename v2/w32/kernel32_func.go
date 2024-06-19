@@ -494,6 +494,9 @@ func (dll *Kernel32DLL) GetUserDefaultLCID() LCID {
 }
 
 // GlobalAlloc https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-globalalloc
+// 生成一塊記憶的內容，透過 kernelDll.GlobalLock() 你可以得到指到這內容的記憶體位址
+// 接著你可以用copy的方式，把內容寫入到此位置之中
+// 最後就能利用 GlobalAlloc 得到的 HGLOBAL (也能當成HANDLE) 指派給需要用到的地方
 // 🧙 To free the memory, use the GlobalFree function. It is not safe to free memory allocated with GlobalAlloc using LocalFree.
 // If the function fails, the return value is NULL.
 func (dll *Kernel32DLL) GlobalAlloc(uFlags UINT, dwBytes SIZE_T) (HGLOBAL, syscall.Errno) {

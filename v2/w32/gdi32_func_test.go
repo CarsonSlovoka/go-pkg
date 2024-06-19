@@ -10,11 +10,11 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"reflect"
 	"sync"
 	"syscall"
 	"testing"
 	"time"
+	"unicode/utf16"
 	"unsafe"
 )
 
@@ -135,7 +135,7 @@ func ExampleGdi32DLL_CreateCompatibleBitmap() {
 // CaptureAnImage https://learn.microsoft.com/en-us/windows/win32/gdi/capturing-an-image
 // https://zh.wikipedia.org/zh-tw/BMP
 // 本範例簡述: 抓取當前的視窗，畫在notepad上，之後再保存在檔案之中，完成後檔案(testdata/captureNotepad.bmp)會刪除
-func ExampleGdi32DLL_CreateCompatibleBitmap2() {
+func ExampleGdi32DLL_createCompatibleBitmap2() {
 	user32dll := w32.NewUser32DLL()
 	gdi32dll := w32.NewGdi32DLL()
 	kernel32dll := w32.NewKernel32DLL()
@@ -244,25 +244,40 @@ func ExampleGdi32DLL_CreateCompatibleBitmap2() {
 	}
 
 	// 透過公式計算大小: https://en.wikipedia.org/wiki/BMP_file_format#Pixel_storage
-	bmpSize := ((bmpNotepad.Width*int32(bitmapInfoHeader.BitCount) + 31) / 32) * 4 /* uint32 */ * bmpNotepad.Height // size 2682368 bytes => 2619KB
+	bmpSize := ((int32(bitmapInfoHeader.BitCount) + 31) >> 5) * 4 /* uint32 */ * bmpNotepad.Width * bmpNotepad.Height // size 2682368 bytes => 2619KB
 
-	hDIB, _ := kernel32dll.GlobalAlloc(w32.GHND, w32.SIZE_T(bmpSize))
-	// Unlock and Free the DIB from the heap.
-	defer kernel32dll.GlobalFree(hDIB)
+	/*
+		hDIB, _ := kernel32dll.GlobalAlloc(w32.GHND, w32.SIZE_T(bmpSize))
+		// Unlock and Free the DIB from the heap.
+		defer kernel32dll.GlobalFree(hDIB)
 
-	// 找到bitmap的資料起始位置lpBitmap
-	var lpBitmap w32.LPVOID
-	lpBitmap, _ = kernel32dll.GlobalLock(hDIB)
-	// Gets the "bits" from the bitmap, and copies them into a buffer
-	// that's pointed to by lpbitmap.
+		// 找到bitmap的資料起始位置lpBitmap
+		var lpBitmap w32.LPVOID
+		lpBitmap, _ = kernel32dll.GlobalLock(hDIB)
+		// Gets the "bits" from the bitmap, and copies them into a buffer
+		// that's pointed to by lpbitmap.
+	*/
+
+	/* 也可以透過GetDIBits來取得到bitmapInfo的資料
+	var bitmapInfo w32.BitmapInfo
+	bitmapInfo.Header.Size = uint32(unsafe.Sizeof(bitmapInfo.Header))
+	if gdi32dll.GetDIBits(hdcNotepad, hbmNotepad, 0, 0, nil, &bitmapInfo, w32.DIB_RGB_COLORS) == 0 {
+		log.Fatal("GetDIBits get BitmapInfo error")
+	}
+	// bitmapInfo.Header.Compression = w32.BI_RGB // 或者 BI_BITFIELDS 都行
+	bmpData := make([]byte, bitmapInfo.Header.SizeImage)
+	*/
+
+	bmpData := make([]byte, bmpSize)
+
 	gdi32dll.GetDIBits(
 		hdcNotepad, hbmNotepad, 0,
 		uint32(bmpNotepad.Height),
-		lpBitmap, // [out]
-		&w32.BitmapInfo{Header: bitmapInfoHeader},
+		bmpData, // lpBitmap, // [out]
+		&w32.BitmapInfo{Header: bitmapInfoHeader}, // &bitmapInfo,
 		w32.DIB_RGB_COLORS,
 	)
-	_, _ = kernel32dll.GlobalUnlock(hDIB)
+	// _, _ = kernel32dll.GlobalUnlock(hDIB)
 
 	// Add the size of the headers to the size of the bitmap to get the total file size.
 	var bitmapFileHeader w32.BitmapFileHeader
@@ -288,14 +303,16 @@ func ExampleGdi32DLL_CreateCompatibleBitmap2() {
 		_ = binary.Write(f, binary.LittleEndian, bitmapInfoHeader)
 
 		// 其實可以直接透過以下這段把數值也順便寫入，即可完成。但我們因為要展示kernel32dll.CreateFile，所以寫入data的部分還是交由它去完成
-		if false {
+		if true {
 			// bitmapData
-			bmpData := make([]byte, bmpSize)
-			var offset uint32
-			for offset = 0; offset < uint32(bmpSize); offset++ {
-				curByteAddr := unsafe.Pointer(uintptr(lpBitmap) + uintptr(offset)) // 計算當前要寫入的byte位址在哪 // 我們是一個byte一個byte寫入，所以大小都是1
-				bmpData[offset] = *(*byte)(curByteAddr)
-			}
+			/*
+				bmpData := make([]byte, bmpSize)
+				var offset uint32
+				for offset = 0; offset < uint32(bmpSize); offset++ {
+					curByteAddr := unsafe.Pointer(uintptr(lpBitmap) + uintptr(offset)) // 計算當前要寫入的byte位址在哪 // 我們是一個byte一個byte寫入，所以大小都是1
+					bmpData[offset] = *(*byte)(curByteAddr)
+				}
+			*/
 
 			/* 如果不想要用for慢慢一個一個給，可以用以下的方法一次賦值完畢
 			sliceHeader := reflect.SliceHeader{
@@ -312,7 +329,8 @@ func ExampleGdi32DLL_CreateCompatibleBitmap2() {
 		_ = f.Close()
 	}
 
-	// 上述故意少寫了bitmapData，以下透過kernel32dll.CreateFile來寫入資料
+	// 以下透過kernel32dll.CreateFile來寫入資料
+	// (只寫入bmpData，沒有{FILE HEADER, DIB HEADER}，所以出來的bmp檔案會有瑕疵)，不過只是為了測試CreateFile有作用而已
 	// A file is created, this is where we will save the screen capture.
 	hFile, errno := kernel32dll.CreateFile(outputBmpPath,
 		w32.FILE_APPEND_DATA, // w32.GENERIC_WRITE <-- 用這個會新建，會把舊的資料刪除
@@ -344,7 +362,8 @@ func ExampleGdi32DLL_CreateCompatibleBitmap2() {
 	// DIB HEADER 不行用以下的方法寫，會有endian的問題
 	// _, _ = kernel32dll.WriteFile(hFile, uintptr(unsafe.Pointer(&bitmapInfoHeader)), uint32(unsafe.Sizeof(bitmapInfoHeader)), &dwBytesWritten, nil)
 	// DATA
-	_ = kernel32dll.WriteFile(hFile, uintptr(lpBitmap), uint32(bmpSize), &dwBytesWritten, nil)
+	// _ = kernel32dll.WriteFile(hFile, uintptr(lpBitmap), uint32(bmpSize), &dwBytesWritten, nil)
+	_ = kernel32dll.WriteFile(hFile, uintptr(unsafe.Pointer(&bmpData[0])), uint32(bmpSize), &dwBytesWritten, nil)
 	_ = kernel32dll.CloseHandle(hFile)
 
 	fmt.Println("ok")
@@ -353,22 +372,12 @@ func ExampleGdi32DLL_CreateCompatibleBitmap2() {
 	// ok
 }
 
-func saveHBitmap(outputPath string, hBitmap w32.HBITMAP) error {
+func saveHBitmap(outputPath string, hdcMem w32.HDC, hBitmap w32.HBITMAP) error {
 	var bitmap w32.Bitmap
 	gdiDll.GetObject(w32.HANDLE(hBitmap), int32(unsafe.Sizeof(bitmap)), uintptr(unsafe.Pointer(&bitmap)))
-	hdc := userDll.GetDC(0)
-	defer userDll.ReleaseDC(0, hdc)
-	hdcMem := gdiDll.CreateCompatibleDC(hdc)
-	defer gdiDll.DeleteDC(hdcMem)
-	gdiDll.SelectObject(hdcMem, w32.HGDIOBJ(hBitmap))
-
 	bitCount := uint16(32)
-	bmpSize := ((bitmap.Width*int32(bitCount) + 31) / 32) * 4 * bitmap.Height
-	hDIB, _ := kernelDll.GlobalAlloc(w32.GHND, w32.SIZE_T(bmpSize))
-	defer kernelDll.GlobalFree(hDIB)
-
-	var lpBitmap w32.LPVOID
-	lpBitmap, _ = kernelDll.GlobalLock(hDIB)
+	bmpSize := ((bitmap.Width*int32(bitCount) + 31) >> 5) * 4 * bitmap.Height
+	bmpData := make([]byte, bmpSize)
 
 	bitmapInfo := &w32.BitmapInfo{Header: w32.BitmapInfoHeader{
 		Size:  40,
@@ -381,11 +390,10 @@ func saveHBitmap(outputPath string, hBitmap w32.HBITMAP) error {
 	gdiDll.GetDIBits(
 		hdcMem, hBitmap, 0,
 		uint32(bitmap.Height),
-		lpBitmap, // [out]
+		bmpData, // lpBitmap, // [out]
 		bitmapInfo,
 		w32.DIB_RGB_COLORS,
 	)
-	_, _ = kernelDll.GlobalUnlock(hDIB)
 
 	f, err := os.Create(outputPath)
 	if err != nil {
@@ -401,13 +409,6 @@ func saveHBitmap(outputPath string, hBitmap w32.HBITMAP) error {
 	})
 	_ = binary.Write(f, binary.LittleEndian, bitmapInfo.Header)
 
-	bmpData := make([]byte, bmpSize)
-	sliceHeader := reflect.SliceHeader{
-		Data: uintptr(lpBitmap),
-		Len:  int(bmpSize),
-		Cap:  int(bmpSize),
-	}
-	bmpData = *(*[]byte)(unsafe.Pointer(&sliceHeader))
 	_, err = f.Write(bmpData)
 	return err
 }
@@ -424,17 +425,11 @@ func ExampleGdi32DLL_CreateDIBSection() {
 			BitCount: 32,
 		},
 	}
-	var lpBits unsafe.Pointer
-	hBitmap := gdiDll.CreateDIBSection(0, &bmi, w32.DIB_RGB_COLORS, &lpBits, 0, 0)
-	bmpSize := ((width*int32(bmi.Header.BitCount) + 31) / 32) * 4 * height
+	bmpSize := ((width*int32(bmi.Header.BitCount) + 31) >> 5) * 4 * height
 	pixels := make([]byte, bmpSize)
-	sliceHeader := reflect.SliceHeader{
-		Data: uintptr(lpBits),
-		Len:  int(bmpSize),
-		Cap:  int(bmpSize),
-	}
-	pixels = *(*[]byte)(unsafe.Pointer(&sliceHeader))
+	hBitmap := gdiDll.CreateDIBSection(0, &bmi, w32.DIB_RGB_COLORS, &pixels, 0, 0)
 
+	// 此時更改pixels的內容，那麼該hBitmap也會跟著改變
 	for i := int32(0); i < bmpSize; i += 4 {
 		copy(pixels[i:i+4], []byte{
 			// b, g, r, a
@@ -442,9 +437,30 @@ func ExampleGdi32DLL_CreateDIBSection() {
 		}[:])
 	}
 
-	if err := saveHBitmap("testdata/test4.bmp", hBitmap); err == nil {
-		_ = os.Remove("testdata/test4.bmp")
+	// 以下我們驗證此hBitmap真的已經有被寫入
+	// 因此我們建立了一個hdcMem並且選擇了該hBitmap，最後透過GetDIBits取得到資料，保存到bmpData之中
+	// 理論上bmpData畫出來的圖要同CreateDIBSection所設定的資料
+	hdc := userDll.GetDC(0)
+	defer userDll.ReleaseDC(0, hdc)
+	hdcMem := gdiDll.CreateCompatibleDC(hdc)
+	defer gdiDll.DeleteObject(w32.HGDIOBJ(hdcMem))
+	gdiDll.SelectObject(hdcMem, w32.HGDIOBJ(hBitmap))
+	defer gdiDll.DeleteObject(w32.HGDIOBJ(hBitmap))
+	bmpData := make([]byte, 4*height*width)
+
+	// 從hdcMem上取得到此hBitmap的資料存入到bmpData之中
+	gdiDll.GetDIBits(
+		hdcMem, hBitmap, 0,
+		uint32(height),
+		bmpData,
+		&bmi,
+		w32.DIB_RGB_COLORS,
+	)
+
+	if false {
+		saveImgEx("temp4.png", width, height, bmpData)
 	}
+
 	// Output:
 }
 
@@ -506,8 +522,6 @@ func TestGdi32DLL_CreateDIBSection(t *testing.T) {
 			BitCount: 32,
 		},
 	}
-	var lpBits unsafe.Pointer
-	hBitmap := gdiDll.CreateDIBSection(0, &bmi, w32.DIB_RGB_COLORS, &lpBits, 0, 0)
 
 	// 設定顏色
 	var (
@@ -515,16 +529,20 @@ func TestGdi32DLL_CreateDIBSection(t *testing.T) {
 		x, y       int32
 	)
 	bmpSize := ((width*int32(bmi.Header.BitCount) + 31) / 32) * 4 * height
-
-	// pixels := (*[1 << 30]byte)(unsafe.Pointer(lpBits)) // 這可行，可以直接指到一個大的區塊，理論上如果圖片沒有那麼大是可行的
 	pixels := make([]byte, bmpSize)
-	// pixels = *(*[]byte)(unsafe.Pointer(&lpBits)) // 錯誤，會不知道界線在哪,所以要透過sliceHeader告知長度來幫忙
-	sliceHeader := reflect.SliceHeader{
-		Data: uintptr(lpBits),
-		Len:  int(bmpSize),
-		Cap:  int(bmpSize),
-	}
-	pixels = *(*[]byte)(unsafe.Pointer(&sliceHeader))
+
+	_ = gdiDll.CreateDIBSection(0, &bmi, w32.DIB_RGB_COLORS, &pixels, 0, 0)
+
+	/*
+		// pixels := (*[1 << 30]byte)(unsafe.Pointer(lpBits)) // 這可行，可以直接指到一個大的區塊，理論上如果圖片沒有那麼大是可行的
+		// pixels = *(*[]byte)(unsafe.Pointer(&lpBits)) // 錯誤，會不知道界線在哪,所以要透過sliceHeader告知長度來幫忙
+		sliceHeader := reflect.SliceHeader{
+			Data: uintptr(lpBits),
+			Len:  int(bmpSize),
+			Cap:  int(bmpSize),
+		}
+		pixels = *(*[]byte)(unsafe.Pointer(&sliceHeader))
+	*/
 
 	i := int32(0)
 	for y = int32(0); y <= height; y++ {
@@ -557,7 +575,6 @@ func TestGdi32DLL_CreateDIBSection(t *testing.T) {
 
 	// 以下為存檔，一種直接寫入數據資料，另一種透過HBITMAP來存檔
 	outputFile1Path := "testdata/temp1.png"
-	outputFile2Path := "testdata/temp2.png"
 	{
 		f, err := os.Create(outputFile1Path)
 		if err != nil {
@@ -581,13 +598,6 @@ func TestGdi32DLL_CreateDIBSection(t *testing.T) {
 			Compression: w32.BI_RGB,
 		})
 		_, _ = f.Write(pixels)
-	}
-
-	// 這是另一種存檔方法
-	if err := saveHBitmap(outputFile2Path, hBitmap); err != nil {
-		t.Fatal(err)
-	} else {
-		_ = os.Remove(outputFile2Path)
 	}
 }
 
@@ -712,21 +722,24 @@ func Example_saveFileIconAsBitmap() {
 
 		hdc := user32dll.GetDC(0)
 
-		var lpBitmap w32.LPVOID
-		hDIB, _ := kernel32dll.GlobalAlloc(w32.GHND, w32.SIZE_T(bmpSize))
-		lpBitmap, _ = kernel32dll.GlobalLock(hDIB)
-		defer kernel32dll.GlobalFree(hDIB)
+		/*
+			var lpBitmap w32.LPVOID
+			hDIB, _ := kernel32dll.GlobalAlloc(w32.GHND, w32.SIZE_T(bmpSize))
+			lpBitmap, _ = kernel32dll.GlobalLock(hDIB)
+			defer kernel32dll.GlobalFree(hDIB)
+		*/
+		bmpData := make([]byte, bmpSize)
 
 		gdi32dll.GetDIBits(
 			hdc, iInfo.HbmColor,
 			0,
 			uint32(bmp.Height),
-			lpBitmap, // [out]
+			bmpData, // lpBitmap, // [out]
 			&w32.BitmapInfo{Header: bitmapInfoHeader},
 			w32.DIB_RGB_COLORS,
 		)
-		count, _ := kernel32dll.GlobalUnlock(hDIB)
-		_ = count
+		// count, _ := kernel32dll.GlobalUnlock(hDIB)
+
 		outputBmpPath := "testdata/temp001.bmp"
 		// Write: FileHeader, DIBHeader, bitmapData
 		{
@@ -742,11 +755,13 @@ func Example_saveFileIconAsBitmap() {
 			_ = binary.Write(f, binary.LittleEndian, bitmapInfoHeader)
 
 			// bitmapData
-			bmpData := make([]byte, bmpSize)
-			for offset := uint32(0); offset < uint32(bmpSize); offset += 1 {
-				curByteAddr := unsafe.Pointer(uintptr(lpBitmap) + uintptr(offset))
-				bmpData[offset] = *(*byte)(curByteAddr)
-			}
+			/*
+				bmpData := make([]byte, bmpSize)
+				for offset := uint32(0); offset < uint32(bmpSize); offset += 1 {
+					curByteAddr := unsafe.Pointer(uintptr(lpBitmap) + uintptr(offset))
+					bmpData[offset] = *(*byte)(curByteAddr)
+				}
+			*/
 			_ = binary.Write(f, binary.LittleEndian, bmpData)
 
 			_ = f.Close()
@@ -1131,40 +1146,6 @@ func ExampleGdi32DLL_BitBlt() {
 		)
 	}
 
-	// 如果您的目的不是單純投放，而是想取得圖片點集的資訊，就要考慮使用以下內容(GetDIBits)來獲得點資料
-	{
-		// HBITMAP TO BITMAP
-		var bitmapN w32.Bitmap
-		gdi32dll.GetObject(w32.HANDLE(hbitmapMemN), int32(unsafe.Sizeof(bitmapN)), uintptr(unsafe.Pointer(&bitmapN)))
-
-		// 第一次呼叫GetDIBits取得BitmapInfo的資料
-		var bitmapInfo w32.BitmapInfo
-		gdi32dll.GetDIBits(hdcMemN, hbitmapMemN, 0, 0, 0, &bitmapInfo, w32.DIB_RGB_COLORS) // DDB to DIB
-
-		// 第二次呼叫GetDIBits取得圖的資料內容
-		var lpBitmapData w32.LPVOID // 這個資料包含三樣東西{BitmapFileHeader, BitmapInfoHeader, 點集資料}
-		gdi32dll.GetDIBits(hdcMemN, hbitmapMemN, 0, uint32(bitmapInfo.Header.Height), lpBitmapData, &bitmapInfo, w32.DIB_RGB_COLORS)
-
-		// 以下我們只對點集的資料數據有興趣，header, info都不是我們所關心的
-		{
-			bmpSize := ((bitmapN.Width*int32(bitmapInfo.Header.BitCount) + 31) / 32) * 4 * bitmapN.Height
-
-			var bitmapFileHeader w32.BitmapFileHeader
-			sizeofDIB := 14 + uint32(unsafe.Sizeof(bitmapInfo.Header)) + uint32(bmpSize)
-			bitmapFileHeader = w32.BitmapFileHeader{
-				Type:       0x4D42,    // BM. // B: 42, M: 4D  // 因為BitmapFile所有的描述都要用"little-endian"讀取，所以要反過來寫4D42
-				Size:       sizeofDIB, // HEADER + INFO + DATA
-				OffsetBits: 14 + uint32(unsafe.Sizeof(bitmapInfo.Header)),
-			}
-
-			var offset uint32
-			bmpPointsDatas := make([]byte, bitmapFileHeader.OffsetBits) // 排除了header, info等資訊
-			for offset = 14 + uint32(unsafe.Sizeof(bitmapInfo.Header)); offset < bitmapFileHeader.OffsetBits; offset += 1 {
-				bmpPointsDatas[offset] = *(*byte)(unsafe.Pointer(uintptr(lpBitmapData) + uintptr(offset)))
-			}
-		}
-	}
-
 	// Output:
 }
 
@@ -1327,7 +1308,7 @@ func ExampleGdi32DLL_GetDIBits() {
 	gdiDll.GetDIBits(
 		hMemDC, hMemBM,
 		start, uint32(height), // 實際高度為height-start，一般而言start會設定成0
-		w32.LPVOID(unsafe.Pointer(&bitmapData[0])), // [out]
+		bitmapData, // [out]
 		&w32.BitmapInfo{Header: w32.BitmapInfoHeader{
 			Size:        40,
 			Width:       width,
@@ -1385,6 +1366,55 @@ func ExampleGdi32DLL_GetBitmapBits() {
 	// saveImg("output.png", img)
 
 	// Output:
+}
+
+func TestGdi32DLL_ExtTextOut(t *testing.T) {
+	hdcScreen := userDll.GetDC(0)
+	hFont := newHFont("Arial", -64)
+	const width = 800
+	const height = 400
+	for _, d := range []struct { // i為2, 6的時候，圖片會全黑，目前還不曉得原因
+		x, y    int32
+		options uint32
+		rect    *w32.RECT
+		u16     []uint16
+		align   uint32
+	}{
+		{0, 0, w32.ETO_GLYPH_INDEX, nil, []uint16{41, 52}, 0},     // 畫書glyphIndex: 41, 52(F,Q)這兩個字
+		{100, 200, w32.ETO_GLYPH_INDEX, nil, []uint16{41, 52}, 0}, // 改變起始化的位置
+		{100, 200, 0, nil, utf16.Encode([]rune("Hi 中文")), 0},      // 直接畫出文字而非使用glyphIndex
+
+		{0, 0, w32.ETO_OPAQUE | w32.ETO_CLIPPED, &w32.RECT{Right: 500, Bottom: 50}, utf16.Encode([]rune("Hi 中文")), 0},
+		{0, 0, w32.ETO_OPAQUE | w32.ETO_CLIPPED, &w32.RECT{Left: 100, Top: 10, Right: 500, Bottom: 50}, utf16.Encode([]rune("Hi 中文")), 0},
+		{0, 0, w32.ETO_OPAQUE, &w32.RECT{Left: 100, Top: 10, Right: 500, Bottom: 50}, utf16.Encode([]rune("Hi 中文")), 0},
+		{0, 0, w32.ETO_OPAQUE, &w32.RECT{Left: 100, Top: 10, Right: 500, Bottom: 50}, utf16.Encode([]rune("Hi 中文")), 0},
+	} {
+		hMemDC := gdiDll.CreateCompatibleDC(hdcScreen)
+		hBitmap := gdiDll.CreateCompatibleBitmap(hdcScreen, width, height)
+		hObjOld := gdiDll.SelectObject(hMemDC, w32.HGDIOBJ(hBitmap))
+		oldFont := gdiDll.SelectObject(hMemDC, w32.HGDIOBJ(hFont))
+
+		gdiDll.SetTextColor(hMemDC, w32.RGB(255, 0, 0))
+		// gdiDll.SetBkMode(hMemDC, w32.TRANSPARENT)
+
+		if d.align != 0 {
+			gdiDll.SetTextAlign(hMemDC, d.align)
+		}
+
+		gdiDll.ExtTextOut(hMemDC, d.x, d.y, d.options, d.rect, d.u16)
+		// gdiDll.GdiFlush()
+
+		// _ = saveHBitmap(fmt.Sprintf("test_%d.bmp", i), hMemDC, hBitmap)
+
+		gdiDll.SelectObject(hMemDC, hObjOld)
+		gdiDll.SelectObject(hMemDC, oldFont)
+
+		gdiDll.DeleteObject(w32.HGDIOBJ(hBitmap))
+		gdiDll.DeleteObject(w32.HGDIOBJ(hMemDC))
+	}
+
+	userDll.ReleaseDC(0, hdcScreen)
+	gdiDll.DeleteObject(w32.HGDIOBJ(hFont))
 }
 
 func TestGdi32DLL_TextOut(t *testing.T) {
@@ -1469,6 +1499,8 @@ func TestGdi32DLL_TextOut(t *testing.T) {
 		(width-textSize.CX)/2, (height-textSize.CY)/2, // 畫的位置用居中的方式
 		text,
 	)
+	// 也可以用ExtTextOut取代TextOut
+	// gdiDll.ExtTextOut(hMemDC, (width-textSize.CX)/2, (height-textSize.CY)/2, 0, nil, utf16.Encode([]rune(text)))
 
 	bitmapBits := make([]byte, width*height*4) // 保存hBitmap所提供的 `前景` 與 `背景` 顏色
 	gdiDll.GetBitmapBits(hBitmap, int32(len(bitmapBits)), uintptr(unsafe.Pointer(&bitmapBits[0])))
@@ -1507,4 +1539,46 @@ func TestGdi32DLL_TextOut(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+}
+
+func TestGdi32DLL_SetTextAlign(t *testing.T) {
+	hdc := userDll.GetDC(0)
+	defer userDll.ReleaseDC(0, hdc)
+
+	hdcMem := gdiDll.CreateCompatibleDC(hdc)
+	defer gdiDll.DeleteObject(w32.HGDIOBJ(hdcMem))
+	hBitmap := gdiDll.CreateCompatibleBitmap(hdc, 1920, 1000)
+	gdiDll.SelectObject(hdcMem, w32.HGDIOBJ(hBitmap))
+	defer gdiDll.DeleteObject(w32.HGDIOBJ(hBitmap))
+
+	// 設置字型
+	hFont := newHFont("Arial", -16)
+	defer gdiDll.DeleteObject(w32.HGDIOBJ(hFont))
+
+	// 各種對齊方式測試
+	alignments := []struct {
+		text  string
+		align uint32
+	}{
+		{"左對齊 TA_LEFT", w32.TA_LEFT},
+		{"右對齊 TA_RIGHT", w32.TA_RIGHT},
+		{"中心對齊 TA_CENTER", w32.TA_CENTER},
+		{"頂部對齊 TA_TOP", w32.TA_TOP},
+		{"底部對齊 TA_BOTTOM", w32.TA_BOTTOM},
+		{"基線對齊 TA_BASELINE", w32.TA_BASELINE},
+	}
+
+	y := int32(10)
+	for _, e := range alignments {
+		// 也可以直接畫在hdc上，但是因為螢幕會一直更新，所以會一閃而過
+		gdiDll.SetTextAlign(hdcMem, e.align)
+		gdiDll.TextOut(hdcMem, 200, y, e.text)
+		y += 100
+	}
+
+	// 將結果保存到剪貼簿之中，有興趣可以直接貼上查看
+	_ = userDll.OpenClipboard(0)
+	_ = userDll.EmptyClipboard()
+	_, _ = userDll.SetClipboardData(w32.CF_BITMAP, w32.HANDLE(hBitmap))
+	_ = userDll.CloseClipboard()
 }
