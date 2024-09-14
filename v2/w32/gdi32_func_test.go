@@ -1379,15 +1379,20 @@ func TestGdi32DLL_ExtTextOut(t *testing.T) {
 		rect    *w32.RECT
 		u16     []uint16
 		align   uint32
+		lpDx    []int32
 	}{
-		{0, 0, w32.ETO_GLYPH_INDEX, nil, []uint16{41, 52}, 0},     // 畫書glyphIndex: 41, 52(F,Q)這兩個字
-		{100, 200, w32.ETO_GLYPH_INDEX, nil, []uint16{41, 52}, 0}, // 改變起始化的位置
-		{100, 200, 0, nil, utf16.Encode([]rune("Hi 中文")), 0},      // 直接畫出文字而非使用glyphIndex
+		{0, 0, w32.ETO_GLYPH_INDEX, nil, []uint16{41, 52}, 0, nil},     // 畫書glyphIndex: 41, 52(F,Q)這兩個字
+		{100, 200, w32.ETO_GLYPH_INDEX, nil, []uint16{41, 52}, 0, nil}, // 改變起始化的位置
+		{100, 200, 0, nil, utf16.Encode([]rune("Hi 中文 a")), 0, nil},
+		{100, 200, 0, nil, utf16.Encode([]rune("Hi 中文 b")), 0, []int32{100}},
+		{100, 200, 0, nil, utf16.Encode([]rune("HELLO")), 0, nil},
+		{100, 200, 0, nil, utf16.Encode([]rune("HELLO")), 0, []int32{200}},
+		{100, 200, 0, nil, utf16.Encode([]rune("HELLO")), 0, []int32{0, 20}}, // H與E的距離為0
 
-		{0, 0, w32.ETO_OPAQUE | w32.ETO_CLIPPED, &w32.RECT{Right: 500, Bottom: 50}, utf16.Encode([]rune("Hi 中文")), 0},
-		{0, 0, w32.ETO_OPAQUE | w32.ETO_CLIPPED, &w32.RECT{Left: 100, Top: 10, Right: 500, Bottom: 50}, utf16.Encode([]rune("Hi 中文")), 0},
-		{0, 0, w32.ETO_OPAQUE, &w32.RECT{Left: 100, Top: 10, Right: 500, Bottom: 50}, utf16.Encode([]rune("Hi 中文")), 0},
-		{0, 0, w32.ETO_OPAQUE, &w32.RECT{Left: 100, Top: 10, Right: 500, Bottom: 50}, utf16.Encode([]rune("Hi 中文")), 0},
+		{0, 0, w32.ETO_OPAQUE | w32.ETO_CLIPPED, &w32.RECT{Right: 500, Bottom: 50}, utf16.Encode([]rune("Hi 中文")), 0, nil},
+		{0, 0, w32.ETO_OPAQUE | w32.ETO_CLIPPED, &w32.RECT{Left: 100, Top: 10, Right: 500, Bottom: 50}, utf16.Encode([]rune("Hi 中文")), 0, nil},
+		{0, 0, w32.ETO_OPAQUE, &w32.RECT{Left: 100, Top: 10, Right: 500, Bottom: 50}, utf16.Encode([]rune("Hi 中文")), 0, nil},
+		{0, 0, w32.ETO_OPAQUE, &w32.RECT{Left: 100, Top: 10, Right: 500, Bottom: 50}, utf16.Encode([]rune("Hi 中文")), 0, nil},
 	} {
 		hMemDC := gdiDll.CreateCompatibleDC(hdcScreen)
 		hBitmap := gdiDll.CreateCompatibleBitmap(hdcScreen, width, height)
@@ -1401,7 +1406,7 @@ func TestGdi32DLL_ExtTextOut(t *testing.T) {
 			gdiDll.SetTextAlign(hMemDC, d.align)
 		}
 
-		gdiDll.ExtTextOut(hMemDC, d.x, d.y, d.options, d.rect, d.u16)
+		gdiDll.ExtTextOut(hMemDC, d.x, d.y, d.options, d.rect, d.u16, d.lpDx)
 		// gdiDll.GdiFlush()
 
 		// _ = saveHBitmap(fmt.Sprintf("test_%d.bmp", i), hMemDC, hBitmap)
@@ -1500,7 +1505,7 @@ func TestGdi32DLL_TextOut(t *testing.T) {
 		text,
 	)
 	// 也可以用ExtTextOut取代TextOut
-	// gdiDll.ExtTextOut(hMemDC, (width-textSize.CX)/2, (height-textSize.CY)/2, 0, nil, utf16.Encode([]rune(text)))
+	// gdiDll.ExtTextOut(hMemDC, (width-textSize.CX)/2, (height-textSize.CY)/2, 0, nil, utf16.Encode([]rune(text)), nil)
 
 	bitmapBits := make([]byte, width*height*4) // 保存hBitmap所提供的 `前景` 與 `背景` 顏色
 	gdiDll.GetBitmapBits(hBitmap, int32(len(bitmapBits)), uintptr(unsafe.Pointer(&bitmapBits[0])))

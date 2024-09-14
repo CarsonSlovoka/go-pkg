@@ -439,9 +439,16 @@ func (dll *Gdi32DLL) ExtTextOut(hdc HDC,
 	// lpString string, // The string does not need to be zero-terminated
 	lpString []uint16, // 如果你是用 ETO_GLYPH_INDEX 那麼 []uint16{52, 49} 相當於畫出 glyphIndex 51與49這兩個字
 	// c uint32, // This value may not exceed 8192
-	// lpDx int32,
+	lpDx []int32,
 ) bool {
 	proc := dll.mustProc(PNExtTextOut)
+
+	var pDx uintptr
+	if lpDx == nil {
+		pDx = 0
+	} else {
+		pDx = uintptr(unsafe.Pointer(&lpDx[0]))
+	}
 
 	c := uint32(len(lpString))
 	if c > 8192 {
@@ -456,7 +463,7 @@ func (dll *Gdi32DLL) ExtTextOut(hdc HDC,
 		uintptr(unsafe.Pointer(lpRect)),
 		uintptr(unsafe.Pointer(&lpString[0])),
 		uintptr(c),
-		0, // lpDx
+		pDx, // lpDx
 	)
 	return r1 != 0
 }
