@@ -1032,13 +1032,18 @@ type BitmapCoreHeader2 struct {
 // BitmapInfoHeader https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmapinfoheader
 // Size: 40
 type BitmapInfoHeader struct {
-	Size          uint32 // 4+4+4+2+2+4+4+4+4+4+4=40
-	Width         int32
-	Height        int32  // 正，負會影響方向(原點在左上(往下往右為正)或者原點在左下(往上往右為正)
-	Planes        uint16 // Specifies the number of planes for the target device. This value must be set to 1. // 位元圖數, 只能設定為1
-	BitCount      uint16 // Specifies the number of bits per pixel (bpp). Bits/pixel 1：單色點陣圖（使用 2 色調色盤）,... 8：8 位元點陣圖（使用 256 色調色盤）. 32：32 位元全彩點陣圖（不一定使用調色盤）
-	Compression   uint32 // 壓縮方式, {0為為壓縮縮BI_RGB, BI_RLE8, BI_RLE4, BI_BITFIELDS}
-	SizeImage     uint32 // 指定圖像的大小，如果是為壓縮的RGB圖，可以設定為0
+	Size   uint32 // 4+4+4+2+2+4+4+4+4+4+4=40
+	Width  int32
+	Height int32  // 正，負會影響方向(原點在左上(往下往右為正)或者原點在左下(往上往右為正)
+	Planes uint16 // Specifies the number of planes for the target device. This value must be set to 1. // 位元圖數, 只能設定為1
+
+	// BitCount 通常圖片有問題，可能是通道有問題
+	// bmp圖片的第29, 30byte就是bitCount的位置; 修改完之後 BitmapFileHeader.Size 也要重新計算
+	BitCount    uint16 // Specifies the number of bits per pixel (bpp). Bits/pixel 1：單色點陣圖（使用 2 色調色盤）,... 8：8 位元點陣圖（使用 256 色調色盤）. 32：32 位元全彩點陣圖（不一定使用調色盤）
+	Compression uint32 // 壓縮方式, {0為為壓縮縮BI_RGB, BI_RLE8, BI_RLE4, BI_BITFIELDS}
+
+	// SizeImage https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmapinfoheader#calculating-surface-stride
+	SizeImage     uint32 // 指定圖像的大小，如果是未壓縮的RGB圖，可以設定為0. 實際算法為: stride = ((((biWidth * biBitCount) + 31) & ~31) >> 3); biSizeImage = abs(biHeight) * stride;
 	XPelsPerMeter int32
 	YPelsPerMeter int32
 	ClrUsed       uint32
