@@ -507,6 +507,7 @@ func ExampleKernel32DLL_FindResource() {
 
 // 類似ExampleKernel32DLL_FindResource，不過本範例直接抓取ICON不再從Icon Group去找尋
 // 建議您安裝[Resource Hacker](http://www.angusj.com/resourcehacker/)去查看微軟的fontView.exe會對本範例更了解
+// Alternative: Resource Cracker https://www.pelock.com/products/resource-cracker
 func ExampleKernel32DLL_FindResource_icon() {
 	kernel32dll := w32.NewKernel32DLL()
 	user32dll := w32.NewUser32DLL()
